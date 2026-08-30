@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: 20
+
+jobs:
+  lint:
+    name: Lint & Type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Lint shared-types
+        run: npm run typecheck --workspace=@ls-customs/shared-types
+      - name: Type-check backend
+        run: npm run typecheck --workspace=@ls-customs/backend
+
+  migration-test:
+    name: Migration Dry-Run
+    runs-on: ubuntu-latest
+    container:
+      image: supabase/postgres:17-stable
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply migrations
+        run: |
+          # Validate migrations parse and apply against a fresh Postgres
+          for f in apps/backend/supabase/migrations/*.sql; do
+            psql -U postgres -d postgres -f "$f" 2>&1 || exit 1
+          done
+
+  function-typecheck:
+    name: Edge Function Type-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Type-check functions
+        run: |
+          npx tsc --noEmit --strict --module esnext --moduleResolution deno \
+            apps/backend/supabase/functions/*//index.ts

@@ -1,0 +1,332 @@
+From b69367bb7703ee2ddc4e3b61dcac1acfee1fdff7 Mon Sep 17 00:00:00 2001
+From: bbrif40 <bbri7198@gmail.com>
+Date: Sun, 23 Aug 2026 16:51:14 +0800
+Subject: [PATCH] Add client-side AI chatbot (signed-in users only)
+
+- Add ChatBot floating widget component (components/chat/ChatBot.tsx)
+- Wire to backend chatbot Edge Function via supabase.functions.invoke
+- Extends useAuth to expose userId for booking context enrichment
+- Renders only in signed-in layout; guest users do not see it
+- Add chat types (ChatMessage, ChatBotProps) to types/index.ts
+- Add chat widget CSS styles to styles.css
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+---
+ apps/web/src/App.tsx                     |   5 +-
+ apps/web/src/components/chat/ChatBot.tsx | 165 +++++++++++++++++++++++
+ apps/web/src/hooks/useAuth.ts            |   6 +
+ apps/web/src/styles.css                  |  26 +++-
+ apps/web/src/types/index.ts              |  15 +++
+ 5 files changed, 215 insertions(+), 2 deletions(-)
+ create mode 100644 apps/web/src/components/chat/ChatBot.tsx
+
+diff --git a/apps/web/src/App.tsx b/apps/web/src/App.tsx
+index 67f6dab..8713ff7 100644
+--- a/apps/web/src/App.tsx
++++ b/apps/web/src/App.tsx
+@@ -20,10 +20,11 @@ import { Rentals } from './components/views/Rentals'
+ import { MechanicServices } from './components/views/MechanicServices'
+ import { Bookings } from './components/views/Bookings'
+ import { Profile } from './components/views/Profile'
++import { ChatBot } from './components/chat/ChatBot'
+ import type { View } from './types'
+ 
+ export function App() {
+-  const { signedIn, identity, authLoading, authMode, authOpen, setAuthMode, setAuthOpen, openAuth } = useAuth()
++  const { signedIn, userId, identity, authLoading, authMode, authOpen, setAuthMode, setAuthOpen, openAuth } = useAuth()
+   const [view, setView] = useState<View>('home')
+   const [menuOpen, setMenuOpen] = useState(false)
+   const [cartCount, setCartCount] = useState(1)
+@@ -155,6 +156,8 @@ export function App() {
+           }}
+         />
+       )}
++
++      <ChatBot userId={userId} onNotify={notify} />
+     </div>
+   )
+ }
+diff --git a/apps/web/src/components/chat/ChatBot.tsx b/apps/web/src/components/chat/ChatBot.tsx
+new file mode 100644
+index 0000000..fe46c75
+--- /dev/null
++++ b/apps/web/src/components/chat/ChatBot.tsx
+@@ -0,0 +1,165 @@
++/**
++ * ChatBot — floating AI assistant widget for LS Customs.
++ * Calls the `chatbot` Edge Function (OpenRouter-backed) for customer
++ * support via the Supabase `functions.invoke` API.
++ *
++ * Only rendered for signed-in users (see App.tsx). Guest users never
++ * see or mount this component.
++ */
++import { useState, useRef, useEffect } from 'react'
++import { MessageCircle, Send, X } from 'lucide-react'
++import { supabase } from '../../supabaseClient'
++import type { ChatMessage, ChatBotProps } from '../../types'
++
++const WELCOME_MESSAGE =
++  "Hi! I'm the LS Customs assistant. How can I help you with rentals, bookings, or mobile mechanic services today?"
++
++export function ChatBot({ userId, onNotify }: ChatBotProps) {
++  const [open, setOpen] = useState(false)
++  const [messages, setMessages] = useState<ChatMessage[]>([])
++  const [conversationId, setConversationId] = useState<string | undefined>(undefined)
++  const [input, setInput] = useState('')
++  const [loading, setLoading] = useState(false)
++  const messagesEndRef = useRef<HTMLDivElement>(null)
++
++  const scrollToBottom = () => {
++    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
++  }
++
++  useEffect(() => {
++    scrollToBottom()
++  }, [messages])
++
++  const toggleOpen = () => {
++    setOpen(true)
++    if (messages.length === 0) {
++      setMessages([
++        {
++          role: 'assistant',
++          content: WELCOME_MESSAGE,
++          timestamp: Date.now(),
++        },
++      ])
++    }
++  }
++
++  const closeChat = () => {
++    setOpen(false)
++  }
++
++  const sendMessage = async () => {
++    const trimmed = input.trim()
++    if (!trimmed || loading) return
++
++    setMessages((prev) => [
++      ...prev,
++      { role: 'user', content: trimmed, timestamp: Date.now() },
++    ])
++    setInput('')
++    setLoading(true)
++
++    try {
++      const { data, error } = await supabase.functions.invoke('chatbot', {
++        body: {
++          message: trimmed,
++          conversation_id: conversationId,
++          user_id: userId,
++        },
++      })
++
++      if (error || !data) {
++        onNotify(error?.message || 'Something went wrong')
++        return
++      }
++
++      if (data.conversation_id && !conversationId) {
++        setConversationId(data.conversation_id)
++      }
++
++      setMessages((prev) => [
++        ...prev,
++        { role: 'assistant', content: data.reply, timestamp: Date.now() },
++      ])
++    } catch {
++      onNotify('Failed to send message')
++    } finally {
++      setLoading(false)
++    }
++  }
++
++  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
++    if (e.key === 'Enter' && !loading && input.trim()) {
++      void sendMessage()
++    }
++  }
++
++  return (
++    <div className="chat-widget">
++      {!open && (
++        <button className="chat-toggle" onClick={toggleOpen} aria-label="Open chat">
++          <MessageCircle size={24} />
++        </button>
++      )}
++
++      {open && (
++        <div className="chat-window">
++          <div className="chat-header">
++            <h3>LS Customs Assistant</h3>
++            <button className="chat-close" onClick={closeChat} aria-label="Close chat">
++              <X size={16} />
++            </button>
++          </div>
++
++          <div className="chat-messages">
++            {messages.map((msg, i) => (
++              <div
++                key={i}
++                className={`chat-message ${msg.role === 'user' ? 'user' : 'assistant'}`}
++              >
++                <div className="chat-bubble">
++                  {msg.content}
++                </div>
++                <div className="chat-time">
++                  {new Date(msg.timestamp).toLocaleTimeString([], {
++                    hour: '2-digit',
++                    minute: '2-digit',
++                  })}
++                </div>
++              </div>
++            ))}
++            {loading && (
++              <div className="chat-message assistant">
++                <div className="chat-bubble typing-dots">
++                  <span />
++                  <span />
++                  <span />
++                </div>
++              </div>
++            )}
++            <div ref={messagesEndRef} />
++          </div>
++
++          <div className="chat-input-row">
++            <input
++              type="text"
++              value={input}
++              onChange={(e) => setInput(e.target.value)}
++              onKeyDown={handleKeyDown}
++              placeholder="Ask about rentals, bookings, services..."
++              disabled={loading}
++              aria-label="Chat message"
++            />
++            <button
++              className="chat-send"
++              onClick={() => void sendMessage()}
++              disabled={loading || !input.trim()}
++              aria-label="Send message"
++            >
++              <Send size={16} />
++            </button>
++          </div>
++        </div>
++      )}
++    </div>
++  )
++}
+diff --git a/apps/web/src/hooks/useAuth.ts b/apps/web/src/hooks/useAuth.ts
+index 9f5fc7c..8b11c7d 100644
+--- a/apps/web/src/hooks/useAuth.ts
++++ b/apps/web/src/hooks/useAuth.ts
+@@ -9,6 +9,7 @@ import type { UserIdentity } from '../types'
+ 
+ interface UseAuthReturn {
+   signedIn: boolean
++  userId: string | undefined
+   identity: UserIdentity
+   authLoading: boolean
+   authMode: 'sign-in' | 'create-account'
+@@ -20,6 +21,7 @@ interface UseAuthReturn {
+ 
+ export function useAuth(): UseAuthReturn {
+   const [signedIn, setSignedIn] = useState(false)
++  const [userId, setUserId] = useState<string | undefined>(undefined)
+   const [displayName, setDisplayName] = useState('')
+   const [displayEmail, setDisplayEmail] = useState('')
+   const [initials, setInitials] = useState('LS')
+@@ -33,6 +35,7 @@ export function useAuth(): UseAuthReturn {
+     supabase.auth.getSession().then(({ data: { session } }) => {
+       if (!mounted) return
+       setSignedIn(Boolean(session))
++      setUserId(session?.user?.id)
+       void resolveIdentity(session)
+       setAuthLoading(false)
+     })
+@@ -41,6 +44,7 @@ export function useAuth(): UseAuthReturn {
+       data: { subscription },
+     } = supabase.auth.onAuthStateChange((_event, session) => {
+       setSignedIn(Boolean(session))
++      setUserId(session?.user?.id)
+       void resolveIdentity(session)
+       setAuthLoading(false)
+     })
+@@ -53,6 +57,7 @@ export function useAuth(): UseAuthReturn {
+ 
+   async function resolveIdentity(session: Session | null) {
+     if (!session?.user) {
++      setUserId(undefined)
+       setDisplayName('')
+       setDisplayEmail('')
+       setInitials('LS')
+@@ -92,6 +97,7 @@ export function useAuth(): UseAuthReturn {
+ 
+   return {
+     signedIn,
++    userId,
+     identity: { displayName, displayEmail, initials },
+     authLoading,
+     authMode,
+diff --git a/apps/web/src/styles.css b/apps/web/src/styles.css
+index f798f7d..c014e1c 100644
+--- a/apps/web/src/styles.css
++++ b/apps/web/src/styles.css
+@@ -23,5 +23,29 @@ html, body, #root { min-height: 100%; height: auto !important; overflow-y: auto
+ .section-heading { display: flex; justify-content: space-between; align-items: end; margin: 48px 0 19px; }.section-heading h2 { margin: 5px 0 0; font-size: 21px; letter-spacing: -.5px; }.vehicle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 17px; }.vehicle-card { background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }.vehicle-image { height: 175px; position: relative; background: #c9d8d0; overflow: hidden; }.vehicle-image img { width: 100%; height: 100%; object-fit: cover; display: block; }.vehicle-image:after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(15,31,31,.28), transparent 55%); }.vehicle-image span { position: absolute; z-index: 1; left: 14px; top: 13px; color: #f1f5ef; font-size: 9px; font-weight: 700; letter-spacing: 1px; }.heart-button { position: absolute; z-index: 1; right: 13px; top: 10px; background: rgba(14,28,30,.35); color: white; font-size: 21px; border-radius: 50%; width: 29px; height: 29px; }.vehicle-info { padding: 15px 16px 16px; }.vehicle-title { display: flex; justify-content: space-between; align-items: center; gap: 6px; }.vehicle-title h3 { margin: 0; font-size: 14px; }.vehicle-title span { color: #bd8c32; font-size: 11px; display: flex; align-items: center; gap: 3px; }.vehicle-info p { min-height: 34px; margin: 8px 0 15px; color: var(--muted); font-size: 11px; }.vehicle-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); padding-top: 13px; }.vehicle-footer strong { font-size: 16px; }.vehicle-footer small { color: var(--muted); font-size: 10px; font-weight: 400; margin-left: 3px; }.small-button { padding: 9px 12px; color: white; background: #2d644f; }.service-heading { margin-top: 52px; }.service-highlight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }.service-mini { position: relative; background: #edf2eb; border-radius: var(--radius); padding: 20px 48px 21px 21px; min-height: 139px; }.service-icon { color: #3f765e; width: 37px; height: 37px; display: grid; place-items: center; background: #d7e8dc; border-radius: 9px; }.service-mini h3 { margin: 14px 0 5px; font-size: 13px; text-transform: uppercase; letter-spacing: .7px; }.service-mini p { color: var(--muted); font-size: 11px; line-height: 1.5; max-width: 360px; margin: 0; }.service-mini > span { display: block; color: #418064; font-size: 10px; font-weight: 700; margin-top: 12px; }.mini-arrow { position: absolute; right: 22px; top: 50%; color: #6c8b79; }
+ .page-heading { margin-bottom: 38px; }.page-heading h1 { font-size: 35px; }.page-heading .button, .page-heading .cart-button { margin-top: 13px; }.cart-button { background: #e2ede5; color: #35684f; }.cart-button b { background: #3a7258; color: white; border-radius: 50%; min-width: 20px; padding: 3px; font-size: 10px; }.filter-row, .category-tabs, .booking-tabs { display: flex; align-items: center; gap: 9px; margin-bottom: 25px; }.filter, .category-tabs button, .booking-tabs button { background: transparent; color: var(--muted); border-radius: 20px; padding: 9px 14px; font-size: 11px; }.filter.active, .category-tabs button.active, .booking-tabs button.active { background: #203c3a; color: white; }.search-field { margin-left: auto; border: 1px solid var(--line); border-radius: 20px; background: white; color: var(--muted); display: flex; align-items: center; gap: 7px; padding: 8px 13px; }.search-field input { border: 0; outline: 0; width: 150px; font-size: 11px; }.rentals-grid { grid-template-columns: repeat(3, 1fr); }.service-layout { display: grid; grid-template-columns: minmax(0, 1fr) 290px; gap: 24px; }.category-tabs { flex-wrap: wrap; }.service-list { display: grid; gap: 11px; }.service-row { display: flex; align-items: center; gap: 16px; background: #fff; border: 1px solid var(--line); border-radius: var(--radius); padding: 17px; }.service-row-icon { width: 46px; height: 46px; flex: 0 0 46px; display: grid; place-items: center; background: #e1eee4; color: #4a7b63; font-size: 21px; border-radius: 10px; }.service-row-copy { flex: 1; }.service-row-copy h3 { margin: 5px 0 4px; font-size: 14px; }.service-row-copy p { color: var(--muted); font-size: 11px; margin: 0 0 8px; }.service-row-copy small { color: #71877c; display: flex; align-items: center; gap: 4px; font-size: 10px; }.service-row-price { text-align: right; }.service-row-price strong { display: block; font-size: 15px; margin-bottom: 9px; }.service-row-price .small-button { display: inline-flex; }.dispatch-card { align-self: start; background: #e3eee5; border-radius: var(--radius); padding: 25px; }.dispatch-icon { background: #c5dfce; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; color: #3c7358; margin-bottom: 18px; }.dispatch-card h3 { margin: 7px 0; font-size: 19px; }.dispatch-card > p:not(.eyebrow) { color: var(--muted); font-size: 11px; line-height: 1.55; }.mechanic-mini { display: flex; align-items: center; gap: 10px; border-top: 1px solid #cbded0; margin-top: 20px; padding-top: 15px; position: relative; }.mechanic-mini strong, .mechanic-mini span { display: block; }.mechanic-mini strong { font-size: 12px; }.mechanic-mini span { color: var(--muted); font-size: 10px; margin-top: 3px; }.mechanic-avatar { background: #cbdde7; color: #3d6474; }.online-dot { position: absolute; left: 23px; top: 38px; width: 8px; height: 8px; border-radius: 50%; background: #61a76e; border: 2px solid #e3eee5; }.full { width: 100%; margin-top: 22px; }.booking-tabs { border-bottom: 1px solid var(--line); gap: 25px; }.booking-tabs button { border-radius: 0; padding: 0 0 13px; }.booking-tabs button.active { color: var(--ink); background: transparent; border-bottom: 2px solid var(--green); }.booking-tabs b { margin-left: 4px; background: #dbeae0; color: #3c7055; padding: 2px 6px; border-radius: 10px; font-size: 9px; }.booking-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 17px; }.booking-card { background: white; border: 1px solid var(--line); border-radius: var(--radius); padding: 23px; }.booking-card-head { display: flex; justify-content: space-between; color: #436d59; }.booking-card-head p { color: var(--muted); font-size: 10px; margin: 8px 0 0; }.booking-card h3 { font-size: 17px; margin: 27px 0 6px; }.status-pill { font-size: 9px; font-weight: 700; letter-spacing: .9px; padding: 5px 8px; border-radius: 12px; }.status-pill.green { background: #dfefe3; color: #3e7958; }.status-pill.amber { background: #f6e8cb; color: #ae7c30; }.booking-progress { display: flex; gap: 5px; margin: 25px 0 7px; }.booking-progress span { height: 5px; flex: 1; border-radius: 3px; background: #e3e8e5; }.booking-progress .done { background: #4d8b67; }.booking-progress .current { background: #e1b455; }.progress-labels { display: flex; justify-content: space-between; color: var(--muted); font-size: 9px; margin-bottom: 22px; }.booking-actions { display: flex; justify-content: end; gap: 8px; margin-top: 22px; }.outline-button { color: #416e5b; border: 1px solid #c1d5c8; background: transparent; }.recent-activity { background: #e8f0e9; display: flex; justify-content: space-between; align-items: center; padding: 22px 25px; border-radius: var(--radius); margin-top: 25px; }.recent-activity h2 { margin: 6px 0 5px; font-size: 16px; }.profile-layout { display: grid; grid-template-columns: 1.1fr .9fr; gap: 23px; }.profile-card { background: white; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }.profile-cover { height: 106px; background: #294747; position: relative; }.profile-cover:after { content: '✳'; position: absolute; right: 10%; top: -32px; color: rgba(229,185,95,.17); font-size: 180px; }.profile-main { text-align: center; margin-top: -32px; position: relative; }.profile-avatar { width: 65px; height: 65px; font-size: 18px; margin: 0 auto 10px; border: 5px solid white; }.profile-main h2 { font-size: 20px; margin: 0 0 4px; }.profile-main .outline-button { margin-top: 14px; }.profile-fields { padding: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 19px; }.profile-fields label { color: #536664; display: grid; gap: 7px; font-size: 10px; font-weight: 700; }.profile-fields input { border: 1px solid var(--line); border-radius: 7px; padding: 11px; color: var(--ink); outline: 0; font-size: 12px; }.settings-list { display: grid; align-content: start; gap: 9px; }.settings-row { background: white; border: 1px solid var(--line); border-radius: 11px; padding: 16px; display: flex; align-items: center; gap: 12px; color: var(--ink); text-align: left; }.settings-row > span:nth-child(2) { flex: 1; }.settings-row strong, .settings-row small { display: block; }.settings-row strong { font-size: 12px; }.settings-row small { color: var(--muted); font-size: 10px; margin-top: 4px; }.settings-row > svg { color: #8fa09c; }.settings-icon { width: 35px; height: 35px; display: grid; place-items: center; border-radius: 8px; color: #4a7a61; background: #e1eee4; }
+ .toast { position: fixed; z-index: 10; bottom: 25px; right: 25px; background: #203c3a; color: white; display: flex; align-items: center; gap: 9px; padding: 12px 13px; border-radius: 8px; box-shadow: 0 10px 30px #1a313344; font-size: 12px; }.toast svg { color: #98d0a7; }.toast button { color: white; background: transparent; display: flex; margin-left: 8px; }
++@keyframes pulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
++.chat-widget { position: fixed; bottom: 24px; right: 24px; z-index: 9; }
++.chat-toggle { width: 56px; height: 56px; border-radius: 50%; background: var(--green); color: var(--white); border: 0; cursor: pointer; box-shadow: 0 8px 24px rgba(63,120,92,.3); display: grid; place-items: center; transition: transform .2s, box-shadow .2s; }
++.chat-toggle:hover { transform: scale(1.05); box-shadow: 0 10px 30px rgba(63,120,92,.4); }
++.chat-window { width: min(100%, 380px); height: 500px; background: var(--white); border-radius: var(--radius); box-shadow: 0 20px 60px rgba(0,0,0,.15); display: flex; flex-direction: column; overflow: hidden; }
++.chat-header { height: 56px; background: var(--green); color: var(--white); padding: 0 20px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 600; }
++.chat-close { background: transparent; color: var(--white); border: 0; cursor: pointer; padding: 6px; display: grid; place-items: center; }
++.chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
++.chat-message { max-width: 85%; font-size: 12px; line-height: 1.5; }
++.chat-message.user { align-self: flex-end; text-align: right; }
++.chat-message.assistant { align-self: flex-start; text-align: left; }
++.chat-bubble { padding: 10px 14px; border-radius: 14px; display: inline-block; font-size: 12px; line-height: 1.5; }
++.chat-message.user .chat-bubble { background: #e2ede5; color: var(--ink); border-bottom-right-radius: 4px; }
++.chat-message.assistant .chat-bubble { background: #f4f6f5; color: var(--ink); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
++.chat-time { font-size: 10px; color: var(--muted); margin-top: 3px; }
++.typing-dots span { display: inline-block; width: 5px; height: 5px; background: var(--muted); border-radius: 50%; margin: 0 2px; animation: pulse .8s infinite; }
++.typing-dots span:nth-child(1) { animation-delay: 0ms; }
++.typing-dots span:nth-child(2) { animation-delay: 150ms; }
++.typing-dots span:nth-child(3) { animation-delay: 300ms; }
++.chat-input-row { display: flex; align-items: center; gap: 8px; padding: 12px; border-top: 1px solid var(--line); background: var(--white); }
++.chat-input-row input { flex: 1; border: 1px solid var(--line); border-radius: 20px; padding: 10px 16px; font-size: 12px; outline: 0; color: var(--ink); background: var(--paper); }
++.chat-input-row input:focus { border-color: var(--green); }
++.chat-send { width: 36px; height: 36px; border-radius: 50%; background: var(--green); color: var(--white); border: 0; cursor: pointer; display: grid; place-items: center; flex: 0 0 auto; }
++.chat-send:disabled { opacity: .5; cursor: not-allowed; }
+ @media (max-width: 950px) { .sidebar { width: 215px; flex-basis: 215px; }.main-content { width: calc(100% - 215px); }.hero-grid { grid-template-columns: 1fr; }.vehicle-grid { grid-template-columns: repeat(2, 1fr); }.service-layout, .profile-layout, .booking-grid { grid-template-columns: 1fr; }.dispatch-card { max-width: none; }.dispatch-card .full { max-width: 300px; } }
+-@media (max-width: 680px) { .app-frame { display: block; }.sidebar { position: fixed; z-index: 8; width: 250px; height: 100vh; transform: translateX(-105%); transition: transform .2s; box-shadow: 8px 0 30px #0003; }.sidebar.is-open { transform: translateX(0); }.main-content { width: 100%; padding-bottom: 66px; }.topbar { height: 65px; padding: 0 20px; }.mobile-menu { display: grid; place-items: center; color: var(--ink); background: transparent; margin-right: 11px; }.breadcrumb { margin-right: auto; }.breadcrumb span, .breadcrumb svg { display: none; }.user-chip span:not(.avatar), .user-chip > svg { display: none; }.top-actions { gap: 14px; }.page { padding: 32px 20px 55px; }.welcome-row h1, .page-heading h1 { font-size: 28px; }.hero-card { padding: 27px 24px; }.hero-card h2 { font-size: 27px; }.hero-buttons { flex-direction: column; align-items: start; }.location-card { min-height: auto; }.section-heading { margin-top: 37px; }.section-heading h2 { font-size: 19px; }.vehicle-grid, .service-highlight-grid, .profile-fields { grid-template-columns: 1fr; }.vehicle-image { height: 190px; }.page-heading { display: block; }.page-heading .button, .page-heading .cart-button { margin-top: 20px; }.filter-row { overflow-x: auto; padding-bottom: 5px; }.search-field { min-width: 210px; }.service-row { align-items: flex-start; }.service-row-price { margin-left: auto; }.service-row-copy p { display: none; }.service-row-copy h3 { line-height: 1.3; }.service-row-price strong { font-size: 13px; }.recent-activity { display: block; }.recent-activity .text-button { margin-top: 15px; }.mobile-nav { position: fixed; z-index: 7; bottom: 0; left: 0; right: 0; height: 65px; display: flex; justify-content: space-around; align-items: center; background: #fff; border-top: 1px solid var(--line); }.mobile-nav button { display: grid; justify-items: center; gap: 4px; color: #9aa6a3; background: transparent; font-size: 9px; }.mobile-nav button.active { color: #377156; }.toast { left: 15px; right: 15px; bottom: 78px; }.booking-card { padding: 18px; } }
++@media (max-width: 680px) { .app-frame { display: block; }.sidebar { position: fixed; z-index: 8; width: 250px; height: 100vh; transform: translateX(-105%); transition: transform .2s; box-shadow: 8px 0 30px #0003; }.sidebar.is-open { transform: translateX(0); }.main-content { width: 100%; padding-bottom: 66px; }.topbar { height: 65px; padding: 0 20px; }.mobile-menu { display: grid; place-items: center; color: var(--ink); background: transparent; margin-right: 11px; }.breadcrumb { margin-right: auto; }.breadcrumb span, .breadcrumb svg { display: none; }.user-chip span:not(.avatar), .user-chip > svg { display: none; }.top-actions { gap: 14px; }.page { padding: 32px 20px 55px; }.welcome-row h1, .page-heading h1 { font-size: 28px; }.hero-card { padding: 27px 24px; }.hero-card h2 { font-size: 27px; }.hero-buttons { flex-direction: column; align-items: start; }.location-card { min-height: auto; }.section-heading { margin-top: 37px; }.section-heading h2 { font-size: 19px; }.vehicle-grid, .service-highlight-grid, .profile-fields { grid-template-columns: 1fr; }.vehicle-image { height: 190px; }.page-heading { display: block; }.page-heading .button, .page-heading .cart-button { margin-top: 20px; }.filter-row { overflow-x: auto; padding-bottom: 5px; }.search-field { min-width: 210px; }.service-row { align-items: flex-start; }.service-row-price { margin-left: auto; }.service-row-copy p { display: none; }.service-row-copy h3 { line-height: 1.3; }.service-row-price strong { font-size: 13px; }.recent-activity { display: block; }.recent-activity .text-button { margin-top: 15px; }.mobile-nav { position: fixed; z-index: 7; bottom: 0; left: 0; right: 0; height: 65px; display: flex; justify-content: space-around; align-items: center; background: #fff; border-top: 1px solid var(--line); }.mobile-nav button { display: grid; justify-items: center; gap: 4px; color: #9aa6a3; background: transparent; font-size: 9px; }.mobile-nav button.active { color: #377156; }.toast { left: 15px; right: 15px; bottom: 78px; }.booking-card { padding: 18px; }.chat-widget { bottom: 16px; right: 16px; }.chat-window { width: min(100%, 340px); height: 460px; } }
+diff --git a/apps/web/src/types/index.ts b/apps/web/src/types/index.ts
+index b3f51ea..2c875c0 100644
+--- a/apps/web/src/types/index.ts
++++ b/apps/web/src/types/index.ts
+@@ -43,3 +43,18 @@ export interface PageHeadingProps {
+   detail: string
+   action?: ReactNode
+ }
++
++/**
++ * A single chat message exchanged with the LS Customs AI assistant.
++ * Used by the ChatBot floating widget to render message history.
++ */
++export interface ChatMessage {
++  role: 'user' | 'assistant'
++  content: string
++  timestamp: number
++}
++
++export interface ChatBotProps {
++  userId: string | undefined
++  onNotify: (message: string) => void
++}
+-- 
+2.53.0.windows.1
+

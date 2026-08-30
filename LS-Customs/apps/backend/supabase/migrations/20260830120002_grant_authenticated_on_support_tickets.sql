@@ -1,0 +1,11 @@
+-- Grant authenticated role privileges on support_tickets.
+-- The 20260819120535_grants.sql migration granted SELECT/INSERT/UPDATE/DELETE
+-- on all tables in schema public to authenticated, but that only applies to
+-- objects that existed at the time. support_tickets was added later
+-- (20260828120000_add_support_tickets.sql) and never received the grant, so
+-- admin reads from the panel (useAdminTickets) get 42501 permission denied
+-- before RLS is even evaluated.
+--
+-- Companion to 20260830120001_grant_service_role_on_support_tickets.sql
+-- which fixed the same gap for service_role.
+grant select, insert, update, delete on public.support_tickets to authenticated;
