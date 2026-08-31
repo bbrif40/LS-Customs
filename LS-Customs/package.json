@@ -13,11 +13,13 @@
     "node": ">=18"
   },
   "devDependencies": {
+    "concurrently": "^10.0.5",
     "supabase": "^2.115.0",
     "turbo": "^2.1.0"
   },
   "scripts": {
-    "dev": "npm run dev --workspace=apps/web",
+    "prepare": "git config core.hooksPath LS-Customs/.githooks",
+    "dev": "npm run db:start --workspace=apps/backend && concurrently --names \"FNS,WEB\" --prefix-colors \"cyan,magenta\" \"npm run functions:serve --workspace=apps/backend\" \"npm run dev --workspace=apps/web\"",
     "web:dev": "npm run dev --workspace=apps/web",
     "web:build": "npm run build --workspace=apps/web",
     "db:start": "npm run db:start --workspace=apps/backend",

@@ -17,13 +17,12 @@ import { AuthModal } from './components/auth/AuthModal'
 import { GuestWorkspace } from './components/views/GuestWorkspace'
 import { Dashboard } from './components/views/Dashboard'
 import { Rentals } from './components/views/Rentals'
-import { MechanicServices } from './components/views/MechanicServices'
+import { MechanicBookingFlow } from './components/views/mechanic/MechanicBookingFlow'
 import { Bookings } from './components/views/Bookings'
 import { Profile } from './components/views/Profile'
 import { ChatBot } from './components/chat/ChatBot'
 import { AdminLayout } from './components/admin/AdminLayout'
 import { AdminLogin } from './components/admin/AdminLogin'
-import { TicketRealtimeProvider } from './components/common/TicketRealtimeProvider'
 import type { View } from './types'
 
 type AppMode = 'customer' | 'admin' | 'admin-login'
@@ -42,7 +41,6 @@ export function App() {
 
   const [view, setView] = useState<View>('home')
   const [menuOpen, setMenuOpen] = useState(false)
-  const [cartCount, setCartCount] = useState(1)
   const [toast, setToast] = useState('')
   const [confirmSignOut, setConfirmSignOut] = useState(false)
 
@@ -80,11 +78,6 @@ export function App() {
     window.setTimeout(() => setToast(''), 2500)
   }
 
-  const addService = (name: string) => {
-    setCartCount((count) => count + 1)
-    notify(`${name} added to your service cart`)
-  }
-
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) {
@@ -107,15 +100,13 @@ export function App() {
 
   if (appMode === 'admin' && adminAuth.isAuthenticated) {
     return (
-      <TicketRealtimeProvider userId={adminAuth.userId ?? null} userRole="admin">
-        <AdminLayout
-          userName={adminAuth.userName}
-          onSignOut={async () => {
-            await adminAuth.signOut()
-            navigateTo('admin-login')
-          }}
-        />
-      </TicketRealtimeProvider>
+      <AdminLayout
+        userName={adminAuth.userName}
+        onSignOut={async () => {
+          await adminAuth.signOut()
+          navigateTo('admin-login')
+        }}
+      />
     )
   }
 
@@ -144,91 +135,92 @@ export function App() {
   }
 
   return (
-    <TicketRealtimeProvider userId={userId ?? null} userRole="customer">
-      <div className="app-frame">
-        <Sidebar
+    <div className="app-frame">
+      <Sidebar
+        view={view}
+        menuOpen={menuOpen}
+        displayName={identity.displayName}
+        initials={identity.initials}
+        onView={(v) => { setView(v); setMenuOpen(false) }}
+        onNotify={notify}
+        onSignOut={() => setConfirmSignOut(true)}
+      />
+
+      <main className="main-content">
+        <Header
           view={view}
           menuOpen={menuOpen}
-          cartCount={cartCount}
           displayName={identity.displayName}
           initials={identity.initials}
-          onView={(v) => { setView(v); setMenuOpen(false) }}
+          onToggleMenu={() => setMenuOpen((open) => !open)}
+          onView={setView}
           onNotify={notify}
-          onSignOut={() => setConfirmSignOut(true)}
         />
 
-        <main className="main-content">
-          <Header
-            view={view}
-            menuOpen={menuOpen}
+        {view === 'home' && (
+          <Dashboard
             displayName={identity.displayName}
             initials={identity.initials}
-            onToggleMenu={() => setMenuOpen((open) => !open)}
             onView={setView}
             onNotify={notify}
           />
-
-          {view === 'home' && (
-            <Dashboard
-              displayName={identity.displayName}
-              initials={identity.initials}
-              onView={setView}
-              onNotify={notify}
-            />
-          )}
-          {view === 'rentals' && <Rentals onNotify={notify} />}
-          {view === 'services' && (
-            <MechanicServices cartCount={cartCount} onAdd={addService} onNotify={notify} />
-          )}
-          {view === 'bookings' && <Bookings onNotify={notify} />}
-          {view === 'profile' && (
-            <Profile
-              userId={userId}
-              displayName={identity.displayName}
-              email={identity.displayEmail}
-              initials={identity.initials}
-              onNotify={notify}
-            />
-          )}
-
-          <WorkspaceFooter onNotify={notify} />
-        </main>
-
-        <nav className="mobile-nav">
-          {navItems.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              className={view === id ? 'active' : ''}
-              onClick={() => setView(id)}
-            >
-              <Icon size={19} />
-              <span>{label === 'Workspace' ? 'Home' : label}</span>
-            </button>
-          ))}
-        </nav>
-
-        {toast && (
-          <div className="toast">
-            <ShieldCheck size={17} />{' '}
-            {toast}
-            <button onClick={() => setToast('')} aria-label="Dismiss">
-              <X size={15} />
-            </button>
-          </div>
         )}
-
-        {confirmSignOut && (
-          <SignOutConfirmation
-            onCancel={() => setConfirmSignOut(false)}
-            onConfirm={() => {
-              setConfirmSignOut(false)
-              void handleSignOut()
-            }}
+        {view === 'rentals' && <Rentals onNotify={notify} />}
+        {view === 'services' && (
+          <MechanicBookingFlow
+            userId={userId}
+            onNotify={notify}
+            onBackToHome={() => setView('home')}
+          />
+        )}
+        {view === 'bookings' && <Bookings onNotify={notify} />}
+        {view === 'profile' && (
+          <Profile
+            userId={userId}
+            displayName={identity.displayName}
+            email={identity.displayEmail}
+            initials={identity.initials}
+            onNotify={notify}
           />
         )}
 
-        <ChatBot userId={userId} onNotify={notify} />
-      </div>
-    </TicketRealtimeProvider>
+        <WorkspaceFooter onNotify={notify} />
+      </main>
+
+      <nav className="mobile-nav">
+        {navItems.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            className={view === id ? 'active' : ''}
+            onClick={() => setView(id)}
+          >
+            <Icon size={19} />
+            <span>{label === 'Workspace' ? 'Home' : label}</span>
+          </button>
+        ))}
+      </nav>
+
+      {toast && (
+        <div className="toast">
+          <ShieldCheck size={17} />{' '}
+          {toast}
+          <button onClick={() => setToast('')} aria-label="Dismiss">
+            <X size={15} />
+          </button>
+        </div>
+      )}
+
+      {confirmSignOut && (
+        <SignOutConfirmation
+          onCancel={() => setConfirmSignOut(false)}
+          onConfirm={() => {
+            setConfirmSignOut(false)
+            void handleSignOut()
+          }}
+        />
+      )}
+
+      <ChatBot userId={userId} onNotify={notify} />
+    </div>
   )
 }

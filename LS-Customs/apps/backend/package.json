@@ -14,6 +14,7 @@
     "db:types": "npx supabase gen types typescript --linked > ../../packages/shared-types/src/database.types.ts",
     "functions:serve": "npx supabase functions serve --env-file supabase/.env",
     "functions:deploy": "npx supabase functions deploy",
+    "precommit:check": "node scripts/check-secrets.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "npx eslint supabase/functions/ --ext .ts"
   },

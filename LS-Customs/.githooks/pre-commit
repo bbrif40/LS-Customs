@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+# Pre-commit guard: scan staged files for hardcoded secrets.
+# See apps/backend/scripts/check-secrets.mjs for the rule set.
+#
+# Resolve the script path relative to *this hook's own location*, not the
+# git toplevel — that way the hook works whether the working tree sits at
+# the git root or in a subdirectory (e.g., LS-Customs/ inside a parent repo).
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+# Walk from the script's location up to the git root and re-add the relative
+# path of the scanner. This is robust against linked worktrees and nested layouts.
+REL_SCRIPT="LS-Customs/apps/backend/scripts/check-secrets.mjs"
+SCANNER="$REPO_ROOT/$REL_SCRIPT"
+
+if [ ! -f "$SCANNER" ]; then
+  # Fall back: try the script's own location + relative path
+  SCANNER="$SCRIPT_DIR/../apps/backend/scripts/check-secrets.mjs"
+fi
+
+if [ ! -f "$SCANNER" ]; then
+  echo "pre-commit: cannot find check-secrets.mjs" >&2
+  echo "  tried: $REPO_ROOT/$REL_SCRIPT" >&2
+  echo "  tried: $SCRIPT_DIR/../apps/backend/scripts/check-secrets.mjs" >&2
+  exit 2
+fi
+
+node "$SCANNER"

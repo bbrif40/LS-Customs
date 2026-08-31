@@ -1,4 +1,4 @@
-# DATABASE.md — Supabase PostgreSQL Schema
+so confusi# DATABASE.md — Supabase PostgreSQL Schema
 
 > All tables live in the `public` schema unless noted. All primary keys are `uuid default gen_random_uuid()`. All tables have `created_at timestamptz default now()`; mutable tables also have `updated_at timestamptz default now()` maintained by trigger.
 
