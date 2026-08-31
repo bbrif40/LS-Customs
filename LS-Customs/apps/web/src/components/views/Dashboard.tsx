@@ -2,6 +2,7 @@
  * Dashboard — home view with welcome row, hero cards, featured rentals, and trending services.
  * Featured rentals come from Supabase via useCustomerVehicles (active only, top by rating).
  */
+import { useEffect, useState } from 'react'
 import { ChevronRight, Gauge, Compass } from 'lucide-react'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { VehicleCard } from '../common/VehicleCard'
@@ -16,19 +17,48 @@ interface DashboardProps {
   onNotify: (message: string) => void
 }
 
+function getGreeting(hour: number): string {
+  if (hour >= 5 && hour < 12) return 'Good morning'
+  if (hour >= 12 && hour < 18) return 'Good afternoon'
+  return 'Good evening'
+}
+
+function formatDashboardDate(date: Date): string {
+  // "Saturday, 12 October 2024" → "SATURDAY, 12 OCTOBER 2024"
+  return date
+    .toLocaleDateString('en-US', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+    .toUpperCase()
+}
+
 export function Dashboard({ displayName, initials, onView, onNotify }: DashboardProps) {
   const { vehicles: featured, loading: featuredLoading } = useCustomerVehicles({
     limit: 4,
     orderByRating: true,
   })
 
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const tick = () => setNow(new Date())
+    tick()
+    const id = setInterval(tick, 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const greeting = getGreeting(now.getHours())
+  const dateLabel = formatDashboardDate(now)
+
   return (
     <div className="page dashboard-page">
       <section className="welcome-row">
         <div>
-          <p className="eyebrow">SATURDAY, 12 OCTOBER 2024</p>
+          <p className="eyebrow">{dateLabel}</p>
           <h1>
-            Good morning, {displayName} <span>✦</span>
+            {greeting}, {displayName} <span>✦</span>
           </h1>
           <p className="muted">Your garage is in good hands. What do you need today?</p>
         </div>
