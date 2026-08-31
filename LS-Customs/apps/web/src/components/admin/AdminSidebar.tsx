@@ -32,6 +32,7 @@ interface AdminSidebarProps {
   onSignOut: () => void
   userName: string
   openTicketCount?: number
+  activeBookingsCount?: number
 }
 
 const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[] = [
@@ -45,7 +46,14 @@ const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[]
   { id: 'revenue', label: 'Revenue', icon: DollarSign },
 ]
 
-export function AdminSidebar({ currentView, onViewChange, onSignOut, userName, openTicketCount = 0 }: AdminSidebarProps) {
+export function AdminSidebar({
+  currentView,
+  onViewChange,
+  onSignOut,
+  userName,
+  openTicketCount = 0,
+  activeBookingsCount = 0,
+}: AdminSidebarProps) {
   return (
     <aside className="admin-sidebar">
       {/* Brand */}
@@ -73,6 +81,11 @@ export function AdminSidebar({ currentView, onViewChange, onSignOut, userName, o
             {id === 'tickets' && openTicketCount > 0 && (
               <span className="admin-nav-badge" aria-label={`${openTicketCount} open tickets`}>
                 {openTicketCount > 99 ? '99+' : openTicketCount}
+              </span>
+            )}
+            {id === 'bookings' && activeBookingsCount > 0 && (
+              <span className="admin-nav-badge" aria-label={`${activeBookingsCount} active bookings`}>
+                {activeBookingsCount > 99 ? '99+' : activeBookingsCount}
               </span>
             )}
           </button>

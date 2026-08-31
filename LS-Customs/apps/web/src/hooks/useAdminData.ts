@@ -421,8 +421,7 @@ export function useAdminVehicleBookings() {
           profiles!inner (
             id,
             full_name,
-            phone,
-            email
+            phone
           ),
           vehicles!inner (
             id,
@@ -488,8 +487,7 @@ export function useAdminServiceBookings() {
           profiles!inner (
             id,
             full_name,
-            phone,
-            email
+            phone
           ),
           mechanic_profiles!left (
             id,
@@ -890,6 +888,55 @@ export function useOpenTicketCount(): number {
         .select('id', { count: 'exact', head: true })
         .in('status', ['open', 'in_progress'])
       if (!cancelled && !error && typeof c === 'number') setCount(c)
+    }
+    void fetchCount()
+
+    const id = window.setInterval(fetchCount, 1_000)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [])
+
+  return count
+}
+
+// Statuses that mean the booking still needs admin attention. `completed`
+// and `cancelled` are terminal and intentionally excluded.
+const ACTIVE_BOOKING_STATUSES = [
+  'pending',
+  'confirmed',
+  'assigned',
+  'en_route',
+  'in_progress',
+] as const
+
+/**
+ * useAdminBookingsCount — combined active-bookings count (vehicle rentals
+ * + mechanic services) for the Bookings nav badge. Two head-only counts
+ * summed so neither table pulls row data. Light polling keeps the badge
+ * close to live without needing realtime infra.
+ */
+export function useAdminBookingsCount(): number {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    let cancelled = false
+    const fetchCount = async () => {
+      const [vehicles, services] = await Promise.all([
+        supabase
+          .from('vehicle_bookings')
+          .select('id', { count: 'exact', head: true })
+          .in('status', [...ACTIVE_BOOKING_STATUSES]),
+        supabase
+          .from('service_bookings')
+          .select('id', { count: 'exact', head: true })
+          .in('status', [...ACTIVE_BOOKING_STATUSES]),
+      ])
+      if (cancelled) return
+      const v = vehicles.count ?? 0
+      const s = services.count ?? 0
+      setCount(v + s)
     }
     void fetchCount()
 

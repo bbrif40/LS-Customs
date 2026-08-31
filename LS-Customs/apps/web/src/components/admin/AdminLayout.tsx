@@ -15,7 +15,7 @@ import { AdminUsers } from './AdminUsers'
 import { AdminBookings } from './AdminBookings'
 import { AdminRevenue } from './AdminRevenue'
 import { AdminTickets } from './AdminTickets'
-import { useOpenTicketCount } from '../../hooks/useAdminData'
+import { useOpenTicketCount, useAdminBookingsCount } from '../../hooks/useAdminData'
 import type { AdminView } from './AdminSidebar'
 
 interface AdminLayoutProps {
@@ -37,6 +37,7 @@ const ALL_VIEWS: AdminView[] = [
 export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
   const [currentView, setCurrentView] = useState<AdminView>('overview')
   const openTicketCount = useOpenTicketCount()
+  const activeBookingsCount = useAdminBookingsCount()
 
   // Each panel is always mounted; only the active one is visible.
   // This keeps cached data warm and avoids a loading spinner on every switch.
@@ -71,6 +72,7 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
         onSignOut={onSignOut}
         userName={userName}
         openTicketCount={openTicketCount}
+        activeBookingsCount={activeBookingsCount}
       />
       <div className="admin-views">
         {ALL_VIEWS.map((view) => (
