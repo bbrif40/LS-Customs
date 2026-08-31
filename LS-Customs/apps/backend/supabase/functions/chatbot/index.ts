@@ -19,7 +19,6 @@ import {
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
 
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") ?? "";
-
 // Ticket creation keywords
 const TICKET_KEYWORDS = [
   "create ticket", "open ticket", "submit ticket", "support ticket",
