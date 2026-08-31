@@ -8,7 +8,6 @@ import type { View } from '../../types'
 interface SidebarProps {
   view: View
   menuOpen: boolean
-  cartCount: number
   displayName: string
   initials: string
   onView: (view: View) => void

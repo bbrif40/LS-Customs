@@ -23,6 +23,23 @@ export interface Service {
   price: string
   duration: string
   icon: ReactNode
+  /** Optional DB id, populated when the row came from Supabase. */
+  id?: string
+  /** Price stored as integer cents to avoid float math. */
+  priceCents?: number
+  /** Duration stored as integer minutes for scheduling. */
+  durationMinutes?: number
+}
+
+/** A single booking created by the MechanicBookingFlow. */
+export interface ServiceBooking {
+  id: string
+  serviceName: string
+  servicePrice: string
+  scheduledAt: string
+  addressLine1: string
+  addressCity: string
+  status: 'pending' | 'confirmed' | 'assigned' | 'en_route' | 'in_progress' | 'completed' | 'cancelled'
 }
 
 export interface NavItem {
