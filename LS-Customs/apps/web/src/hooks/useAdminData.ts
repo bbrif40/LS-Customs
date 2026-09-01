@@ -469,7 +469,15 @@ export function useAdminServiceBookings() {
     setLoading(true)
     setError(null)
     try {
-      const { data: result, error: queryError } = await supabase
+      // The previous query embedded `service_booking_items!left ( ...
+      // mechanic_services!inner ( ... ) )` directly on `service_bookings`.
+      // PostgREST frequently rejects nested embeds when the generated
+      // schema cache is missing the `service_booking_items.service_booking_id`
+      // relationship entry, returning 400 and leaving the Bookings panel
+      // stuck on the "Failed to load bookings" error. To make the call
+      // robust against the schema cache, fetch the bookings first and
+      // join the items in a follow-up query keyed by booking id.
+      const { data: rows, error: queryError } = await supabase
         .from('service_bookings')
         .select(`
           id,
@@ -508,8 +516,22 @@ export function useAdminServiceBookings() {
             id,
             line1,
             city
-          ),
-          service_booking_items!left (
+          )
+        `)
+        .order('created_at', { ascending: false })
+
+      if (queryError) throw queryError
+
+      const safeRows = (rows ?? []) as unknown as ServiceBookingWithDetails[]
+
+      // Second pass: pull items for the booking ids we just loaded.
+      // If this fails we still want to show the bookings (just without
+      // the line-item list), so a non-fatal empty array is fine.
+      const bookingIds = safeRows.map((b) => b.id)
+      if (bookingIds.length > 0) {
+        const { data: itemRows, error: itemsError } = await supabase
+          .from('service_booking_items')
+          .select(`
             id,
             service_booking_id,
             mechanic_service_id,
@@ -521,12 +543,27 @@ export function useAdminServiceBookings() {
               main_category,
               base_price
             )
-          )
-        `)
-        .order('created_at', { ascending: false })
+          `)
+          .in('service_booking_id', bookingIds)
 
-      if (queryError) throw queryError
-      setData(result as unknown as ServiceBookingWithDetails[])
+        if (!itemsError && itemRows) {
+          const byBooking = new Map<string, ServiceBookingWithDetails['service_booking_items']>()
+          for (const row of itemRows as unknown as NonNullable<ServiceBookingWithDetails['service_booking_items']>) {
+            const list = byBooking.get(row.service_booking_id) ?? []
+            list.push(row)
+            byBooking.set(row.service_booking_id, list)
+          }
+          for (const booking of safeRows) {
+            booking.service_booking_items = byBooking.get(booking.id) ?? []
+          }
+        } else {
+          for (const booking of safeRows) {
+            booking.service_booking_items = []
+          }
+        }
+      }
+
+      setData(safeRows)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch service bookings')
     } finally {
