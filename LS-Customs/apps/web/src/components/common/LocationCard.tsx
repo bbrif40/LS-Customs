@@ -1,10 +1,12 @@
 /**
  * LocationCard — geolocation picker with map embed.
- * Uses the geocode-address Edge Function for address-to-coordinate lookup.
+ * Uses the geocode-address Edge Function for address-to-coordinate lookup
+ * and renders the resolved pin on a Leaflet + OpenStreetMap map.
  */
 import { useState } from 'react'
 import { MapPin, ChevronRight } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
+import { MapView } from './map'
 
 interface LocationCardProps {
   onNotify: (message: string) => void
@@ -50,10 +52,6 @@ export function LocationCard({ onNotify }: LocationCardProps) {
     setAddress(resultData.formatted_address || address)
   }
 
-  const mapUrl = coordinates
-    ? `https://www.google.com/maps?q=${coordinates.lat},${coordinates.lng}&z=15&output=embed`
-    : ''
-
   return (
     <article className="location-card">
       <div className="card-top">
@@ -64,11 +62,18 @@ export function LocationCard({ onNotify }: LocationCardProps) {
         <MapPin className="pin" size={24} />
       </div>
       {coordinates ? (
-        <iframe
-          className="google-map"
-          title="Shared mechanic service location"
-          src={mapUrl}
-          loading="lazy"
+        <MapView
+          pins={[
+            {
+              id: 'me',
+              lat: coordinates.lat,
+              lng: coordinates.lng,
+              title: address,
+            },
+          ]}
+          center={coordinates}
+          zoom={15}
+          height={300}
         />
       ) : (
         <div className="map-lines">

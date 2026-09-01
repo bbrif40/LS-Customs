@@ -478,6 +478,10 @@ export function useAdminServiceBookings() {
           address_id,
           pin_lat,
           pin_lng,
+          -- current_lat, current_lng, location_updated_at
+          -- are read by AdminBookingDetail's live map. They are added
+          -- by migration 20260901120000 — until the migration is
+          -- applied, the SELECT omits them so the page still loads.
           scheduled_at,
           status,
           total_price,

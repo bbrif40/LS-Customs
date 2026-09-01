@@ -246,6 +246,9 @@ export interface Database {
           address_id: string | null
           pin_lat: number | null
           pin_lng: number | null
+          current_lat: number | null
+          current_lng: number | null
+          location_updated_at: string | null
           scheduled_at: string
           status: 'pending' | 'confirmed' | 'assigned' | 'en_route' | 'in_progress' | 'completed' | 'cancelled'
           total_price: number
@@ -260,6 +263,9 @@ export interface Database {
           address_id?: string | null
           pin_lat?: number | null
           pin_lng?: number | null
+          current_lat?: number | null
+          current_lng?: number | null
+          location_updated_at?: string | null
           scheduled_at: string
           status?: 'pending' | 'confirmed' | 'assigned' | 'en_route' | 'in_progress' | 'completed' | 'cancelled'
           total_price?: number
@@ -274,6 +280,9 @@ export interface Database {
           address_id?: string | null
           pin_lat?: number | null
           pin_lng?: number | null
+          current_lat?: number | null
+          current_lng?: number | null
+          location_updated_at?: string | null
           scheduled_at?: string
           status?: 'pending' | 'confirmed' | 'assigned' | 'en_route' | 'in_progress' | 'completed' | 'cancelled'
           total_price?: number

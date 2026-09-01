@@ -415,32 +415,6 @@
   position: relative;
 }
 
-.admin-nav-label {
-  flex: 1;
-  min-width: 0;
-}
-
-.admin-nav-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  border-radius: 10px;
-  background: #ef4444;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  font-family: 'DM Sans', sans-serif;
-  box-shadow: 0 0 0 2px var(--admin-sidebar);
-}
-
-.admin-nav-item.active .admin-nav-badge {
-  box-shadow: 0 0 0 2px var(--admin-sidebar-active);
-}
-
 .admin-nav-item:hover {
   background: var(--admin-sidebar-hover);
   color: #d4d9e6;
@@ -2209,3 +2183,10 @@
   .admin-revenue-header { flex-direction: column; gap: 12px; }
   .admin-revenue-actions { flex-wrap: wrap; }
 }
+
+/* ── Map panel ─────────────────────────────────────────────── */
+.admin-map-panel { background: var(--admin-card); border: 1px solid var(--admin-border); border-radius: var(--admin-radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--admin-shadow); }
+.admin-map-panel h3 { margin: 0 0 4px; font-size: 14px; color: var(--admin-ink); }
+.admin-map-panel .admin-map-panel-sub { color: var(--admin-muted); font-size: 12px; margin: 0 0 12px; }
+.admin-map-panel .map-skeleton { background: #f3f4f6; }
+.admin-map-panel .leaflet-container { border: 1px solid var(--admin-border); }

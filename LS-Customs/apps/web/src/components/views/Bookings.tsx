@@ -1,14 +1,23 @@
 /**
  * Bookings — active and completed booking cards with progress indicators.
+ *
+ * The "View live map" button on the mechanic service card opens a modal
+ * with a small Leaflet map. The page itself is still mock data — when a
+ * real `useCustomerServiceBookings` hook exists, swap the hard-coded pin
+ * for the active booking's coordinates.
  */
-import { ChevronRight, CarFront, Wrench, Plus } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronRight, CarFront, Wrench, Plus, X } from 'lucide-react'
 import { PageHeading } from '../common/PageHeading'
+import { MapView } from '../common/map'
 
 interface BookingsProps {
   onNotify: (message: string) => void
 }
 
 export function Bookings({ onNotify }: BookingsProps) {
+  const [liveMapOpen, setLiveMapOpen] = useState(false)
+
   return (
     <div className="page">
       <PageHeading
@@ -78,7 +87,7 @@ export function Bookings({ onNotify }: BookingsProps) {
             <button className="outline-button" onClick={() => onNotify('Calling Mike Reynolds')}>
               Call
             </button>
-            <button className="button dark-button" onClick={() => onNotify('Live map opened')}>
+            <button className="button dark-button" onClick={() => setLiveMapOpen(true)}>
               View live map
             </button>
           </div>
@@ -95,6 +104,41 @@ export function Bookings({ onNotify }: BookingsProps) {
           </button>
         </div>
       </div>
+
+      {liveMapOpen && (
+        <div className="map-modal-backdrop" onClick={() => setLiveMapOpen(false)}>
+          <div className="map-modal" onClick={(e) => e.stopPropagation()}>
+            <header>
+              <h3>Live service tracking</h3>
+              <button
+                type="button"
+                onClick={() => setLiveMapOpen(false)}
+                aria-label="Close live map"
+              >
+                <X size={18} />
+              </button>
+            </header>
+            {/* TODO: replace with useCustomerServiceBookings().activeBooking coords. */}
+            <MapView
+              pins={[
+                {
+                  id: 'active',
+                  lat: 34.0407,
+                  lng: -118.2468,
+                  title: 'Brake pad replacement',
+                  description: 'Mike Reynolds · 3.2 mi away',
+                },
+              ]}
+              center={{ lat: 34.0407, lng: -118.2468 }}
+              zoom={15}
+              height={420}
+            />
+            <footer>
+              <small>Pin updates every 30s once live tracking is enabled.</small>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

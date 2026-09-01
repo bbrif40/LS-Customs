@@ -9,6 +9,8 @@ import {
   useAdminVehicleBookings,
   useAdminServiceBookings,
 } from '../../hooks/useAdminData'
+import { MapView, type MapPin } from '../common/map'
+import { AdminBookingDetail } from './AdminBookingDetail'
 import type { VehicleBooking, ServiceBooking, Profile, Vehicle, Address, MechanicProfile, MechanicService } from '@ls-customs/shared-types'
 
 type BookingTab = 'vehicles' | 'services'
@@ -60,6 +62,7 @@ export function AdminBookings() {
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | BookingStatus>('all')
   const [currentPage, setCurrentPage] = useState(1)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const pageSize = 10
 
   const {
@@ -105,6 +108,28 @@ export function AdminBookings() {
   )
 
   const totalPages = Math.ceil(filteredBookings.length / pageSize)
+
+  // Build the pin set for the live service map. Only service bookings with
+  // an explicit pin (set by the customer's LocationPicker in StepLocation)
+  // are shown — vehicle bookings have no lat/lng column today.
+  const servicePins: MapPin[] = (serviceBookingsWithDetails ?? [])
+    .filter(
+      (b): b is ServiceBookingWithDetails & { pin_lat: number; pin_lng: number } =>
+        b.pin_lat != null && b.pin_lng != null,
+    )
+    .map((b) => {
+      const customer = b.profiles?.[0]?.full_name ?? `Booking #${b.id.slice(0, 8)}`
+      const serviceName = b.service_booking_items?.[0]?.mechanic_services?.name ?? 'Service'
+      return {
+        id: b.id,
+        lat: b.pin_lat,
+        lng: b.pin_lng,
+        title: customer,
+        description: `${serviceName} — ${statusLabels[b.status] ?? b.status}`,
+        // Color the pin by status so the map mirrors the table.
+        color: statusColors[b.status] ?? undefined,
+      }
+    })
 
   const handleStatusChange = async (
     booking: VehicleBooking | ServiceBooking,
@@ -232,6 +257,17 @@ export function AdminBookings() {
         ))}
       </div>
 
+      {/* ── Live Service Map ─────────────────────────────────── */}
+      <section className="admin-map-panel">
+        <h3>Live service map</h3>
+        <p className="admin-map-panel-sub">
+          {servicePins.length === 0
+            ? 'No service bookings with a pinned location yet. Customers can drop a pin in Step 4 of the booking flow.'
+            : `${servicePins.length} pinned service booking${servicePins.length === 1 ? '' : 's'} on the map.`}
+        </p>
+        <MapView pins={servicePins} height={360} />
+      </section>
+
       {/* ── Bookings Table ───────────────────────────────────── */}
       <div className="admin-vehicle-grid" style={{ gridTemplateColumns: '1fr' }}>
         {filteredBookings.length === 0 ? (
@@ -265,8 +301,18 @@ export function AdminBookings() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedBookings.map((booking) => (
-                  <tr key={booking.id}>
+                {paginatedBookings.map((booking) => {
+                  const isServiceRow = activeTab === 'services'
+                  const isSelected = selectedId === booking.id
+                  return (
+                  <tr
+                    key={booking.id}
+                    onClick={isServiceRow ? () => setSelectedId(booking.id) : undefined}
+                    style={{
+                      cursor: isServiceRow ? 'pointer' : 'default',
+                      background: isSelected ? 'rgba(232, 168, 56, 0.06)' : undefined,
+                    }}
+                  >
                     <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
                       {booking.id.slice(0, 8)}...
                     </td>
@@ -378,7 +424,8 @@ export function AdminBookings() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
 
@@ -410,6 +457,16 @@ export function AdminBookings() {
           </div>
         )}
       </div>
+
+      {/* ── Booking detail drawer ─────────────────────────────── */}
+      <AdminBookingDetail
+        booking={
+          selectedId
+            ? (serviceBookingsWithDetails ?? []).find((b) => b.id === selectedId) ?? null
+            : null
+        }
+        onClose={() => setSelectedId(null)}
+      />
     </div>
   )
 }

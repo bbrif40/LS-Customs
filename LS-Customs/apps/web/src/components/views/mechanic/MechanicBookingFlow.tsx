@@ -2,9 +2,7 @@
  * MechanicBookingFlow — orchestrator for the multi-step mechanic booking flow.
  *
  * Owns the form state, validates per step, and renders the active step.
- * On confirm, inserts a `service_bookings` row plus the linked address and
- * `service_booking_items` row, so the admin Bookings panel can display the
- * service name, address, and price.
+ * On confirm, inserts a `service_bookings` row and shows the Confirmed step.
  *
  * Falls back to a generated reference + no insert if the table is missing,
  * mirroring useServices' graceful degradation.
@@ -25,12 +23,14 @@ import { StepConfirmed } from './StepConfirmed'
 import type { Service, ServiceBooking } from '../../../types'
 
 export interface ChosenAddress {
-  /** Present when source === 'default' — the saved default address id. */
-  id?: string
   line1: string
   city: string
   label?: string
   source: 'default' | 'custom'
+  /** Set when the user drops a pin on the LocationPicker map. */
+  pin_lat?: number | null
+  /** Set when the user drops a pin on the LocationPicker map. */
+  pin_lng?: number | null
 }
 
 interface MechanicBookingFlowProps {
@@ -53,14 +53,6 @@ function buildScheduledAt(date: string, time: string): string {
 
 function formatPriceCents(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`
-}
-
-// A real `mechanic_services.id` is a UUID. The static-catalog fallback uses
-// the service's name as the id, so a string check is enough to gate the
-// FK-bound insert.
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-function isUuid(s: string | undefined): s is string {
-  return !!s && UUID_RE.test(s)
 }
 
 export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: MechanicBookingFlowProps) {
@@ -120,91 +112,39 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
 
     const scheduledAt = buildScheduledAt(date, time)
     const totalCents = service.priceCents ?? 0
-    const totalPrice = totalCents / 100
     const localRef = generateLocalRef()
 
-    // Try to insert the real booking (header + linked rows). If any step
-    // errors or the catalog is in static-fallback mode, fall back to a
-    // local-only confirmation so the user still gets a successful flow
-    // during development.
+    // Try to insert the real booking. If the table is missing or the insert
+    // errors, fall back to a local-only confirmation so the user still gets
+    // a successful flow during development.
     let bookingId: string | null = null
     let status: ServiceBooking['status'] = 'pending'
-    let dbWriteFailed = false
 
     try {
-      // 1. Resolve the address id. For the customer's saved default we
-      //    reuse the existing row (no insert needed). For a one-off
-      //    address we insert a non-default row so the address still
-      //    appears in the admin Bookings table.
-      let addressId: string | null = address.id ?? null
-      if (!addressId) {
-        const { data: addrRow, error: addrError } = await supabase
-          .from('addresses')
-          .insert({
-            customer_id: userId,
-            line1: address.line1,
-            city: address.city,
-            label: address.label ?? null,
-            lat: 0,
-            lng: 0,
-            is_default: false,
-          })
-          .select('id')
-          .single()
-        if (addrError) throw addrError
-        addressId = addrRow?.id ?? null
-      }
-
-      // 2. Insert the booking header. The CHECK constraint
-      //    `one_location_only` requires either address_id or
-      //    (pin_lat, pin_lng); we always set address_id above.
-      const { data: bookingRow, error: bookingError } = await supabase
+      const { data, error: insertError } = await supabase
         .from('service_bookings')
         .insert({
           customer_id: userId,
-          address_id: addressId,
           scheduled_at: scheduledAt,
           status: 'pending',
-          total_price: totalPrice,
+          total_price: totalCents / 100,
           notes: null,
+          // Persist the pin from the LocationPicker so the admin map can
+          // show this booking. The columns are nullable; missing pin
+          // (e.g. when the user picked their default address) writes null.
+          pin_lat: address.pin_lat ?? null,
+          pin_lng: address.pin_lng ?? null,
         })
         .select('id, status')
         .single()
-      if (bookingError) throw bookingError
-      if (bookingRow?.id) bookingId = bookingRow.id
-      if (bookingRow?.status) status = bookingRow.status as ServiceBooking['status']
 
-      // 3. Insert the linked service_booking_items row so the admin
-      //    Bookings panel can show the service name. The static
-      //    catalog's id is the service name, not a real UUID, so we
-      //    only attempt this when the row came from Supabase. This
-      //    runs outside the main try/catch — if the items insert
-      //    fails after the booking header was saved, we still keep
-      //    the bookingId so the admin can see it (and we just note
-      //    that the service line didn't link).
-      if (bookingId && isUuid(service.id) && service.priceCents != null) {
-        const { error: itemError } = await supabase
-          .from('service_booking_items')
-          .insert({
-            service_booking_id: bookingId,
-            mechanic_service_id: service.id,
-            quantity: 1,
-            price_at_booking: service.priceCents / 100,
-          })
-        if (itemError) {
-          // Non-fatal: the booking header is already saved. Just surface
-          // the issue in the UI so the user (and any error reporter)
-          // can see the service line didn't link.
-          // eslint-disable-next-line no-console
-          console.warn('service_booking_items insert failed', itemError)
-        }
-      }
+      if (insertError) throw insertError
+      if (data?.id) bookingId = data.id
+      if (data?.status) status = data.status as ServiceBooking['status']
     } catch (err) {
       // No DB or permission issue — keep going locally.
       const message = err instanceof Error ? err.message : 'Booking could not be saved'
       setSubmitError(message)
-      dbWriteFailed = true
-      bookingId = null
     }
 
     setConfirmedBooking({
@@ -219,13 +159,6 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     setSubmitting(false)
     setStep('review') // ensure we're on the review step
     goTo('review') // the Confirmed view is rendered via the orchestrator below
-
-    // Quietly note when the booking did not reach the DB — the user
-    // gets a working local confirmation either way, but the toast
-    // surfaces the issue so it's not silently lost.
-    if (dbWriteFailed) {
-      onNotify('Booking saved locally — we could not reach the booking service')
-    }
   }, [userId, service, date, time, address, onNotify, goTo])
 
   // Once a booking is confirmed we render the Confirmed step regardless

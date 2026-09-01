@@ -5,6 +5,7 @@
  */
 import { useState, useEffect } from 'react'
 import { ChevronLeft, MapPin } from 'lucide-react'
+import { LocationPicker } from '../../common/map'
 import type { ChosenAddress } from './MechanicBookingFlow'
 
 interface DefaultAddress {
@@ -40,20 +41,41 @@ export function StepLocation({
   const [mode, setMode] = useState<Mode>(initialMode)
   const [line1, setLine1] = useState(value?.source === 'custom' ? value.line1 : '')
   const [city, setCity] = useState(value?.source === 'custom' ? value.city : '')
+  // Local pin state. Mirrors value.pin_lat/pin_lng so the picker renders immediately,
+  // and so the "Reset" button on the picker has somewhere to read.
+  const [pin, setPin] = useState<{ lat: number; lng: number } | null>(
+    value?.pin_lat != null && value?.pin_lng != null
+      ? { lat: value.pin_lat, lng: value.pin_lng }
+      : null,
+  )
 
   // When the value is cleared upstream, reset our local form.
   useEffect(() => {
     if (value === null) {
       setLine1('')
       setCity('')
+      setPin(null)
     }
   }, [value])
+
+  // Emit a complete custom address object (text + pin) upward.
+  function emitCustom(nextPin?: { lat: number; lng: number } | null) {
+    if (!line1.trim() || !city.trim()) return
+    const lat = nextPin ? nextPin.lat : pin?.lat ?? null
+    const lng = nextPin ? nextPin.lng : pin?.lng ?? null
+    onChange({
+      line1: line1.trim(),
+      city: city.trim(),
+      source: 'custom',
+      pin_lat: lat,
+      pin_lng: lng,
+    })
+  }
 
   function pickDefault() {
     setMode('default')
     if (defaultAddress) {
       onChange({
-        id: defaultAddress.id,
         line1: defaultAddress.line1,
         city: defaultAddress.city,
         label: defaultAddress.label ?? undefined,
@@ -64,15 +86,24 @@ export function StepLocation({
 
   function pickCustom() {
     setMode('custom')
-    // Only commit if both fields are filled.
-    if (line1.trim() && city.trim()) {
-      onChange({ line1: line1.trim(), city: city.trim(), source: 'custom' })
-    }
+    emitCustom()
   }
 
   function commitCustom() {
+    emitCustom()
+  }
+
+  function handlePinChange(pos: { lat: number; lng: number }) {
+    setPin(pos)
+    // Commit immediately so the parent's ChosenAddress stays in sync.
     if (line1.trim() && city.trim()) {
-      onChange({ line1: line1.trim(), city: city.trim(), source: 'custom' })
+      onChange({
+        line1: line1.trim(),
+        city: city.trim(),
+        source: 'custom',
+        pin_lat: pos.lat,
+        pin_lng: pos.lng,
+      })
     }
   }
 
@@ -151,6 +182,14 @@ export function StepLocation({
               </label>
               <p className="form-helper">
                 We don't save custom addresses to your profile.
+              </p>
+              <LocationPicker
+                value={pin}
+                onChange={handlePinChange}
+                height={340}
+              />
+              <p className="form-helper">
+                Drag the pin to drop your exact location. We'll send the mechanic here.
               </p>
             </div>
           )}

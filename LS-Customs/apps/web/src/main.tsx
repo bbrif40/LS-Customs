@@ -5,6 +5,7 @@ import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
 import '@ionic/react/css/structure.css';
 import '@ionic/react/css/typography.css';
+import 'leaflet/dist/leaflet.css';
 import './styles.css';
 import './admin.css';
 import { App } from './App';
