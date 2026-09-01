@@ -290,13 +290,26 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
               Scheduled
             </h4>
             <p>
-              {new Date(booking.scheduled_at).toLocaleString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              })}
+              {(() => {
+                // Guard against NULL / malformed scheduled_at. A bare
+                // `new Date(null).toLocaleString()` throws "Invalid
+                // time value" and the DetailErrorBoundary shows the
+                // "Couldn't load booking detail" fallback, which is
+                // confusing for a single missing field. Render a plain
+                // placeholder instead so the rest of the panel still
+                // shows.
+                const raw = booking.scheduled_at
+                if (!raw) return 'Not scheduled'
+                const d = new Date(raw)
+                if (Number.isNaN(d.getTime())) return 'Not scheduled'
+                return d.toLocaleString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })
+              })()}
             </p>
             <p style={{ marginTop: 6, color: '#9ca3af', fontSize: 12 }}>
               Total: <strong style={{ color: '#e8a838' }}>₱{booking.total_price.toLocaleString()}</strong>
@@ -359,7 +372,20 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
               Metadata
             </h4>
             <p style={{ fontSize: 12, color: '#9ca3af' }}>
-              Booked {new Date(booking.id).toISOString().slice(0, 16).replace('T', ' ')} (server time)
+              Booked {(() => {
+                // The booking id is a UUID, not a timestamp — `new
+                // Date(uuid).toISOString()` throws "Invalid time
+                // value". Use created_at from the row if present,
+                // otherwise show the id-prefix as a placeholder.
+                const createdAt = (booking as { created_at?: string | null }).created_at
+                if (createdAt) {
+                  const d = new Date(createdAt)
+                  if (!Number.isNaN(d.getTime())) {
+                    return d.toISOString().slice(0, 16).replace('T', ' ') + ' UTC'
+                  }
+                }
+                return booking.id.slice(0, 8) + '… (no created_at on row)'
+              })()}
             </p>
           </section>
         </div>

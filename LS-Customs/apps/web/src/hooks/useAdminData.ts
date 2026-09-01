@@ -469,97 +469,216 @@ export function useAdminServiceBookings() {
     setLoading(true)
     setError(null)
     try {
-      // The previous query embedded `service_booking_items!left ( ...
-      // mechanic_services!inner ( ... ) )` directly on `service_bookings`.
-      // PostgREST frequently rejects nested embeds when the generated
-      // schema cache is missing the `service_booking_items.service_booking_id`
-      // relationship entry, returning 400 and leaving the Bookings panel
-      // stuck on the "Failed to load bookings" error. To make the call
-      // robust against the schema cache, fetch the bookings first and
-      // join the items in a follow-up query keyed by booking id.
+      // PostgREST's auto-detected relationships can lag the schema cache
+      // on Supabase, which causes the booking query to 400 if it tries to
+      // follow FK chains in a single SELECT. The previous fix used a
+      // two-pass query but still embedded `mechanic_profiles!left ( ...
+      // profiles!inner ( ... ) )` directly on `service_bookings`, which
+      // is the same nested-embed pattern PostgREST can refuse. To make
+      // the call robust regardless of cache state, start with a flat
+      // column list (no embeds), then enrich each booking with the
+      // joined rows in follow-up queries keyed by id. Every follow-up
+      // failure is non-fatal: the panel still shows the bookings, just
+      // with whichever joins the schema cache happens to support.
       const { data: rows, error: queryError } = await supabase
         .from('service_bookings')
-        .select(`
-          id,
-          customer_id,
-          mechanic_id,
-          address_id,
-          pin_lat,
-          pin_lng,
-          -- current_lat, current_lng, location_updated_at
-          -- are read by AdminBookingDetail's live map. They are added
-          -- by migration 20260901120000 — until the migration is
-          -- applied, the SELECT omits them so the page still loads.
-          scheduled_at,
-          status,
-          total_price,
-          notes,
-          created_at,
-          updated_at,
-          profiles!inner (
-            id,
-            full_name,
-            phone
-          ),
-          mechanic_profiles!left (
-            id,
-            specialties,
-            is_available,
-            rating_avg,
-            profiles!inner (
-              id,
-              full_name,
-              phone
-            )
-          ),
-          addresses!left (
-            id,
-            line1,
-            city
-          )
-        `)
+        .select(
+          'id, customer_id, mechanic_id, address_id, pin_lat, pin_lng, ' +
+            // current_lat, current_lng, location_updated_at
+            // are read by AdminBookingDetail's live map. They are added
+            // by migration 20260901120000 — until the migration is
+            // applied, the SELECT omits them so the page still loads.
+            'scheduled_at, status, total_price, notes, created_at, updated_at',
+        )
         .order('created_at', { ascending: false })
 
-      if (queryError) throw queryError
+      if (queryError) {
+        // eslint-disable-next-line no-console
+        console.error('[useAdminServiceBookings] first query failed', queryError)
+        throw queryError
+      }
 
-      const safeRows = (rows ?? []) as unknown as ServiceBookingWithDetails[]
+      const safeRows = ((rows ?? []) as unknown as ServiceBookingWithDetails[]).map(
+        (b) => ({
+          ...b,
+          profiles: null,
+          mechanic_profiles: null,
+          addresses: null,
+          service_booking_items: [],
+        }),
+      )
 
-      // Second pass: pull items for the booking ids we just loaded.
-      // If this fails we still want to show the bookings (just without
-      // the line-item list), so a non-fatal empty array is fine.
       const bookingIds = safeRows.map((b) => b.id)
-      if (bookingIds.length > 0) {
-        const { data: itemRows, error: itemsError } = await supabase
-          .from('service_booking_items')
-          .select(`
-            id,
-            service_booking_id,
-            mechanic_service_id,
-            quantity,
-            price_at_booking,
-            mechanic_services!inner (
-              id,
-              name,
-              main_category,
-              base_price
-            )
-          `)
-          .in('service_booking_id', bookingIds)
+      if (bookingIds.length === 0) {
+        setData(safeRows)
+        return
+      }
 
-        if (!itemsError && itemRows) {
-          const byBooking = new Map<string, ServiceBookingWithDetails['service_booking_items']>()
-          for (const row of itemRows as unknown as NonNullable<ServiceBookingWithDetails['service_booking_items']>) {
-            const list = byBooking.get(row.service_booking_id) ?? []
-            list.push(row)
-            byBooking.set(row.service_booking_id, list)
+      // Each follow-up is independent and non-fatal. We never throw
+      // out of the catch; we only set `error` if the very first query
+      // (or the absolute data shape) is broken.
+
+      // 1. Customer profiles (one per booking by customer_id). PostgREST
+      //    returns one row per id, not an array; we wrap with `[row]`
+      //    so the existing `b.profiles?.[0]?.full_name` accesses in the
+      //    panel still work (the type was always `Profile[] | null`).
+      const customerIds = Array.from(
+        new Set(safeRows.map((b) => b.customer_id).filter((id): id is string => Boolean(id))),
+      )
+      if (customerIds.length > 0) {
+        const { data: customerRows, error: customerErr } = await supabase
+          .from('profiles')
+          .select('id, full_name, phone')
+          .in('id', customerIds)
+        if (customerErr) {
+          // eslint-disable-next-line no-console
+          console.warn('[useAdminServiceBookings] customers query failed (non-fatal)', customerErr)
+        } else if (customerRows) {
+          const byCustomer = new Map<string, NonNullable<ServiceBookingWithDetails['profiles']>>()
+          for (const row of customerRows as { id: string; full_name: string; phone: string | null }[]) {
+            byCustomer.set(row.id, [row])
           }
-          for (const booking of safeRows) {
-            booking.service_booking_items = byBooking.get(booking.id) ?? []
+          for (const b of safeRows) {
+            b.profiles = byCustomer.get(b.customer_id) ?? null
           }
-        } else {
-          for (const booking of safeRows) {
-            booking.service_booking_items = []
+        }
+      }
+
+      // 2. Mechanic profiles — single-level embed of profiles inside
+      //    mechanic_profiles is still nested, so do them in two
+      //    separate passes and stitch the result in memory.
+      const mechanicIds = Array.from(
+        new Set(safeRows.map((b) => b.mechanic_id).filter((id): id is string => Boolean(id))),
+      )
+      if (mechanicIds.length > 0) {
+        const { data: mechanicRows, error: mechanicErr } = await supabase
+          .from('mechanic_profiles')
+          .select('id, specialties, is_available, rating_avg, user_id')
+          .in('id', mechanicIds)
+        if (mechanicErr) {
+          // eslint-disable-next-line no-console
+          console.warn('[useAdminServiceBookings] mechanics query failed (non-fatal)', mechanicErr)
+        } else if (mechanicRows) {
+          const userIds = Array.from(
+            new Set(
+              (mechanicRows as { user_id: string | null }[])
+                .map((r) => r.user_id)
+                .filter((id): id is string => Boolean(id)),
+            ),
+          )
+          let userRows: { id: string; full_name: string; phone: string | null }[] = []
+          if (userIds.length > 0) {
+            const { data: users, error: usersErr } = await supabase
+              .from('profiles')
+              .select('id, full_name, phone')
+              .in('id', userIds)
+            if (usersErr) {
+              // eslint-disable-next-line no-console
+              console.warn('[useAdminServiceBookings] mechanic users query failed (non-fatal)', usersErr)
+            } else if (users) {
+              userRows = users as { id: string; full_name: string; phone: string | null }[]
+            }
           }
+          const usersById = new Map(userRows.map((u) => [u.id, u]))
+          const byMechanic = new Map<string, NonNullable<ServiceBookingWithDetails['mechanic_profiles']>>()
+          for (const row of mechanicRows as { id: string; specialties: string[] | null; is_available: boolean | null; rating_avg: number | null; user_id: string | null }[]) {
+            const u = row.user_id ? usersById.get(row.user_id) : undefined
+            byMechanic.set(row.id, [
+              {
+                id: row.id,
+                specialties: row.specialties,
+                is_available: row.is_available,
+                rating_avg: row.rating_avg,
+                profiles: u ? [u] : null,
+              },
+            ])
+          }
+          for (const b of safeRows) {
+            b.mechanic_profiles = byMechanic.get(b.mechanic_id) ?? null
+          }
+        }
+      }
+
+      // 3. Addresses — single-level, but pull by id to be safe. PostgREST
+      //    returns one row per id; the type is `Address[] | null` (the
+      //    Supabase convention for embed-like fields) so we wrap with
+      //    `[row]` for panel compatibility.
+      const addressIds = Array.from(
+        new Set(safeRows.map((b) => b.address_id).filter((id): id is string => Boolean(id))),
+      )
+      if (addressIds.length > 0) {
+        const { data: addressRows, error: addressErr } = await supabase
+          .from('addresses')
+          .select('id, line1, city')
+          .in('id', addressIds)
+        if (addressErr) {
+          // eslint-disable-next-line no-console
+          console.warn('[useAdminServiceBookings] addresses query failed (non-fatal)', addressErr)
+        } else if (addressRows) {
+          const byAddress = new Map<string, NonNullable<ServiceBookingWithDetails['addresses']>>()
+          for (const row of addressRows as { id: string; line1: string; city: string }[]) {
+            byAddress.set(row.id, [row])
+          }
+          for (const b of safeRows) {
+            b.addresses = byAddress.get(b.address_id) ?? null
+          }
+        }
+      }
+
+      // 4. Line items + their mechanic_services. Same nested-embed
+      //    risk, so split into two passes.
+      const { data: itemRows, error: itemsError } = await supabase
+        .from('service_booking_items')
+        .select('id, service_booking_id, mechanic_service_id, quantity, price_at_booking')
+        .in('service_booking_id', bookingIds)
+      if (itemsError) {
+        // eslint-disable-next-line no-console
+        console.warn('[useAdminServiceBookings] items query failed (non-fatal)', itemsError)
+      } else if (itemRows) {
+        const itemRowsTyped = itemRows as {
+          id: string
+          service_booking_id: string
+          mechanic_service_id: string
+          quantity: number
+          price_at_booking: number
+        }[]
+        const serviceIds = Array.from(
+          new Set(
+            itemRowsTyped
+              .map((r) => r.mechanic_service_id)
+              .filter((id): id is string => Boolean(id)),
+          ),
+        )
+        let servicesById = new Map<string, MechanicService>()
+        if (serviceIds.length > 0) {
+          const { data: serviceRows, error: serviceErr } = await supabase
+            .from('mechanic_services')
+            .select('id, name, main_category, base_price')
+            .in('id', serviceIds)
+          if (serviceErr) {
+            // eslint-disable-next-line no-console
+            console.warn('[useAdminServiceBookings] services query failed (non-fatal)', serviceErr)
+          } else if (serviceRows) {
+            servicesById = new Map(
+              (serviceRows as MechanicService[]).map((s) => [s.id, s]),
+            )
+          }
+        }
+        const byBooking = new Map<string, NonNullable<ServiceBookingWithDetails['service_booking_items']>>()
+        for (const row of itemRowsTyped) {
+          const list = byBooking.get(row.service_booking_id) ?? []
+          list.push({
+            id: row.id,
+            service_booking_id: row.service_booking_id,
+            mechanic_service_id: row.mechanic_service_id,
+            quantity: row.quantity,
+            price_at_booking: row.price_at_booking,
+            mechanic_services: servicesById.get(row.mechanic_service_id) ?? null,
+          })
+          byBooking.set(row.service_booking_id, list)
+        }
+        for (const b of safeRows) {
+          b.service_booking_items = byBooking.get(b.id) ?? []
         }
       }
 
