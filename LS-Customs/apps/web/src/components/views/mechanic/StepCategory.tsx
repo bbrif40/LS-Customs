@@ -23,12 +23,26 @@ const ICON_BY_KEYWORD: Array<{ keywords: string[]; icon: string }> = [
   { keywords: ['quick', 'wiper', 'fix'], icon: '⌒' },
 ]
 
+const IMAGE_BY_CATEGORY: Array<{ keywords: string[]; image: string }> = [
+  { keywords: ['routine', 'fluid', 'oil'], image: '/customer-services/fluidchange.png' },
+  { keywords: ['tire', 'wheel', 'suspension', 'brake'], image: '/customer-services/tires.png' },
+  { keywords: ['electrical', 'battery', 'alternator'], image: '/customer-services/batterycare.png' },
+  { keywords: ['diagnostic', 'engine'], image: '/customer-services/diagnosticfix.png' },
+  { keywords: ['light', 'headlight', 'visibility'], image: '/customer-services/lightingfix.png' },
+  { keywords: ['quick', 'wiper', 'fix'], image: '/customer-services/quickfixes.png' },
+]
+
 function iconFor(category: string): string {
   const lower = category.toLowerCase()
   const match = ICON_BY_KEYWORD.find((entry) =>
     entry.keywords.some((kw) => lower.includes(kw)),
   )
   return match?.icon ?? '✳'
+}
+
+function imageFor(category: string): string | undefined {
+  const lower = category.toLowerCase()
+  return IMAGE_BY_CATEGORY.find((entry) => entry.keywords.some((keyword) => lower.includes(keyword)))?.image
 }
 
 function prettyLabel(raw: string): string {
@@ -51,6 +65,7 @@ export function StepCategory({ services, loading, source, selected, onSelect }: 
       label: prettyLabel(raw),
       count,
       icon: iconFor(raw),
+      image: imageFor(raw),
     }))
   }, [services])
 
@@ -80,7 +95,11 @@ export function StepCategory({ services, loading, source, selected, onSelect }: 
               className={`category-tile ${selected === cat.raw ? 'selected' : ''}`}
               onClick={() => onSelect(cat.raw)}
             >
-              <div className="category-icon">{cat.icon}</div>
+              {cat.image ? (
+                <img className="category-image" src={cat.image} alt="" />
+              ) : (
+                <div className="category-icon">{cat.icon}</div>
+              )}
               <strong>{cat.label}</strong>
               <small>
                 {cat.count} {cat.count === 1 ? 'service' : 'services'}

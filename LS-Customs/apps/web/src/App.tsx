@@ -26,6 +26,7 @@ import { AdminLayout } from './components/admin/AdminLayout'
 import { AdminLogin } from './components/admin/AdminLogin'
 import { TicketRealtimeProvider } from './components/common/TicketRealtimeProvider'
 import type { View } from './types'
+import { useCustomerNotifications } from './hooks/useCustomerNotifications'
 
 type AppMode = 'customer' | 'admin' | 'admin-login'
 
@@ -132,6 +133,10 @@ export function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [toast, setToast] = useState('')
   const [confirmSignOut, setConfirmSignOut] = useState(false)
+  // Set by Header when the user clicks a notification tied to a specific
+  // booking. Bookings reads this to expand the matching card.
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
+  const { unreadCount } = useCustomerNotifications(userId, 'nav')
 
   // Listen to browser forward/back buttons
   useEffect(() => {
@@ -247,6 +252,7 @@ export function App() {
             onView={(v) => { setView(v); setMenuOpen(false) }}
             onNotify={notify}
             onSignOut={() => setConfirmSignOut(true)}
+            unreadCount={unreadCount}
           />
 
           <main className="main-content">
@@ -258,6 +264,8 @@ export function App() {
               onToggleMenu={() => setMenuOpen((open) => !open)}
               onView={setView}
               onNotify={notify}
+              userId={userId}
+              onSelectBooking={(id) => { setSelectedBookingId(id); setView('bookings') }}
             />
 
             {view === 'home' && (
@@ -268,7 +276,7 @@ export function App() {
                 onNotify={notify}
               />
             )}
-            {view === 'rentals' && <Rentals onNotify={notify} />}
+            {view === 'rentals' && <Rentals userId={userId} onNotify={notify} />}
             {view === 'services' && (
               <MechanicBookingFlow
                 userId={userId}
@@ -280,7 +288,7 @@ export function App() {
                 booking. Renders nothing; just runs the side effect so the
                 stream survives navigation away from the Mechanic screen. */}
             {userId && <ActiveBookingTracker userId={userId} />}
-            {view === 'bookings' && <Bookings onNotify={notify} />}
+            {view === 'bookings' && <Bookings userId={userId} onNotify={notify} selectedBookingId={selectedBookingId} onClearSelection={() => setSelectedBookingId(null)} />}
             {view === 'profile' && (
               <Profile
                 userId={userId}

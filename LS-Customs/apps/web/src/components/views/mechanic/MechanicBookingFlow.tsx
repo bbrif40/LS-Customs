@@ -23,6 +23,7 @@ import { StepConfirmed } from './StepConfirmed'
 import type { Service, ServiceBooking } from '../../../types'
 
 export interface ChosenAddress {
+  id?: string
   line1: string
   city: string
   label?: string
@@ -107,6 +108,29 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     }
     if (!service || !date || !time || !address) return
 
+    // ponytail: a non-UUID `id` would mean useServices returned a service
+    // without a DB row. Since the static fallback was removed, the only
+    // way to land here is the live query failing mid-load. Refuse rather
+    // than send a name string to a `uuid` column.
+    const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.id)
+    if (!looksLikeUuid) {
+      // eslint-disable-next-line no-console
+      console.warn('[mechanic-booking] refusing to confirm: service has no DB id. useServices failed to load rows.')
+      setSubmitError('Service catalog is loading. Please refresh and try again.')
+      return
+    }
+
+    // The DB has a `one_location_only` CHECK: a booking must carry EITHER a
+    // saved `address_id` OR a dropped pin (pin_lat + pin_lng), never neither.
+    // If the user picked a custom address but never dropped a pin, fall back
+    // to their saved default address (if any) before sending to the DB.
+    const hasPin = address.pin_lat != null && address.pin_lng != null
+    const effectiveAddressId = address.id ?? (address.source === 'custom' && !hasPin ? defaultAddress?.id ?? null : null)
+    if (!effectiveAddressId && !hasPin) {
+      setSubmitError('Please pick a saved address or drop a pin on the map before confirming.')
+      return
+    }
+
     setSubmitting(true)
     setSubmitError(null)
 
@@ -114,9 +138,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     const totalCents = service.priceCents ?? 0
     const localRef = generateLocalRef()
 
-    // Try to insert the real booking. If the table is missing or the insert
-    // errors, fall back to a local-only confirmation so the user still gets
-    // a successful flow during development.
+    // Persist the booking and its selected service as one customer flow.
     let bookingId: string | null = null
     let status: ServiceBooking['status'] = 'pending'
 
@@ -125,15 +147,13 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
         .from('service_bookings')
         .insert({
           customer_id: userId,
+          address_id: effectiveAddressId,
           scheduled_at: scheduledAt,
           status: 'pending',
           total_price: totalCents / 100,
           notes: null,
-          // Persist the pin from the LocationPicker so the admin map can
-          // show this booking. The columns are nullable; missing pin
-          // (e.g. when the user picked their default address) writes null.
-          pin_lat: address.pin_lat ?? null,
-          pin_lng: address.pin_lng ?? null,
+          pin_lat: hasPin ? address.pin_lat : null,
+          pin_lng: hasPin ? address.pin_lng : null,
         })
         .select('id, status')
         .single()
@@ -141,10 +161,28 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
       if (insertError) throw insertError
       if (data?.id) bookingId = data.id
       if (data?.status) status = data.status as ServiceBooking['status']
+      if (!bookingId) throw new Error('Booking was not created')
+
+      const { error: itemError } = await supabase.from('service_booking_items').insert({
+        service_booking_id: bookingId,
+        mechanic_service_id: service.id,
+        quantity: 1,
+        price_at_booking: totalCents / 100,
+      })
+      if (itemError) throw itemError
     } catch (err) {
-      // No DB or permission issue — keep going locally.
-      const message = err instanceof Error ? err.message : 'Booking could not be saved'
+      // ponytail: surface the real DB error to the customer; the previous
+      // generic "Booking could not be saved" hid the actual constraint.
+      // PostgREST errors are plain objects ({message, code, hint, details})
+      // not Error instances, so `String(err)` would be "[object Object]".
+      const e = err as { message?: string; hint?: string; details?: string } | null
+      const raw = e?.message ?? (err instanceof Error ? err.message : String(err))
+      const message = /one_location_only/i.test(raw)
+        ? 'Please pick a saved address or drop a pin on the map before confirming.'
+        : raw || 'Booking could not be saved'
       setSubmitError(message)
+      setSubmitting(false)
+      return
     }
 
     setConfirmedBooking({
@@ -152,14 +190,13 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
       serviceName: service.name,
       servicePrice: service.priceCents != null ? formatPriceCents(service.priceCents) : service.price,
       scheduledAt,
-      addressLine1: address.line1,
-      addressCity: address.city,
+      addressLine1: effectiveAddressId === defaultAddress?.id ? defaultAddress.line1 : address.line1,
+      addressCity: effectiveAddressId === defaultAddress?.id ? defaultAddress.city : address.city,
       status,
     })
     setSubmitting(false)
-    setStep('review') // ensure we're on the review step
     goTo('review') // the Confirmed view is rendered via the orchestrator below
-  }, [userId, service, date, time, address, onNotify, goTo])
+  }, [userId, service, date, time, address, defaultAddress, onNotify, goTo])
 
   // Once a booking is confirmed we render the Confirmed step regardless
   // of the current step value.

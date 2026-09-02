@@ -27,9 +27,12 @@ function toUiVehicle(row: DbVehicle): UiVehicle {
   if (row.transmission) detailParts.push(row.transmission)
 
   return {
+    id: row.id,
+    category: row.category,
     name: row.name,
     detail: detailParts.join(' · ') || row.category.replace('_', ' '),
     price: `₱${row.price_per_day.toLocaleString()}`,
+    pricePerDay: row.price_per_day,
     image: row.image_url || '',
     tag: row.sub_category ? row.sub_category.toUpperCase() : row.category.toUpperCase(),
     rating: row.rating_avg ? row.rating_avg.toFixed(1) : '0.0',

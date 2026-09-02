@@ -1,14 +1,26 @@
 /**
  * Dashboard — home view with welcome row, hero cards, featured rentals, and trending services.
- * Featured rentals come from Supabase via useCustomerVehicles (active only, top by rating).
+ * Both featured rentals and trending services come from Supabase.
  */
 import { useEffect, useState } from 'react'
-import { ChevronRight, Gauge, Compass } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
+import { useTrendingServices } from '../../hooks/useTrendingServices'
 import { VehicleCard } from '../common/VehicleCard'
 import { ServiceMini } from '../common/ServiceMini'
 import { LocationCard } from '../common/LocationCard'
 import type { View } from '../../types'
+
+function iconForCategory(raw: string): string {
+  const lower = raw.toLowerCase()
+  if (lower.includes('tire') || lower.includes('wheel') || lower.includes('brake') || lower.includes('suspension')) return '◉'
+  if (lower.includes('electric') || lower.includes('battery')) return '⚡'
+  if (lower.includes('diagnostic') || lower.includes('engine')) return '⌁'
+  if (lower.includes('light') || lower.includes('headlight') || lower.includes('visibility')) return '✧'
+  if (lower.includes('quick') || lower.includes('wiper')) return '⌒'
+  if (lower.includes('routine') || lower.includes('fluid') || lower.includes('oil')) return '◒'
+  return '✳'
+}
 
 interface DashboardProps {
   displayName: string
@@ -40,6 +52,7 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
     limit: 4,
     orderByRating: true,
   })
+  const { services: trending, loading: trendingLoading } = useTrendingServices(2)
 
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -69,6 +82,18 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
 
       <section className="hero-grid">
         <article className="hero-card">
+          <video
+            className="hero-video"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata"
+            aria-hidden="true"
+          >
+            <source src="/customer-videos/dashboardvidep.mp4" type="video/mp4" />
+          </video>
+          <div className="hero-overlay" aria-hidden="true" />
           <div className="hero-copy">
             <p className="eyebrow light">LS CUSTOMS CONCIERGE</p>
             <h2>
@@ -86,7 +111,6 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
               </button>
             </div>
           </div>
-          <div className="hero-wheel">✳</div>
         </article>
         <LocationCard onNotify={onNotify} />
       </section>
@@ -126,18 +150,21 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
         </button>
       </section>
       <div className="service-highlight-grid">
-        <ServiceMini
-          title="Standard maintenance"
-          detail="Oil changes, filter replacements, and fluid checks. Keeping you on the road."
-          price="STARTS AT $89"
-          icon={<Gauge size={20} />}
-        />
-        <ServiceMini
-          title="Tire & suspension"
-          detail="Wheel alignment, tire balancing, and suspension diagnostics."
-          price="STARTS AT $120"
-          icon={<Compass size={20} />}
-        />
+        {trendingLoading ? (
+          <p className="muted" style={{ padding: '24px 0' }}>Loading services…</p>
+        ) : trending.length === 0 ? (
+          <p className="muted" style={{ padding: '24px 0' }}>No active services in the catalog yet.</p>
+        ) : (
+          trending.map((service) => (
+            <ServiceMini
+              key={service.id}
+              title={service.name}
+              detail={service.description ?? 'Professional service performed at your location.'}
+              price={`STARTS AT $${service.basePrice.toFixed(0)}`}
+              icon={<span aria-hidden="true">{iconForCategory(service.category)}</span>}
+            />
+          ))
+        )}
       </div>
     </div>
   )

@@ -3,12 +3,15 @@
  * Pulls the active fleet from Supabase via useCustomerVehicles.
  */
 import { useState, useMemo } from 'react'
-import { ChevronRight, Search, Loader2 } from 'lucide-react'
+import { ChevronRight, Search, Loader2, CalendarDays } from 'lucide-react'
+import { supabase } from '../../supabaseClient'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { VehicleCard } from '../common/VehicleCard'
 import { PageHeading } from '../common/PageHeading'
+import { RentalPayment } from './RentalPayment'
 
 interface RentalsProps {
+  userId?: string
   onNotify: (message: string) => void
 }
 
@@ -21,10 +24,30 @@ const CATEGORY_TABS: { id: CategoryFilter; label: string }[] = [
   { id: 'premium', label: 'Luxury' },
 ]
 
-export function Rentals({ onNotify }: RentalsProps) {
+export function Rentals({ userId, onNotify }: RentalsProps) {
   const { vehicles, loading, error, refetch } = useCustomerVehicles()
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const [selectedVehicle, setSelectedVehicle] = useState<typeof vehicles[number] | null>(null)
+  const [bookingId, setBookingId] = useState<string | null>(null)
+  const [bookingError, setBookingError] = useState<string | null>(null)
+
+  if (selectedVehicle && bookingId) {
+    const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
+    return <RentalPayment vehicle={selectedVehicle} bookingId={bookingId} startDate={startDate} endDate={endDate} total={days * selectedVehicle.pricePerDay} onBack={() => { setBookingId(null); setSelectedVehicle(null) }} onNotify={onNotify} />
+  }
+
+  const chooseVehicle = async (vehicle: typeof vehicles[number]) => {
+    if (!startDate || !endDate || endDate <= startDate) { setBookingError('Select a valid pickup and return date first.'); return }
+    setBookingError(null)
+    const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
+    if (!userId) { onNotify('Please sign in before booking a rental.'); return }
+    const { data, error: insertError } = await supabase.from('vehicle_bookings').insert({ vehicle_id: vehicle.id, customer_id: userId, start_date: startDate, end_date: endDate, total_price: days * vehicle.pricePerDay, status: 'pending' }).select('id').single()
+    if (insertError || !data) { setBookingError(insertError?.message ?? 'Booking could not be created.'); return }
+    setSelectedVehicle(vehicle); setBookingId(data.id); onNotify('Rental booking created')
+  }
 
   // Note: the UI Vehicle type doesn't carry the raw `category` field, so we
   // re-derive a simple tag-based filter from the visible `tag` text. This
@@ -54,9 +77,7 @@ export function Rentals({ onNotify }: RentalsProps) {
         title="Find your next drive"
         detail="Choose from a curated fleet, ready when you are."
         action={
-          <button className="button dark-button" onClick={() => onNotify('Rental dates updated')}>
-            Select dates <ChevronRight size={16} />
-          </button>
+          <span className="date-picker-group"><CalendarDays size={16} /><input aria-label="Pickup date" type="date" min={new Date().toISOString().slice(0, 10)} value={startDate} onChange={(e) => setStartDate(e.target.value)} /><span>to</span><input aria-label="Return date" type="date" min={startDate || new Date().toISOString().slice(0, 10)} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></span>
         }
       />
 
@@ -80,6 +101,7 @@ export function Rentals({ onNotify }: RentalsProps) {
         </label>
       </div>
 
+      {bookingError && <p className="form-helper review-error">{bookingError}</p>}
       {loading ? (
         <div
           style={{
@@ -127,7 +149,7 @@ export function Rentals({ onNotify }: RentalsProps) {
             <VehicleCard
               key={vehicle.name}
               vehicle={vehicle}
-              onBook={() => onNotify(`${vehicle.name} selected for booking`)}
+              onBook={() => void chooseVehicle(vehicle)}
             />
           ))}
         </div>

@@ -43,7 +43,6 @@ export function GuestWorkspace({ onOpenAuth }: GuestWorkspaceProps) {
             >
               <Icon size={18} strokeWidth={1.8} />
               {label}
-              {id === 'bookings' && <span className="nav-count">2</span>}
             </button>
           ))}
         </nav>

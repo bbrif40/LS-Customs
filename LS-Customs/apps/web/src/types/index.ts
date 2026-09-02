@@ -9,9 +9,12 @@ export type View = 'home' | 'rentals' | 'services' | 'bookings' | 'profile'
 export type AuthMode = 'sign-in' | 'create-account'
 
 export interface Vehicle {
+  id: string
+  category: 'short_term' | 'extended' | 'premium'
   name: string
   detail: string
   price: string
+  pricePerDay: number
   image: string
   tag: string
   rating: string
@@ -40,6 +43,54 @@ export interface ServiceBooking {
   addressLine1: string
   addressCity: string
   status: 'pending' | 'confirmed' | 'assigned' | 'en_route' | 'in_progress' | 'completed' | 'cancelled'
+}
+
+export interface CustomerNotification {
+  id: string
+  type: string | null
+  title: string
+  body: string | null
+  metadata: NotificationMetadata
+  is_read: boolean
+  created_at: string
+}
+
+/**
+ * Notification metadata shapes produced by backend triggers and edge
+ * functions. The customer-app renderer uses these to pick the right icon
+ * and route the click to the matching view.
+ *
+ *   booking_status_changed   — notify_on_status_change on vehicle/service
+ *                                booking status updates.
+ *   ticket_admin_reply       — admin posts a message on the customer's
+ *                                ticket (notify_on_ticket_admin_reply).
+ *   ticket_status_changed    — ticket moved to resolved/closed
+ *                                (notify_on_ticket_status_change).
+ *   payment_status_changed   — payment moved to succeeded/failed
+ *                                (notify_on_payment_status_change).
+ */
+export interface NotificationMetadata {
+  booking_id?: string
+  booking_type?: 'vehicle' | 'service'
+  old_status?: string
+  new_status?: string
+  customer_id?: string
+  scheduled_at?: string
+  /** Populated on the customer's "mechanic assigned" notification (see
+   *  notify_on_status_change in 20260902160000_assignment_notification_metadata.sql). */
+  mechanic_id?: string
+  mechanic_name?: string
+  mechanic_phone?: string
+  ticket_id?: string
+  tracking_number?: string
+  subject?: string
+  message_id?: string
+  author_id?: string
+  payment_id?: string
+  amount?: number
+  currency?: string
+  provider?: string
+  [key: string]: unknown
 }
 
 export interface NavItem {

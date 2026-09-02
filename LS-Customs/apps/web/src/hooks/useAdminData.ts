@@ -25,9 +25,15 @@ type VehicleBookingWithCustomer = VehicleBooking & {
   vehicles: Vehicle[] | null
 }
 
+type AdminProfileSummary = Pick<Profile, 'id' | 'full_name' | 'phone'>
+type AdminMechanicSummary = Pick<MechanicProfile, 'id' | 'specialties' | 'rating_avg'> & {
+  is_available: boolean | null
+  profiles: AdminProfileSummary[] | null
+}
+
 type ServiceBookingWithDetails = ServiceBooking & {
-  profiles: Profile[] | null
-  mechanic_profiles: (MechanicProfile & { profiles: Profile[] | null })[] | null
+  profiles: AdminProfileSummary[] | null
+  mechanic_profiles: AdminMechanicSummary[] | null
   addresses: {
     id: string
     line1: string
@@ -498,7 +504,7 @@ export function useAdminServiceBookings() {
         throw queryError
       }
 
-      const safeRows = ((rows ?? []) as unknown as ServiceBookingWithDetails[]).map(
+      const safeRows: ServiceBookingWithDetails[] = ((rows ?? []) as unknown as ServiceBookingWithDetails[]).map(
         (b) => ({
           ...b,
           profiles: null,
@@ -588,13 +594,13 @@ export function useAdminServiceBookings() {
                 id: row.id,
                 specialties: row.specialties,
                 is_available: row.is_available,
-                rating_avg: row.rating_avg,
+                rating_avg: row.rating_avg ?? 0,
                 profiles: u ? [u] : null,
               },
             ])
           }
           for (const b of safeRows) {
-            b.mechanic_profiles = byMechanic.get(b.mechanic_id) ?? null
+            b.mechanic_profiles = b.mechanic_id ? byMechanic.get(b.mechanic_id) ?? null : null
           }
         }
       }
@@ -620,7 +626,7 @@ export function useAdminServiceBookings() {
             byAddress.set(row.id, [row])
           }
           for (const b of safeRows) {
-            b.addresses = byAddress.get(b.address_id) ?? null
+            b.addresses = b.address_id ? byAddress.get(b.address_id) ?? null : null
           }
         }
       }

@@ -76,6 +76,7 @@ export function StepLocation({
     setMode('default')
     if (defaultAddress) {
       onChange({
+        id: defaultAddress.id,
         line1: defaultAddress.line1,
         city: defaultAddress.city,
         label: defaultAddress.label ?? undefined,

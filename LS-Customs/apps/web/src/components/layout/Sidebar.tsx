@@ -13,9 +13,10 @@ interface SidebarProps {
   onView: (view: View) => void
   onNotify: (message: string) => void
   onSignOut: () => void
+  unreadCount: number
 }
 
-export function Sidebar({ view, menuOpen, onView, onNotify, onSignOut }: SidebarProps) {
+export function Sidebar({ view, menuOpen, onView, onNotify, onSignOut, unreadCount }: SidebarProps) {
   return (
     <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
       <div className="brand-mark" onClick={() => onView('home')} role="button" tabIndex={0}>
@@ -32,7 +33,7 @@ export function Sidebar({ view, menuOpen, onView, onNotify, onSignOut }: Sidebar
           >
             <Icon size={18} strokeWidth={1.8} />
             {label}
-            {id === 'bookings' && <span className="nav-count">2</span>}
+            {id === 'bookings' && unreadCount > 0 && <span className="nav-count">{unreadCount}</span>}
           </button>
         ))}
       </nav>

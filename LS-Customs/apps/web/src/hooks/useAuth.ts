@@ -32,11 +32,25 @@ export function useAuth(): UseAuthReturn {
   useEffect(() => {
     let mounted = true
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (!mounted) return
-      setSignedIn(Boolean(session))
-      setUserId(session?.user?.id)
-      void resolveIdentity(session)
+      if (error) {
+        console.error('[useAuth] failed to restore session:', error)
+        setSignedIn(false)
+        setUserId(undefined)
+        void resolveIdentity(null)
+      } else {
+        setSignedIn(Boolean(session))
+        setUserId(session?.user?.id)
+        void resolveIdentity(session)
+      }
+      setAuthLoading(false)
+    }).catch((error: unknown) => {
+      if (!mounted) return
+      console.error('[useAuth] session startup failed:', error)
+      setSignedIn(false)
+      setUserId(undefined)
+      void resolveIdentity(null)
       setAuthLoading(false)
     })
 

@@ -3,15 +3,24 @@
  * Shows both vehicle_bookings and service_bookings in tabbed views.
  * Admin can update status via existing RLS policy (unrestricted for admins).
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Search, Filter, Truck, Wrench, X, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import {
   useAdminVehicleBookings,
   useAdminServiceBookings,
 } from '../../hooks/useAdminData'
+import { supabase } from '../../supabaseClient'
 import { MapView, type MapPin } from '../common/map'
 import { AdminBookingDetail } from './AdminBookingDetail'
 import type { VehicleBooking, ServiceBooking, Profile, Vehicle, Address, MechanicProfile, MechanicService } from '@ls-customs/shared-types'
+
+interface AvailableMechanic {
+  id: string
+  full_name: string
+  phone: string | null
+  years_experience: number | null
+  rating_avg: number | null
+}
 
 type BookingTab = 'vehicles' | 'services'
 type BookingStatus = VehicleBooking['status'] | ServiceBooking['status']
@@ -63,7 +72,43 @@ export function AdminBookings() {
   const [statusFilter, setStatusFilter] = useState<'all' | BookingStatus>('all')
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Mechanics available to take a new job. Loaded once on mount; the
+  // assign dropdown re-renders from this list.
+  const [availableMechanics, setAvailableMechanics] = useState<AvailableMechanic[]>([])
+  const [assignOpenFor, setAssignOpenFor] = useState<string | null>(null)
+  const [assigning, setAssigning] = useState(false)
   const pageSize = 10
+
+  // Fetch available mechanics once on mount. Cheap query; the list
+  // rarely changes mid-session.
+  useEffect(() => {
+    let cancelled = false
+    void (async () => {
+      const { data, error } = await supabase
+        .from('mechanic_profiles')
+        .select('id, years_experience, rating_avg, profiles!inner(full_name, phone)')
+        .eq('is_available', true)
+        .order('rating_avg', { ascending: false, nullsFirst: false })
+      if (cancelled) return
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.warn('[admin] failed to load mechanics:', error.message)
+        return
+      }
+      type Row = { id: string; years_experience: number | null; rating_avg: number | null; profiles: { full_name: string; phone: string | null } | null }
+      setAvailableMechanics(
+        ((data ?? []) as unknown as Row[])
+          .map((r) => ({
+            id: r.id,
+            full_name: r.profiles?.full_name ?? 'Mechanic',
+            phone: r.profiles?.phone ?? null,
+            years_experience: r.years_experience,
+            rating_avg: r.rating_avg,
+          })),
+      )
+    })()
+    return () => { cancelled = true }
+  }, [])
 
   const {
     data: vehicleBookings,
@@ -146,6 +191,39 @@ export function AdminBookings() {
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Failed to update status')
+    }
+  }
+
+  // Single-shot assign: writes mechanic_id and status='assigned' in one
+  // update. The trigger notify_on_status_change sees both fields move
+  // atomically and fires the assignment notification to the customer.
+  // ponytail: this is a direct PostgREST update rather than a custom RPC.
+  // The RLS policy 'mechanic_profiles update admin' + service_role path
+  // makes it land. If a concurrent admin already assigned this booking
+  // the WHERE status='pending' clause short-circuits to 0 rows.
+  const assignMechanic = async (bookingId: string, mechanicId: string) => {
+    setAssigning(true)
+    try {
+      // Pre-check: was the booking still pending? If not, the WHERE
+      // status='pending' filter would silently no-op.
+      const { data: probe, error: probeErr } = await supabase
+        .from('service_bookings')
+        .select('status')
+        .eq('id', bookingId)
+        .single()
+      if (probeErr) throw probeErr
+      if (probe.status !== 'pending') {
+        throw new Error(`Booking is already ${probe.status}; reload to see the latest.`)
+      }
+      const { error } = await supabase
+        .from('service_bookings')
+        .update({ mechanic_id: mechanicId, status: 'assigned' })
+        .eq('id', bookingId)
+      if (error) throw error
+      setAssignOpenFor(null)
+      await Promise.all([refetchVehicles(), refetchServices()])
+    } finally {
+      setAssigning(false)
     }
   }
 
@@ -393,13 +471,55 @@ export function AdminBookings() {
                               </button>
                             )}
                             {booking.status === 'pending' && activeTab === 'services' && (
-                              <button
-                                className="admin-vehicle-btn secondary"
-                                onClick={() => handleStatusChange(booking, 'assigned')}
-                                style={{ padding: '4px 8px', fontSize: 11 }}
-                              >
-                                Assign
-                              </button>
+                              <div style={{ position: 'relative', display: 'inline-block' }}>
+                                <button
+                                  className="admin-vehicle-btn secondary"
+                                  onClick={() => setAssignOpenFor((cur) => (cur === booking.id ? null : booking.id))}
+                                  style={{ padding: '4px 8px', fontSize: 11 }}
+                                  disabled={assigning}
+                                >
+                                  Assign ▾
+                                </button>
+                                {assignOpenFor === booking.id && (
+                                  <div
+                                    role="menu"
+                                    style={{
+                                      position: 'absolute',
+                                      top: '100%',
+                                      right: 0,
+                                      marginTop: 4,
+                                      minWidth: 240,
+                                      background: 'var(--admin-card, #1a1f2e)',
+                                      border: '1px solid var(--admin-border, #2d3748)',
+                                      borderRadius: 6,
+                                      boxShadow: '0 8px 16px rgba(0,0,0,0.4)',
+                                      zIndex: 10,
+                                      padding: 4,
+                                    }}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {availableMechanics.length === 0 ? (
+                                      <div style={{ padding: 8, fontSize: 11, color: 'var(--admin-muted, #9ca3af)' }}>
+                                        No available mechanics.
+                                      </div>
+                                    ) : availableMechanics.map((m) => (
+                                      <button
+                                        key={m.id}
+                                        type="button"
+                                        className="admin-vehicle-btn secondary"
+                                        style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 8px', fontSize: 12, marginBottom: 2 }}
+                                        disabled={assigning}
+                                        onClick={() => void assignMechanic(booking.id, m.id)}
+                                      >
+                                        <strong style={{ display: 'block' }}>{m.full_name}</strong>
+                                        <span style={{ color: 'var(--admin-muted, #9ca3af)' }}>
+                                          {m.years_experience != null ? `${m.years_experience} yrs` : 'New'} · {m.rating_avg != null ? `★ ${m.rating_avg.toFixed(1)}` : 'unrated'}
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
                             )}
                             {booking.status === 'assigned' && activeTab === 'services' && (
                               <button
