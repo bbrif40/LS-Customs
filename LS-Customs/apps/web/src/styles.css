@@ -3,6 +3,38 @@
 /* Customer booking, payment, and notification controls */
 .date-picker-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .date-picker-group input { min-height: 36px; border: 1px solid var(--line, #d9dfdc); border-radius: 6px; padding: 6px 8px; background: var(--surface, #fff); color: inherit; }
+.rental-planner { display: flex; align-items: center; gap: 24px; margin: 4px 0 32px; padding: 18px 20px; border: 1px solid #dce8df; border-radius: 12px; background: linear-gradient(105deg, #edf5ef, #f9fbf8); }
+.rental-planner-heading { display: flex; align-items: center; gap: 11px; min-width: 205px; }
+.rental-planner-heading > div:last-child { display: flex; flex-direction: column; gap: 4px; }
+.rental-planner-heading strong { font-size: 13px; }
+.rental-planner-heading span { color: var(--muted); font-size: 11px; }
+.planner-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 9px; color: #376b51; background: #d8eadc; }
+.rental-planner .date-picker-group { flex: 1; }
+.rental-planner .date-picker-group label { display: flex; flex-direction: column; gap: 5px; }
+.rental-planner .date-picker-group label span { color: #718078; font-size: 9px; font-weight: 800; letter-spacing: .7px; text-transform: uppercase; }
+.rental-planner .date-picker-group input { min-width: 145px; border-color: #c9dbce; background: #fff; }
+.date-arrow { color: #8a9990; margin-top: 17px; font-size: 11px; }
+.planner-status { white-space: nowrap; color: #8a7561; font-size: 10px; font-weight: 700; }
+.planner-status.ready { color: #377156; }
+.rental-toolbar { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }
+.rental-toolbar-label { display: inline-flex; align-items: center; gap: 7px; margin-right: 2px; color: #40564c; font-size: 12px; white-space: nowrap; }
+.rental-toolbar .filter-row { margin: 0; }
+.rental-toolbar .search-field { margin-left: auto; }
+.vehicle-card { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+.vehicle-card:hover { transform: translateY(-3px); border-color: #bfd7c5; box-shadow: 0 14px 30px rgba(35, 70, 49, .10); }
+.vehicle-card.is-unavailable { opacity: .72; }
+.vehicle-card.is-unavailable:hover { transform: none; box-shadow: none; }
+.vehicle-card.is-unavailable .vehicle-image { filter: grayscale(.4); }
+.vehicle-unavailable-badge { position: absolute; z-index: 1; right: 13px; top: 48px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background: #2c1f17; color: #f6e0c4; border: 1px solid #6b4a2a; border-radius: 6px; font-size: 9px; font-weight: 700; letter-spacing: .4px; }
+.vehicle-footer .small-button[disabled] { background: #b3bcb8; cursor: not-allowed; }
+.vehicle-footer .small-button[disabled]:hover { background: #b3bcb8; transform: none; }
+.vehicle-image { height: 190px; }
+.vehicle-tag { padding: 5px 8px; border: 1px solid rgba(255,255,255,.34); border-radius: 4px; background: rgba(18, 36, 31, .42); backdrop-filter: blur(4px); }
+.vehicle-rating { padding: 4px 7px; border-radius: 5px; background: #fff8e8; }
+.vehicle-divider { height: 1px; margin: 0 0 12px; background: #edf1ed; }
+.vehicle-price { color: #244d3b; }
+.vehicle-footer .small-button { transition: background .2s ease, transform .2s ease; }
+.vehicle-footer .small-button:hover { background: #214f3c; transform: translateY(-1px); }
 .notification-panel { position: absolute; top: 52px; right: 0; z-index: 20; width: min(360px, calc(100vw - 32px)); max-height: 440px; overflow: auto; padding: 12px; border: 1px solid var(--line, #d9dfdc); border-radius: 8px; background: #fff; box-shadow: 0 12px 32px rgba(22, 35, 29, .16); }
 .top-actions { position: relative; }
 .notification-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 4px 10px; border-bottom: 1px solid var(--line, #d9dfdc); }
@@ -24,6 +56,7 @@
 .category-image { display: block; width: 100%; height: 132px; object-fit: cover; margin-bottom: 14px; }
 .category-tile > strong, .category-tile > small { display: block; padding: 0 15px; }
 @media (max-width: 640px) { .date-picker-group { align-items: stretch; } .date-picker-group input { width: 100%; } .notification-panel { right: -8px; } }
+@media (max-width: 760px) { .rental-planner { align-items: flex-start; flex-direction: column; gap: 16px; } .rental-planner .date-picker-group { width: 100%; } .rental-planner .date-picker-group input { min-width: 0; width: 100%; } .rental-planner .planner-status { align-self: flex-start; } .rental-toolbar { align-items: flex-start; flex-wrap: wrap; } .rental-toolbar .filter-row { order: 3; width: 100%; overflow-x: auto; padding-bottom: 3px; } .rental-toolbar .search-field { margin-left: auto; } }
 .workspace-footer { width: 100%; margin-left: 0; padding: 30px 5.5% 34px; display: flex; align-items: center; gap: 28px; border-top: 1px solid var(--line); background: #fff; color: var(--muted); font-size: 10px; }.workspace-footer-brand { display: flex; align-items: center; gap: 8px; color: var(--ink); }.workspace-footer-brand .brand-spark { font-size: 20px; }.workspace-footer-brand small { color: var(--muted); margin-left: 6px; }.workspace-footer-links { display: flex; gap: 18px; margin-left: auto; }.workspace-footer-links button { min-height: 36px; background: transparent; color: #55716a; font-size: 10px; }.workspace-footer-links button:hover { color: var(--green); }.workspace-copyright { margin-left: 8px; white-space: nowrap; }
 @media (max-width: 680px) { .workspace-footer { width: 100%; margin-left: 0; padding: 28px 20px 92px; display: block; }.workspace-footer-brand { flex-wrap: wrap; }.workspace-footer-brand small { width: 100%; margin: 3px 0 0 28px; }.workspace-footer-links { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin: 21px 0 15px; }.workspace-footer-links button { text-align: left; }.workspace-copyright { margin-left: 0; } }
 

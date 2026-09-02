@@ -121,8 +121,6 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
           </div>
           {loading ? (
             <p className="muted" style={{ padding: '24px 0' }}>Loading services…</p>
-          ) : source === 'static' ? (
-            <p className="form-helper">Showing the demo catalog. Connect Supabase to load live services.</p>
           ) : null}
           {!loading && filtered.length === 0 && (
             <p className="muted" style={{ padding: '24px 0' }}>No services in this category yet.</p>

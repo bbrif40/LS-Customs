@@ -15,7 +15,6 @@ export function WorkspaceFooter({ onNotify }: WorkspaceFooterProps) {
         <small>Professional automotive solutions.</small>
       </div>
       <div className="workspace-footer-links">
-        <button onClick={() => { window.history.pushState({}, '', '/admin'); window.dispatchEvent(new PopStateEvent('popstate')) }}>Admin Portal</button>
         <button onClick={() => onNotify('Help Center opened')}>Help Center</button>
         <button onClick={() => onNotify('Contact Support opened')}>Contact Support</button>
         <button onClick={() => onNotify('Terms of Service opened')}>Terms of Service</button>

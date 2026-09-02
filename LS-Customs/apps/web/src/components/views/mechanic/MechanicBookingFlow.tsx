@@ -112,7 +112,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     // without a DB row. Since the static fallback was removed, the only
     // way to land here is the live query failing mid-load. Refuse rather
     // than send a name string to a `uuid` column.
-    const looksLikeUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.id)
+    const looksLikeUuid = typeof service.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.id)
     if (!looksLikeUuid) {
       // eslint-disable-next-line no-console
       console.warn('[mechanic-booking] refusing to confirm: service has no DB id. useServices failed to load rows.')

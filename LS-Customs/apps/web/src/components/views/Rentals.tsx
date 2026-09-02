@@ -2,10 +2,11 @@
  * Rentals — fleet collection page with filters and search.
  * Pulls the active fleet from Supabase via useCustomerVehicles.
  */
-import { useState, useMemo } from 'react'
-import { ChevronRight, Search, Loader2, CalendarDays } from 'lucide-react'
+import { useState, useMemo, useEffect } from 'react'
+import { ChevronRight, Search, Loader2, CalendarDays, SlidersHorizontal } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
+import { useVehicleAvailability } from '../../hooks/useVehicleAvailability'
 import { VehicleCard } from '../common/VehicleCard'
 import { PageHeading } from '../common/PageHeading'
 import { RentalPayment } from './RentalPayment'
@@ -33,31 +34,24 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
   const [selectedVehicle, setSelectedVehicle] = useState<typeof vehicles[number] | null>(null)
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [bookingError, setBookingError] = useState<string | null>(null)
+  // Mark vehicles as unavailable when they have an active booking
+  // overlapping the selected date range. The RPC keeps this fresh
+  // whenever the dates change, so the cards update as the user
+  // shifts their trip.
+  const { unavailableIds } = useVehicleAvailability(startDate, endDate)
+  // Re-validate against the latest availability whenever the user
+  // changes the dates. If they had a vehicle selected and that
+  // vehicle is now blocked, drop the selection.
+  useEffect(() => {
+    if (selectedVehicle && unavailableIds.has(selectedVehicle.id)) {
+      setSelectedVehicle(null)
+    }
+  }, [unavailableIds, selectedVehicle])
 
-  if (selectedVehicle && bookingId) {
-    const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
-    return <RentalPayment vehicle={selectedVehicle} bookingId={bookingId} startDate={startDate} endDate={endDate} total={days * selectedVehicle.pricePerDay} onBack={() => { setBookingId(null); setSelectedVehicle(null) }} onNotify={onNotify} />
-  }
-
-  const chooseVehicle = async (vehicle: typeof vehicles[number]) => {
-    if (!startDate || !endDate || endDate <= startDate) { setBookingError('Select a valid pickup and return date first.'); return }
-    setBookingError(null)
-    const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
-    if (!userId) { onNotify('Please sign in before booking a rental.'); return }
-    const { data, error: insertError } = await supabase.from('vehicle_bookings').insert({ vehicle_id: vehicle.id, customer_id: userId, start_date: startDate, end_date: endDate, total_price: days * vehicle.pricePerDay, status: 'pending' }).select('id').single()
-    if (insertError || !data) { setBookingError(insertError?.message ?? 'Booking could not be created.'); return }
-    setSelectedVehicle(vehicle); setBookingId(data.id); onNotify('Rental booking created')
-  }
-
-  // Note: the UI Vehicle type doesn't carry the raw `category` field, so we
-  // re-derive a simple tag-based filter from the visible `tag` text. This
-  // works because the admin form uppercases sub_category into the tag, and
-  // for sub-category-less vehicles the category itself is uppercased.
   const filteredVehicles = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     return vehicles.filter((v) => {
       if (activeCategory !== 'all') {
-        // Best-effort match: tag should include the category or its alias.
         const t = v.tag.toLowerCase()
         const alias = activeCategory === 'premium' ? 'luxury' : activeCategory.replace('_', ' ')
         if (!t.includes(alias)) return false
@@ -70,34 +64,69 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
     })
   }, [vehicles, activeCategory, searchQuery])
 
+  if (selectedVehicle && bookingId) {
+    const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
+    return <RentalPayment vehicle={selectedVehicle} bookingId={bookingId} startDate={startDate} endDate={endDate} total={days * selectedVehicle.pricePerDay} onBack={() => { setBookingId(null); setSelectedVehicle(null) }} onNotify={onNotify} />
+  }
+
+  const chooseVehicle = async (vehicle: typeof vehicles[number]) => {
+    if (!startDate || !endDate || endDate <= startDate) { setBookingError('Select a valid pickup and return date first.'); return }
+    // Last-mile guard: the card might have been rendered as
+    // "available" using a slightly older snapshot of the RPC result,
+    // and a different customer could have taken the slot in the
+    // meantime. Re-check before INSERT so we surface a friendly
+    // message instead of the raw constraint text.
+    setBookingError(null)
+    if (unavailableIds.has(vehicle.id)) {
+      setBookingError(`${vehicle.name} is already booked for those dates. Try a different vehicle or shift your dates.`)
+      return
+    }
+    const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
+    if (!userId) { onNotify('Please sign in before booking a rental.'); return }
+    const { data, error: insertError } = await supabase.from('vehicle_bookings').insert({ vehicle_id: vehicle.id, customer_id: userId, start_date: startDate, end_date: endDate, total_price: days * vehicle.pricePerDay, status: 'pending' }).select('id').single()
+    if (insertError || !data) {
+      // Map the exclusion-constraint text to a human message; fall
+      // back to the raw error for anything else.
+      const msg = insertError?.message ?? 'Booking could not be created.'
+      if (msg.toLowerCase().includes('no_overlapping_bookings') || msg.toLowerCase().includes('conflicting key')) {
+        setBookingError(`${vehicle.name} is already booked for those dates. Try a different vehicle or shift your dates.`)
+      } else {
+        setBookingError(msg)
+      }
+      return
+    }
+    setSelectedVehicle(vehicle); setBookingId(data.id); onNotify('Rental booking created')
+  }
+
   return (
     <div className="page">
       <PageHeading
         eyebrow="FLEET COLLECTION"
         title="Find your next drive"
         detail="Choose from a curated fleet, ready when you are."
-        action={
-          <span className="date-picker-group"><CalendarDays size={16} /><input aria-label="Pickup date" type="date" min={new Date().toISOString().slice(0, 10)} value={startDate} onChange={(e) => setStartDate(e.target.value)} /><span>to</span><input aria-label="Return date" type="date" min={startDate || new Date().toISOString().slice(0, 10)} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></span>
-        }
       />
 
-      <div className="filter-row">
-        {CATEGORY_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            className={`filter ${activeCategory === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveCategory(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
+      <section className="rental-planner" aria-label="Rental dates">
+        <div className="rental-planner-heading">
+          <div className="planner-icon"><CalendarDays size={20} /></div>
+          <div><strong>Plan your trip</strong><span>Select your dates to see the right daily rate.</span></div>
+        </div>
+        <div className="date-picker-group">
+          <label><span>Pickup</span><input aria-label="Pickup date" type="date" min={new Date().toISOString().slice(0, 10)} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
+          <span className="date-arrow">to</span>
+          <label><span>Return</span><input aria-label="Return date" type="date" min={startDate || new Date().toISOString().slice(0, 10)} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
+        </div>
+        <span className={`planner-status ${startDate && endDate && endDate > startDate ? 'ready' : ''}`}>{startDate && endDate && endDate > startDate ? 'Dates selected' : 'Dates required to book'}</span>
+      </section>
+
+      <div className="rental-toolbar">
+        <div className="rental-toolbar-label"><SlidersHorizontal size={15} /><strong>Browse fleet</strong></div>
+        <div className="filter-row">
+          {CATEGORY_TABS.map((tab) => <button key={tab.id} className={`filter ${activeCategory === tab.id ? 'active' : ''}`} onClick={() => setActiveCategory(tab.id)}>{tab.label}</button>)}
+        </div>
         <label className="search-field">
           <Search size={17} />
-          <input
-            placeholder="Search vehicles..."
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-          />
+          <input placeholder="Search vehicles..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
         </label>
       </div>
 
@@ -126,7 +155,7 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
             gap: 12,
           }}
         >
-          <p>Failed to load vehicles: {error}</p>
+            <p>Failed to load vehicles: {error}</p>
           <button className="button dark-button" onClick={() => void refetch()}>
             Retry
           </button>
@@ -149,6 +178,7 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
             <VehicleCard
               key={vehicle.name}
               vehicle={vehicle}
+              unavailable={unavailableIds.has(vehicle.id)}
               onBook={() => void chooseVehicle(vehicle)}
             />
           ))}
