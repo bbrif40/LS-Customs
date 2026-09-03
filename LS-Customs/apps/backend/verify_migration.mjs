@@ -1,6 +1,6 @@
 import { Client } from 'pg'
 
-const DB_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+const DB_URL = 'postgresql://postgres:postgres@127.0.0.1:55422/postgres'
 const client = new Client({ connectionString: DB_URL })
 await client.connect()
 

@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises'
 import { Client } from 'pg'
 import path from 'node:path'
 
-const DB_URL = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+const DB_URL = 'postgresql://postgres:postgres@127.0.0.1:55422/postgres'
 const MIGRATION = path.resolve(
   'supabase/migrations/20260902120000_notification_triggers_tickets_payments.sql',
 )

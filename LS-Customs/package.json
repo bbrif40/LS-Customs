@@ -20,7 +20,7 @@
   "scripts": {
     "prepare": "git config core.hooksPath LS-Customs/.githooks",
     "dev": "npm run db:start --workspace=apps/backend && concurrently --names \"FNS,WEB\" --prefix-colors \"cyan,magenta\" \"npm run functions:serve --workspace=apps/backend\" \"npm run dev --workspace=apps/web\"",
-    "web:dev": "npm run dev --workspace=apps/web",
+    "web:dev": "npm run db:start && npm run dev --workspace=apps/web",
     "web:build": "npm run build --workspace=apps/web",
     "db:start": "npm run db:start --workspace=apps/backend",
     "db:stop": "npm run db:stop --workspace=apps/backend",

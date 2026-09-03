@@ -6,6 +6,8 @@ import { X, ChevronRight } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import type { AuthMode } from '../../types'
 
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
+
 interface AuthModalProps {
   mode: AuthMode
   onModeChange: (mode: AuthMode) => void
@@ -24,6 +26,11 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
     setLoading(true)
     setError('')
     try {
+      const healthCheck = await fetch(`${supabaseUrl}/auth/v1/settings`, { method: 'GET' })
+      if (!healthCheck.ok) {
+        throw new Error('Local Supabase Auth is unavailable. Start the local Supabase stack and try again.')
+      }
+
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: window.location.origin },

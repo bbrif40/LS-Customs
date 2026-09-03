@@ -4,7 +4,7 @@ const header = { alg: 'HS256', typ: 'JWT' };
 const now = Math.floor(Date.now() / 1000);
 const payload = {
   aud: 'authenticated',
-  iss: 'http://127.0.0.1:54321/auth/v1',
+  iss: 'http://127.0.0.1:55421/auth/v1',
   sub: '11111111-1111-1111-1111-111111111111',
   email: 'alice@ls.test',
   role: 'authenticated',

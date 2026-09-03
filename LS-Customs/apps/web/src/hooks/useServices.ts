@@ -29,7 +29,7 @@ function toUiService(row: MechanicService): Service {
   return {
     name: row.name,
     category: row.main_category,
-    price: `$${row.base_price.toFixed(2)}`,
+    price: `₱${row.base_price.toFixed(2)}`,
     duration: `${row.estimated_duration_minutes} mins`,
     icon: '✳',
     id: row.id,
