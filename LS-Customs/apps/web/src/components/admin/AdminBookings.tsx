@@ -154,27 +154,21 @@ export function AdminBookings() {
 
   const totalPages = Math.ceil(filteredBookings.length / pageSize)
 
-  // Build the pin set for the live service map. Only service bookings with
-  // an explicit pin (set by the customer's LocationPicker in StepLocation)
-  // are shown — vehicle bookings have no lat/lng column today.
+  // Service bookings carry the customer's dropped pin. Vehicle rentals do
+  // not need the dispatch map, so this data is only used on the services tab.
   const servicePins: MapPin[] = (serviceBookingsWithDetails ?? [])
     .filter(
-      (b): b is ServiceBookingWithDetails & { pin_lat: number; pin_lng: number } =>
-        b.pin_lat != null && b.pin_lng != null,
+      (booking): booking is ServiceBookingWithDetails & { pin_lat: number; pin_lng: number } =>
+        booking.pin_lat != null && booking.pin_lng != null,
     )
-    .map((b) => {
-      const customer = b.profiles?.[0]?.full_name ?? `Booking #${b.id.slice(0, 8)}`
-      const serviceName = b.service_booking_items?.[0]?.mechanic_services?.name ?? 'Service'
-      return {
-        id: b.id,
-        lat: b.pin_lat,
-        lng: b.pin_lng,
-        title: customer,
-        description: `${serviceName} — ${statusLabels[b.status] ?? b.status}`,
-        // Color the pin by status so the map mirrors the table.
-        color: statusColors[b.status] ?? undefined,
-      }
-    })
+    .map((booking) => ({
+      id: booking.id,
+      lat: booking.pin_lat,
+      lng: booking.pin_lng,
+      title: booking.profiles?.[0]?.full_name ?? `Booking #${booking.id.slice(0, 8)}`,
+      description: `${booking.service_booking_items?.[0]?.mechanic_services?.name ?? 'Service'} - ${statusLabels[booking.status] ?? booking.status}`,
+      color: statusColors[booking.status] ?? undefined,
+    }))
 
   const handleStatusChange = async (
     booking: VehicleBooking | ServiceBooking,
@@ -335,16 +329,17 @@ export function AdminBookings() {
         ))}
       </div>
 
-      {/* ── Live Service Map ─────────────────────────────────── */}
-      <section className="admin-map-panel">
-        <h3>Live service map</h3>
-        <p className="admin-map-panel-sub">
-          {servicePins.length === 0
-            ? 'No service bookings with a pinned location yet. Customers can drop a pin in Step 4 of the booking flow.'
-            : `${servicePins.length} pinned service booking${servicePins.length === 1 ? '' : 's'} on the map.`}
-        </p>
-        <MapView pins={servicePins} height={360} />
-      </section>
+      {activeTab === 'services' && (
+        <section className="admin-map-panel">
+          <h3>Service customer locations</h3>
+          <p className="admin-map-panel-sub">
+            {servicePins.length === 0
+              ? 'No service bookings have a pinned customer location yet.'
+              : `${servicePins.length} pinned service customer${servicePins.length === 1 ? '' : 's'} on the map.`}
+          </p>
+          <MapView pins={servicePins} height={360} />
+        </section>
+      )}
 
       {/* ── Bookings Table ───────────────────────────────────── */}
       <div className="admin-vehicle-grid" style={{ gridTemplateColumns: '1fr' }}>

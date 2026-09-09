@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { CarFront, Loader2, MapPin, Phone, RefreshCw, UserCircle2, Wrench, X, Calendar, Hash, Tag } from 'lucide-react'
+import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag } from 'lucide-react'
 import { PageHeading } from '../common/PageHeading'
 import { MapView } from '../common/map'
+import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { useCustomerBookings, type CustomerServiceBooking, type CustomerVehicleBooking } from '../../hooks/useCustomerBookings'
+import { supabase } from '../../supabaseClient'
 
 interface BookingsProps {
   userId: string | undefined
@@ -58,7 +60,7 @@ type BookingDetails =
   | { kind: 'service'; booking: CustomerServiceBooking; onViewMap: () => void }
   | { kind: 'rental'; booking: CustomerVehicleBooking }
 
-function BookingDetailsModal({ details, onClose }: { details: BookingDetails; onClose: () => void }) {
+function BookingDetailsModal({ details, userId, onClose }: { details: BookingDetails; userId: string | undefined; onClose: () => void }) {
   const isService = details.kind === 'service'
   const serviceNames = isService
     ? details.booking.service_booking_items?.map((item) => item.mechanic_services?.name).filter(Boolean).join(', ')
@@ -76,13 +78,65 @@ function BookingDetailsModal({ details, onClose }: { details: BookingDetails; on
   // Type-narrowed via the isService branch — TS understands the union
   // narrows inside each branch even without `details.booking` here.
   const shared = details.booking
+  const canRate = shared.status === 'completed' && Boolean(userId) && (isService ? Boolean(details.booking.mechanic_id) : Boolean(details.booking.vehicle_id))
+  const [rating, setRating] = useState(0)
+  const [comment, setComment] = useState('')
+  const [reviewId, setReviewId] = useState<string | null>(null)
+  const [ratingError, setRatingError] = useState<string | null>(null)
+  const [savingRating, setSavingRating] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    setRating(0)
+    setComment('')
+    setReviewId(null)
+    setRatingError(null)
+    if (!userId || !canRate) return () => { active = false }
+    void supabase
+      .from('reviews')
+      .select('id, rating, comment')
+      .eq('booking_id', shared.id)
+      .eq('customer_id', userId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error) setRatingError(error.message)
+        if (data) {
+          setReviewId(data.id)
+          setRating(data.rating)
+          setComment(data.comment ?? '')
+        }
+      })
+    return () => { active = false }
+  }, [canRate, shared.id, userId])
+
+  async function saveRating() {
+    if (!userId || !rating || !canRate) return
+    setSavingRating(true)
+    setRatingError(null)
+    const payload = {
+      booking_type: isService ? 'service' as const : 'vehicle' as const,
+      booking_id: shared.id,
+      customer_id: userId,
+      target_vehicle_id: isService ? null : details.booking.vehicle_id,
+      target_mechanic_id: isService ? details.booking.mechanic_id : null,
+      rating,
+      comment: comment.trim() || null,
+    }
+    const result = reviewId
+      ? await supabase.from('reviews').update({ rating, comment: payload.comment }).eq('id', reviewId).select('id').single()
+      : await supabase.from('reviews').insert(payload).select('id').single()
+    if (result.error) setRatingError(result.error.message)
+    else setReviewId(result.data.id)
+    setSavingRating(false)
+  }
 
   return (
     <div className="map-modal-backdrop" onClick={onClose}>
       <div className="map-modal booking-details-modal" onClick={(event) => event.stopPropagation()}>
         <header>
           <div>
-            <span className="booking-details-eyebrow">{isService ? 'Mobile service' : 'Vehicle rental'}</span>
+            <span className="booking-details-eyebrow">Transaction receipt · {isService ? 'Mobile service' : 'Vehicle rental'}</span>
             <h3>{isService ? (serviceNames || 'Mobile mechanic service') : (details.booking.vehicles?.name ?? 'Vehicle rental')}</h3>
           </div>
           <button onClick={onClose} aria-label="Close details"><X size={18} /></button>
@@ -101,6 +155,7 @@ function BookingDetailsModal({ details, onClose }: { details: BookingDetails; on
               {isAssigned && mechPhone && <DetailRow icon={Phone} label="Mechanic phone" value={mechPhone} />}
               {serviceNames && <DetailRow icon={Tag} label="Services" value={serviceNames} />}
               <DetailRow icon={Tag} label="Total" value={`₱${Number(shared.total_price).toLocaleString()}`} />
+              <DetailRow icon={Calendar} label="Booked on" value={new Date(shared.created_at).toLocaleString()} />
             </>
           ) : (
             <>
@@ -108,6 +163,7 @@ function BookingDetailsModal({ details, onClose }: { details: BookingDetails; on
               <DetailRow icon={MapPin} label="Pickup location" value={details.booking.pickup_location ?? 'Pickup location to be confirmed'} />
               {details.booking.vehicles?.image_url && <DetailRow icon={CarFront} label="Vehicle" value={details.booking.vehicles.name} />}
               <DetailRow icon={Tag} label="Total" value={`₱${Number(shared.total_price).toLocaleString()}`} />
+              <DetailRow icon={Calendar} label="Booked on" value={new Date(shared.created_at).toLocaleString()} />
             </>
           )}
 
@@ -115,6 +171,27 @@ function BookingDetailsModal({ details, onClose }: { details: BookingDetails; on
               surfaces once the admin has actually assigned a mechanic. */}
           {isAssigned && (
             <MechanicBlock name={mechName ?? null} phone={mechPhone ?? null} />
+          )}
+          {canRate && (
+            <div className="booking-rating-panel">
+              <div>
+                <strong>{reviewId ? 'Your rating' : `Rate this ${isService ? 'mechanic' : 'vehicle'}`}</strong>
+                <span>{reviewId ? 'You can update it within 24 hours.' : 'Share your experience with future customers.'}</span>
+              </div>
+              <div className="rating-stars" aria-label="Choose a rating from 1 to 5">
+                {[1, 2, 3, 4, 5].map((value) => (
+                  <button key={value} type="button" className={value <= rating ? 'active' : ''} aria-label={`${value} star${value === 1 ? '' : 's'}`} onClick={() => setRating(value)}>
+                    <Star size={20} fill={value <= rating ? 'currentColor' : 'none'} />
+                  </button>
+                ))}
+              </div>
+              <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Add an optional comment" rows={2} />
+              {ratingError && <p className="form-helper review-error">{ratingError}</p>}
+              <button className="button dark-button" type="button" disabled={!rating || savingRating} onClick={() => void saveRating()}>
+                {savingRating ? <Loader2 size={15} className="spin" /> : <Star size={15} />}
+                {reviewId ? 'Update rating' : 'Submit rating'}
+              </button>
+            </div>
           )}
         </div>
         <footer>
@@ -145,6 +222,7 @@ export function Bookings({ userId, selectedBookingId, onClearSelection }: Bookin
   const [liveBooking, setLiveBooking] = useState<CustomerServiceBooking | null>(null)
   const [details, setDetails] = useState<BookingDetails | null>(null)
   const [tab, setTab] = useState<'active' | 'history'>('active')
+  const [bookingType, setBookingType] = useState<'all' | 'rentals' | 'services'>('all')
 
   // Auto-open the details modal when a notification deep-links to a
   // service booking. Auto-dismiss the selection once the user closes
@@ -162,17 +240,26 @@ export function Bookings({ userId, selectedBookingId, onClearSelection }: Bookin
   const activeStatuses = ['pending', 'confirmed', 'assigned', 'en_route', 'in_progress']
   const historyStatuses = ['completed', 'cancelled']
   const matches = (status: string) => (tab === 'active' ? activeStatuses : historyStatuses).includes(status)
-  const visibleVehicles = vehicleBookings.filter((b) => matches(b.status))
-  const visibleServices = serviceBookings.filter((b) => matches(b.status))
+  const visibleVehicles = bookingType === 'services' ? [] : vehicleBookings.filter((b) => matches(b.status))
+  const visibleServices = bookingType === 'rentals' ? [] : serviceBookings.filter((b) => matches(b.status))
   const activeCount = vehicleBookings.filter((b) => activeStatuses.includes(b.status)).length + serviceBookings.filter((b) => activeStatuses.includes(b.status)).length
   const historyCount = vehicleBookings.filter((b) => historyStatuses.includes(b.status)).length + serviceBookings.filter((b) => historyStatuses.includes(b.status)).length
+  const scrollRef = useScrollAnimation<HTMLDivElement>()
 
   return (
-    <div className="page">
+    <div className={`page ${scrollRef.className}`} ref={scrollRef.ref}>
       <PageHeading eyebrow="YOUR ACTIVITY" title="Bookings & progress" detail="Keep an eye on your rentals and mobile service appointments." action={<button className="outline-button" onClick={() => void refetch()}><RefreshCw size={15} /> Refresh</button>} />
       <div className="booking-tabs">
         <button className={tab === 'active' ? 'active' : ''} onClick={() => setTab('active')}>Active <b>{activeCount}</b></button>
         <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>All history <b>{historyCount}</b></button>
+      </div>
+      <div className="booking-type-filter" aria-label="Filter bookings by type">
+        <span>Show</span>
+        {(['all', 'rentals', 'services'] as const).map((type) => (
+          <button key={type} className={bookingType === type ? 'active' : ''} onClick={() => setBookingType(type)}>
+            {type === 'all' ? 'Everything' : type === 'rentals' ? 'Rentals' : 'Mechanical services'}
+          </button>
+        ))}
       </div>
       {loading ? <div className="loading-state"><Loader2 size={20} className="spin" /> Loading your bookings…</div> : error ? <div className="empty-state"><p>{error}</p><button className="button dark-button" onClick={() => void refetch()}>Retry</button></div> : vehicleBookings.length === 0 && serviceBookings.length === 0 ? <div className="empty-state"><p>No bookings yet. Your rental and service bookings will appear here.</p></div> : visibleVehicles.length === 0 && visibleServices.length === 0 ? <div className="empty-state"><p>{tab === 'active' ? 'No active bookings right now. Completed and cancelled bookings live in All history.' : 'No completed or cancelled bookings yet.'}</p></div> : (
         <div className="booking-grid">
@@ -235,6 +322,7 @@ export function Bookings({ userId, selectedBookingId, onClearSelection }: Bookin
       {details && (
         <BookingDetailsModal
           details={details}
+          userId={userId}
           onClose={() => {
             setDetails(null)
             if (onClearSelection) onClearSelection()

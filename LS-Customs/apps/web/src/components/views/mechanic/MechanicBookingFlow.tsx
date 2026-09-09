@@ -7,10 +7,11 @@
  * Falls back to a generated reference + no insert if the table is missing,
  * mirroring useServices' graceful degradation.
  */
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '../../../supabaseClient'
 import { useProfile } from '../../../hooks/useProfile'
 import { useServices } from '../../../hooks/useServices'
+import { useScrollAnimation } from '../../../hooks/useScrollAnimation'
 import { PageHeading } from '../../common/PageHeading'
 import { BookingStepper } from './BookingStepper'
 import { STEP_ORDER, type Step } from './steps'
@@ -20,6 +21,7 @@ import { StepSchedule } from './StepSchedule'
 import { StepLocation } from './StepLocation'
 import { StepReview } from './StepReview'
 import { StepConfirmed } from './StepConfirmed'
+import { preloadMap } from '../../common/map/preload'
 import type { Service, ServiceBooking } from '../../../types'
 
 export interface ChosenAddress {
@@ -57,8 +59,12 @@ function formatPriceCents(cents: number): string {
 }
 
 export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: MechanicBookingFlowProps) {
+  useEffect(() => {
+    preloadMap()
+  }, [])
   const { defaultAddress, loading: profileLoading } = useProfile(userId)
   const { services, loading: servicesLoading, source: servicesSource } = useServices()
+  const scrollRef = useScrollAnimation<HTMLDivElement>()
 
   const [step, setStep] = useState<Step>('category')
   const [category, setCategory] = useState<string | null>(null)
@@ -202,7 +208,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
   // of the current step value.
   if (confirmedBooking) {
     return (
-      <div className="page mechanic-flow">
+      <div className={`page mechanic-flow ${scrollRef.className}`} ref={scrollRef.ref}>
         <PageHeading
           eyebrow="MOBILE MECHANIC"
           title="Service confirmed"
@@ -218,7 +224,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
   }
 
   return (
-    <div className="page mechanic-flow">
+    <div className={`page mechanic-flow ${scrollRef.className}`} ref={scrollRef.ref}>
       <PageHeading
         eyebrow="MOBILE MECHANIC"
         title="Book a mechanic"

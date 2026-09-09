@@ -24,6 +24,15 @@ interface VehicleFormData {
   fuel_type: string
   price_per_day: number
   image_url: string
+  gallery_urls: string[]
+  location: string
+  host_name: string
+  host_rating: number
+  features: string[]
+  rental_rules: string[]
+  mileage_policy: string
+  max_trip: string
+  delivery_methods: string[]
   is_active: boolean
 }
 
@@ -37,8 +46,20 @@ const initialFormData: VehicleFormData = {
   fuel_type: 'Gasoline',
   price_per_day: 0,
   image_url: '',
+  gallery_urls: [],
+  location: '',
+  host_name: '',
+  host_rating: 0,
+  features: [],
+  rental_rules: [],
+  mileage_policy: '',
+  max_trip: '',
+  delivery_methods: [],
   is_active: true,
 }
+
+const listValue = (value: string) => value.split('\n').map((item) => item.trim()).filter(Boolean)
+const listText = (value: string[]) => value.join('\n')
 
 export function AdminFleet() {
   const { data: vehicles, loading, error, refetch } = useAdminVehicles()
@@ -82,6 +103,15 @@ export function AdminFleet() {
       fuel_type: vehicle.fuel_type || 'Gasoline',
       price_per_day: vehicle.price_per_day,
       image_url: vehicle.image_url || '',
+      gallery_urls: vehicle.gallery_urls || [],
+      location: vehicle.location || '',
+      host_name: vehicle.host_name || '',
+      host_rating: vehicle.host_rating || 0,
+      features: vehicle.features || [],
+      rental_rules: vehicle.rental_rules || [],
+      mileage_policy: vehicle.mileage_policy || '',
+      max_trip: vehicle.max_trip || '',
+      delivery_methods: vehicle.delivery_methods || [],
       is_active: vehicle.is_active,
     })
     setSubmitError(null)
@@ -310,6 +340,48 @@ export function AdminFleet() {
                       required
                     />
                   </div>
+                </div>
+                <div className="admin-form-field">
+                  <label>Gallery Image URLs</label>
+                  <textarea value={listText(formData.gallery_urls)} onChange={(e) => setFormData({ ...formData, gallery_urls: listValue(e.target.value) })} placeholder="One image URL per line" rows={3} />
+                </div>
+                <div className="admin-form-row">
+                  <div className="admin-form-field">
+                    <label>Location</label>
+                    <input type="text" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="Imus, Cavite" />
+                  </div>
+                  <div className="admin-form-field">
+                    <label>Host Name</label>
+                    <input type="text" value={formData.host_name} onChange={(e) => setFormData({ ...formData, host_name: e.target.value })} placeholder="LS Customs" />
+                  </div>
+                  <div className="admin-form-field">
+                    <label>Host Rating</label>
+                    <input type="number" value={formData.host_rating} onChange={(e) => setFormData({ ...formData, host_rating: parseFloat(e.target.value) || 0 })} min={0} max={5} step={0.1} />
+                  </div>
+                </div>
+                <div className="admin-form-row">
+                  <div className="admin-form-field">
+                    <label>Features</label>
+                    <textarea value={listText(formData.features)} onChange={(e) => setFormData({ ...formData, features: listValue(e.target.value) })} placeholder="Bluetooth\nBackup camera" rows={3} />
+                  </div>
+                  <div className="admin-form-field">
+                    <label>Rental Rules</label>
+                    <textarea value={listText(formData.rental_rules)} onChange={(e) => setFormData({ ...formData, rental_rules: listValue(e.target.value) })} placeholder="No off-roading\nNo littering" rows={3} />
+                  </div>
+                </div>
+                <div className="admin-form-row">
+                  <div className="admin-form-field">
+                    <label>Mileage Policy</label>
+                    <input type="text" value={formData.mileage_policy} onChange={(e) => setFormData({ ...formData, mileage_policy: e.target.value })} placeholder="Unlimited mileage" />
+                  </div>
+                  <div className="admin-form-field">
+                    <label>Maximum Trip</label>
+                    <input type="text" value={formData.max_trip} onChange={(e) => setFormData({ ...formData, max_trip: e.target.value })} placeholder="1 month maximum trip" />
+                  </div>
+                </div>
+                <div className="admin-form-field">
+                  <label>Delivery Methods</label>
+                  <textarea value={listText(formData.delivery_methods)} onChange={(e) => setFormData({ ...formData, delivery_methods: listValue(e.target.value) })} placeholder="Pickup\nHome delivery" rows={2} />
                 </div>
                 <div className="admin-form-field">
                   <label>Name</label>

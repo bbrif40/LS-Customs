@@ -18,6 +18,16 @@ export interface Vehicle {
   image: string
   tag: string
   rating: string
+  galleryImages?: string[]
+  location?: string
+  description?: string
+  hostName?: string
+  hostRating?: string
+  features?: string[]
+  rentalRules?: string[]
+  mileagePolicy?: string
+  maxTrip?: string
+  deliveryMethods?: string[]
 }
 
 export interface Service {
@@ -103,6 +113,7 @@ export interface UserIdentity {
   displayName: string
   displayEmail: string
   initials: string
+  avatarUrl: string | null
 }
 
 export interface PageHeadingProps {

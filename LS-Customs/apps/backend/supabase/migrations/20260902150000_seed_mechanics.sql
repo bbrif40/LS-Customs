@@ -66,12 +66,12 @@ begin
   values
     (uid_rico,
      array['engine_diagnostics','brake_services','tire_wheel_care'],
-     true, 14.5995, 120.9842, 8, 4.7, 42),
+    true, 14.5995, 120.9842, 8, 0, 0),
     (uid_marco,
      array['electrical_battery_care','lighting_visibility','quick_fixes'],
-     true, 14.6760, 121.0437, 5, 4.5, 28),
+    true, 14.6760, 121.0437, 5, 0, 0),
     (uid_andre,
      array['routine_fluid_service','tire_wheel_care','diagnostic_repair'],
-     false, 14.5547, 121.0244, 12, 4.9, 67)
+    false, 14.5547, 121.0244, 12, 0, 0)
   on conflict (id) do nothing;
 end $$;

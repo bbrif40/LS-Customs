@@ -12,6 +12,7 @@ interface HeaderProps {
   menuOpen: boolean
   displayName: string
   initials: string
+  avatarUrl?: string | null
   onToggleMenu: () => void
   onView: (view: View) => void
   onNotify: (message: string) => void
@@ -156,7 +157,7 @@ function NotificationItem({
   )
 }
 
-export function Header({ view, menuOpen, displayName, initials, onToggleMenu, onView, onNotify, userId, onSelectBooking }: HeaderProps) {
+export function Header({ view, menuOpen, displayName, initials, avatarUrl, onToggleMenu, onView, onNotify, userId, onSelectBooking }: HeaderProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useCustomerNotifications(userId, 'panel')
   const [open, setOpen] = useState(false)
   return (
@@ -204,7 +205,7 @@ export function Header({ view, menuOpen, displayName, initials, onToggleMenu, on
           </div>
         )}
         <button className="user-chip" onClick={() => onView('profile')}>
-          <span className="avatar">{initials}</span>
+          {avatarUrl && <span className="avatar"><img src={avatarUrl} alt="" /></span>}
           <span>{displayName}</span>
           <ChevronRight size={15} />
         </button>

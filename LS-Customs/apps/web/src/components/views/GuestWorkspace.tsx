@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { Phone, CircleHelp, ChevronRight, Menu, CarFront, Wrench, ClipboardList } from 'lucide-react'
 import { navItems } from '../../data/navigation'
+import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { Rentals } from './Rentals'
 import { MechanicServices } from './MechanicServices'
 import { WorkspaceFooter } from '../layout/WorkspaceFooter'
@@ -17,6 +18,7 @@ interface GuestWorkspaceProps {
 
 export function GuestWorkspace({ onOpenAuth }: GuestWorkspaceProps) {
   const [guestView, setGuestView] = useState<View>('home')
+  const scrollRef = useScrollAnimation()
 
   const navigateGuest = (view: View) => {
     if (view === 'rentals' || view === 'services') {
@@ -86,7 +88,7 @@ export function GuestWorkspace({ onOpenAuth }: GuestWorkspaceProps) {
         </header>
 
         {guestView === 'home' && (
-          <div className="guest-page">
+          <div className={`guest-page ${scrollRef.className}`} ref={scrollRef.ref}>
             <p className="eyebrow">LS CUSTOMS WORKSPACE</p>
             <h1>
               Your automotive care,
@@ -104,7 +106,7 @@ export function GuestWorkspace({ onOpenAuth }: GuestWorkspaceProps) {
                 Create an account
               </button>
             </div>
-            <div className="guest-panels">
+            <div className="guest-panels stagger-children">
               <article>
                 <CarFront size={20} />
                 <strong>Premium rentals</strong>

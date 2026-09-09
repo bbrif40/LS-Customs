@@ -27,7 +27,7 @@ interface UseProfileResult {
   saving: boolean
   error: string | null
   refetch: () => Promise<void>
-  updateProfile: (updates: { full_name?: string; phone?: string | null }) => Promise<void>
+  updateProfile: (updates: { full_name?: string; phone?: string | null; avatar_url?: string | null }) => Promise<void>
   upsertDefaultAddress: (input: { line1: string; city: string; label?: string }) => Promise<void>
 }
 
@@ -78,7 +78,7 @@ export function useProfile(userId: string | undefined): UseProfileResult {
   }, [fetchAll])
 
   const updateProfile = useCallback(
-    async (updates: { full_name?: string; phone?: string | null }) => {
+    async (updates: { full_name?: string; phone?: string | null; avatar_url?: string | null }) => {
       if (!userId) throw new Error('Not signed in')
       setSaving(true)
       setError(null)
@@ -91,6 +91,9 @@ export function useProfile(userId: string | undefined): UseProfileResult {
           .single()
         if (updateError) throw updateError
         setProfile(data as DbProfile)
+        if (Object.prototype.hasOwnProperty.call(updates, 'avatar_url')) {
+          window.dispatchEvent(new CustomEvent('ls-profile-updated', { detail: { avatarUrl: updates.avatar_url ?? null } }))
+        }
       } finally {
         setSaving(false)
       }

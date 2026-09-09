@@ -86,6 +86,15 @@ export interface Database {
           fuel_type: string | null
           price_per_day: number
           image_url: string | null
+          gallery_urls: string[]
+          location: string | null
+          host_name: string | null
+          host_rating: number | null
+          features: string[]
+          rental_rules: string[]
+          mileage_policy: string | null
+          max_trip: string | null
+          delivery_methods: string[]
           is_active: boolean
           rating_avg: number
           rating_count: number
@@ -103,6 +112,15 @@ export interface Database {
           fuel_type?: string | null
           price_per_day: number
           image_url?: string | null
+          gallery_urls?: string[]
+          location?: string | null
+          host_name?: string | null
+          host_rating?: number | null
+          features?: string[]
+          rental_rules?: string[]
+          mileage_policy?: string | null
+          max_trip?: string | null
+          delivery_methods?: string[]
           is_active?: boolean
           rating_avg?: number
           rating_count?: number
@@ -120,6 +138,15 @@ export interface Database {
           fuel_type?: string | null
           price_per_day?: number
           image_url?: string | null
+          gallery_urls?: string[]
+          location?: string | null
+          host_name?: string | null
+          host_rating?: number | null
+          features?: string[]
+          rental_rules?: string[]
+          mileage_policy?: string | null
+          max_trip?: string | null
+          delivery_methods?: string[]
           is_active?: boolean
           rating_avg?: number
           rating_count?: number

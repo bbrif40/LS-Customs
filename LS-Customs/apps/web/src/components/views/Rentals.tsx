@@ -3,10 +3,12 @@
  * Pulls the active fleet from Supabase via useCustomerVehicles.
  */
 import { useState, useMemo, useEffect } from 'react'
-import { ChevronRight, Search, Loader2, CalendarDays, SlidersHorizontal } from 'lucide-react'
+import { ChevronRight, Search, Loader2, CalendarDays, Fuel, MapPin, Settings2, SlidersHorizontal, Star, Users, X } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { useVehicleAvailability } from '../../hooks/useVehicleAvailability'
+import { useScrollAnimation } from '../../hooks/useScrollAnimation'
+import { useFavoriteVehicles } from '../../hooks/useFavoriteVehicles'
 import { VehicleCard } from '../common/VehicleCard'
 import { PageHeading } from '../common/PageHeading'
 import { RentalPayment } from './RentalPayment'
@@ -32,6 +34,7 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [selectedVehicle, setSelectedVehicle] = useState<typeof vehicles[number] | null>(null)
+  const [previewVehicle, setPreviewVehicle] = useState<typeof vehicles[number] | null>(null)
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [bookingError, setBookingError] = useState<string | null>(null)
   // Mark vehicles as unavailable when they have an active booking
@@ -39,6 +42,7 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
   // whenever the dates change, so the cards update as the user
   // shifts their trip.
   const { unavailableIds } = useVehicleAvailability(startDate, endDate)
+  const { isFavorite, toggleFavorite } = useFavoriteVehicles()
   // Re-validate against the latest availability whenever the user
   // changes the dates. If they had a vehicle selected and that
   // vehicle is now blocked, drop the selection.
@@ -47,6 +51,9 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
       setSelectedVehicle(null)
     }
   }, [unavailableIds, selectedVehicle])
+
+  const scrollRef = useScrollAnimation<HTMLDivElement>()
+  const isPageVisible = scrollRef.className.includes('visible')
 
   const filteredVehicles = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
@@ -99,7 +106,7 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
   }
 
   return (
-    <div className="page">
+    <div className={`page ${scrollRef.className}`} ref={scrollRef.ref}>
       <PageHeading
         eyebrow="FLEET COLLECTION"
         title="Find your next drive"
@@ -173,15 +180,48 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
             : 'No vehicles match your filters.'}
         </div>
       ) : (
-        <div className="vehicle-grid rentals-grid">
+        <div className={`vehicle-grid rentals-grid stagger-children ${isPageVisible ? 'visible' : ''}`}>
           {filteredVehicles.map((vehicle) => (
             <VehicleCard
               key={vehicle.name}
               vehicle={vehicle}
               unavailable={unavailableIds.has(vehicle.id)}
+              isFavorite={isFavorite(vehicle.id)}
+              onToggleFavorite={() => toggleFavorite(vehicle.id)}
+              onView={() => setPreviewVehicle(vehicle)}
               onBook={() => void chooseVehicle(vehicle)}
             />
           ))}
+        </div>
+      )}
+      {previewVehicle && (
+        <div className="vehicle-preview-backdrop" onClick={() => setPreviewVehicle(null)}>
+          <div className="vehicle-preview-modal" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <div>
+                <p className="eyebrow">{previewVehicle.tag}</p>
+                <h2>{previewVehicle.name}</h2>
+              </div>
+              <button type="button" onClick={() => setPreviewVehicle(null)} aria-label="Close vehicle details"><X size={20} /></button>
+            </header>
+            <div className="vehicle-preview-content">
+              <img src={previewVehicle.galleryImages?.[0] || previewVehicle.image} alt={previewVehicle.name} />
+              <div className="vehicle-preview-copy">
+                <div className="vehicle-preview-rating"><Star size={15} fill="currentColor" /> {previewVehicle.rating} rating</div>
+                <p>{previewVehicle.description || previewVehicle.detail}</p>
+                <div className="vehicle-preview-specs">
+                  <span><Users size={15} /> {previewVehicle.detail.match(/\d+ seats/)?.[0] || 'Seats available'}</span>
+                  <span><Settings2 size={15} /> {previewVehicle.detail.includes('Manual') ? 'Manual' : 'Automatic'}</span>
+                  <span><Fuel size={15} /> {previewVehicle.detail.includes('Electric') ? 'Electric' : 'Gasoline'}</span>
+                  <span><MapPin size={15} /> {previewVehicle.location || 'Los Santos'}</span>
+                </div>
+                <strong className="vehicle-preview-price">{previewVehicle.price}<small>/ day</small></strong>
+                <button type="button" className="button dark-button" onClick={() => { setPreviewVehicle(null); document.querySelector('.rental-planner')?.scrollIntoView({ behavior: 'smooth' }) }}>
+                  Choose dates to book <ChevronRight size={15} />
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

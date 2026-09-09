@@ -8,7 +8,7 @@
  * The two saves are independent so a contact change does not require
  * re-submitting the address, and vice versa.
  */
-import { useState, useEffect } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Bell, ShieldCheck, MapPin, Headset, Loader2 } from 'lucide-react'
 import { PageHeading } from '../common/PageHeading'
 import { SettingsRow } from '../common/SettingsRow'
@@ -32,16 +32,38 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
     updateProfile,
     upsertDefaultAddress,
   } = useProfile(userId)
+  const photoInputRef = useRef<HTMLInputElement>(null)
 
   // Local form state — initialized once the profile loads.
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [addressLine1, setAddressLine1] = useState('')
   const [addressCity, setAddressCity] = useState('')
-
   // Per-section dirty state. A change in one section only dirties that section.
   const [contactDirty, setContactDirty] = useState(false)
   const [addressDirty, setAddressDirty] = useState(false)
+
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      onNotify('Please choose an image file')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      onNotify('Profile images must be smaller than 2 MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result !== 'string') return
+      void updateProfile({ avatar_url: reader.result })
+        .then(() => onNotify('Profile photo saved'))
+        .catch((error: unknown) => onNotify(error instanceof Error ? `Save failed: ${error.message}` : 'Save failed'))
+    }
+    reader.readAsDataURL(file)
+    event.target.value = ''
+  }
 
   useEffect(() => {
     if (!profile) return
@@ -124,7 +146,7 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
   }
 
   return (
-    <div className="page">
+    <div className="page profile-page">
       <PageHeading
         eyebrow="ACCOUNT"
         title="Profile & settings"
@@ -148,14 +170,17 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
         </div>
       )}
 
-      <div className="profile-layout">
+      <div className="profile-layout stagger-children visible">
         <section className="profile-card">
           <div className="profile-cover" />
           <div className="profile-main">
-            <div className="avatar profile-avatar">{initials}</div>
+            <div className="avatar profile-avatar">
+              {profile?.avatar_url ? <img src={profile.avatar_url} alt="Profile" /> : initials}
+            </div>
             <h2>{displayName}</h2>
             <p className="muted">{email}</p>
-            <button className="outline-button" onClick={() => onNotify('Photo picker opened')}>
+            <input ref={photoInputRef} className="profile-photo-input" type="file" accept="image/*" onChange={handlePhotoChange} />
+            <button className="outline-button" onClick={() => photoInputRef.current?.click()} disabled={saving}>
               Change photo
             </button>
           </div>

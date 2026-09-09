@@ -38,6 +38,12 @@ export default function MapSurface(props: MapSurfaceProps) {
   const { center, zoom, pins, draggablePin, onPinChange, onMapClick, height } = props
   const libs = useLeaflet()
 
+  const containerKey = useMemo(
+    // Depend on the values, not the `center` array reference (new every render).
+    () => `m:${center[0].toFixed(3)}:${center[1].toFixed(3)}:${pins.length}:${draggablePin ? 'd' : 's'}`,
+    [center[0], center[1], pins.length, draggablePin],
+  )
+
   // While the chunk is loading, render nothing for one frame.
   // The surrounding <Suspense> keeps the skeleton visible.
   if (!libs) return null
@@ -52,12 +58,6 @@ export default function MapSurface(props: MapSurfaceProps) {
       popupAnchor: [0, -10],
     })
   }
-
-  const containerKey = useMemo(
-    // Depend on the values, not the `center` array reference (new every render).
-    () => `m:${center[0].toFixed(3)}:${center[1].toFixed(3)}:${pins.length}:${draggablePin ? 'd' : 's'}`,
-    [center[0], center[1], pins.length, draggablePin],
-  )
 
   const { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } = libs.rl
 

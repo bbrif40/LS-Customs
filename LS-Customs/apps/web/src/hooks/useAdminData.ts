@@ -103,7 +103,7 @@ function useAdminList<T>(
 export function useAdminVehicles() {
   return useAdminList<Vehicle>(
     'vehicles',
-    'id, category, sub_category, name, description, seats, transmission, fuel_type, price_per_day, image_url, is_active, rating_avg, rating_count, created_at, updated_at',
+    'id, category, sub_category, name, description, seats, transmission, fuel_type, price_per_day, image_url, gallery_urls, location, host_name, host_rating, features, rental_rules, mileage_policy, max_trip, delivery_methods, is_active, rating_avg, rating_count, created_at, updated_at',
     { column: 'created_at', ascending: false }
   )
 }

@@ -6,6 +6,8 @@ import { useEffect, useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { useTrendingServices } from '../../hooks/useTrendingServices'
+import { useScrollAnimation } from '../../hooks/useScrollAnimation'
+import { useFavoriteVehicles } from '../../hooks/useFavoriteVehicles'
 import { VehicleCard } from '../common/VehicleCard'
 import { ServiceMini } from '../common/ServiceMini'
 import { LocationCard } from '../common/LocationCard'
@@ -48,11 +50,9 @@ function formatDashboardDate(date: Date): string {
 }
 
 export function Dashboard({ displayName, initials, onView, onNotify }: DashboardProps) {
-  const { vehicles: featured, loading: featuredLoading } = useCustomerVehicles({
-    limit: 4,
-    orderByRating: true,
-  })
+  const { vehicles: featured, loading: featuredLoading } = useCustomerVehicles()
   const { services: trending, loading: trendingLoading } = useTrendingServices(2)
+  const { isFavorite, toggleFavorite } = useFavoriteVehicles()
 
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -64,9 +64,11 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
 
   const greeting = getGreeting(now.getHours())
   const dateLabel = formatDashboardDate(now)
+  const scrollRef = useScrollAnimation<HTMLDivElement>({ threshold: 0 })
+  const isDashboardVisible = scrollRef.className.includes('visible')
 
   return (
-    <div className="page dashboard-page">
+    <div className={`page dashboard-page ${scrollRef.className}`} ref={scrollRef.ref}>
       <section className="welcome-row">
         <div>
           <p className="eyebrow">{dateLabel}</p>
@@ -80,7 +82,7 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
         </button>
       </section>
 
-      <section className="hero-grid">
+      <section className={`hero-grid stagger-hero ${isDashboardVisible ? 'visible' : ''}`}>
         <article className="hero-card">
           <video
             className="hero-video"
@@ -117,8 +119,8 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
 
       <section className="section-heading">
         <div>
-          <p className="eyebrow">CURATED FOR YOU</p>
-          <h2>Featured rentals</h2>
+          <p className="eyebrow">YOUR GARAGE</p>
+          <h2>Your favorite rentals</h2>
         </div>
         <button className="text-button" onClick={() => onView('rentals')}>
           View all <ChevronRight size={15} />
@@ -126,14 +128,16 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
       </section>
       {featuredLoading ? (
         <p className="muted" style={{ padding: '24px 0' }}>Loading featured vehicles…</p>
-      ) : featured.length === 0 ? (
-        <p className="muted" style={{ padding: '24px 0' }}>No active vehicles in the fleet yet.</p>
+      ) : featured.filter((vehicle) => isFavorite(vehicle.id)).length === 0 ? (
+        <p className="muted favorite-empty" style={{ padding: '24px 0' }}>Tap the heart on a vehicle to keep it here.</p>
       ) : (
         <div className="vehicle-grid">
-          {featured.map((vehicle) => (
+          {featured.filter((vehicle) => isFavorite(vehicle.id)).map((vehicle) => (
             <VehicleCard
               key={vehicle.name}
               vehicle={vehicle}
+              isFavorite={isFavorite(vehicle.id)}
+              onToggleFavorite={() => toggleFavorite(vehicle.id)}
               onBook={() => onNotify(`${vehicle.name} selected for booking`)}
             />
           ))}
@@ -143,13 +147,13 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
       <section className="section-heading service-heading">
         <div>
           <p className="eyebrow">ON-DEMAND CARE</p>
-          <h2>Trending mechanic services</h2>
+          <h2>You might want to try these for your vehicle</h2>
         </div>
         <button className="text-button" onClick={() => onView('services')}>
           View all <ChevronRight size={15} />
         </button>
       </section>
-      <div className="service-highlight-grid">
+      <div className={`service-highlight-grid stagger-children ${isDashboardVisible ? 'visible' : ''}`}>
         {trendingLoading ? (
           <p className="muted" style={{ padding: '24px 0' }}>Loading services…</p>
         ) : trending.length === 0 ? (

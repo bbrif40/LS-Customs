@@ -1414,11 +1414,20 @@
 }
 
 .admin-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 22px 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+.admin-modal > form {
+  min-height: 0;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
 }
 
 .admin-form-row {

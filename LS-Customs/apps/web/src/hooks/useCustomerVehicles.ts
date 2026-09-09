@@ -36,6 +36,16 @@ function toUiVehicle(row: DbVehicle): UiVehicle {
     image: row.image_url || '',
     tag: row.sub_category ? row.sub_category.toUpperCase() : row.category.toUpperCase(),
     rating: row.rating_avg ? row.rating_avg.toFixed(1) : '0.0',
+    galleryImages: row.gallery_urls?.length ? row.gallery_urls : row.image_url ? [row.image_url] : [],
+    location: row.location || 'Los Santos',
+    description: row.description || 'Always in good running condition.',
+    hostName: row.host_name || 'LS Customs',
+    hostRating: row.host_rating ? row.host_rating.toFixed(1) : 'N/A',
+    features: row.features || [],
+    rentalRules: row.rental_rules || [],
+    mileagePolicy: row.mileage_policy || 'Mileage terms provided at pickup',
+    maxTrip: row.max_trip || 'Flexible rental duration',
+    deliveryMethods: row.delivery_methods || [],
   }
 }
 
@@ -54,7 +64,7 @@ export function useCustomerVehicles(
       let query = supabase
         .from('vehicles')
         .select(
-          'id, category, sub_category, name, description, seats, transmission, fuel_type, price_per_day, image_url, is_active, rating_avg, rating_count, created_at, updated_at'
+          'id, category, sub_category, name, description, seats, transmission, fuel_type, price_per_day, image_url, gallery_urls, location, host_name, host_rating, features, rental_rules, mileage_policy, max_trip, delivery_methods, is_active, rating_avg, rating_count, created_at, updated_at'
         )
         .eq('is_active', true)
 

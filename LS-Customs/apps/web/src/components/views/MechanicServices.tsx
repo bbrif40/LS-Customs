@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { ChevronRight, Package, Clock3, Wrench, Plus } from 'lucide-react'
 import { useServices } from '../../hooks/useServices'
 import { supabase } from '../../supabaseClient'
+import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { PageHeading } from '../common/PageHeading'
 
 interface MechanicServicesProps {
@@ -80,13 +81,15 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
     return Array.from(seen)
   }, [services])
 
+  const scrollRef = useScrollAnimation()
+
   const filtered = useMemo(() => {
     if (activeCategory === 'all') return services
     return services.filter((s) => s.category === activeCategory)
   }, [services, activeCategory])
 
   return (
-    <div className="page">
+    <div className={`page ${scrollRef.className}`} ref={scrollRef.ref}>
       <PageHeading
         eyebrow="MOBILE MECHANIC"
         title="Care that comes to you"
@@ -101,7 +104,7 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
         }
       />
       <div className="service-layout">
-        <div className="service-list">
+        <div className="service-list stagger-children">
           <div className="category-tabs">
             <button
               className={activeCategory === 'all' ? 'active' : ''}

@@ -261,6 +261,7 @@ export function App() {
               menuOpen={menuOpen}
               displayName={identity.displayName}
               initials={identity.initials}
+              avatarUrl={identity.avatarUrl}
               onToggleMenu={() => setMenuOpen((open) => !open)}
               onView={setView}
               onNotify={notify}

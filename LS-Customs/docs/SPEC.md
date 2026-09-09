@@ -21,7 +21,8 @@ Give customers a single app to (a) rent a vehicle when they need one and (b) get
 ### 1.2 Why This Needs a Real Backend
 
 - Bookings must never double-book a vehicle or a mechanic — this requires transactional integrity, not client-side checks.
-- Customer data (addresses, phone numbers, payment references) and mechanic location data are sensitive — access must be enforced at the database level (RLS), not just hidden in the UI.
+- Customer data (addresses, phone 
+numbers, payment references) and mechanic location data are sensitive — access must be enforced at the database level (RLS), not just hidden in the UI.
 - Matching a service request to an available, nearby mechanic and keeping booking status in sync (pending → assigned → en route → in progress → completed) is a server-side workflow, not a UI concern.
 
 ---

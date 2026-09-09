@@ -13,9 +13,9 @@
 
 insert into public.vehicles (id, category, sub_category, name, description, seats, transmission, fuel_type, price_per_day, image_url, is_active, rating_avg, rating_count)
 values
-  ('aaaaaaaa-1111-1111-1111-111111111111', 'premium', 'Grand Tourer', 'Audi A4 Premium', 'Executive sedan with 5 seats', 5, 'Automatic', 'Gasoline', 4500, 'https://images.unsplash.com/photo-1606664515524', true, 4.9, 128),
-  ('bbbbbbbb-2222-2222-2222-222222222222', 'premium', 'Luxury Sedan', 'Mercedes-Benz C-Class', 'Luxury grand tourer with 5 seats', 5, 'Automatic', 'Gasoline', 12000, 'https://images.unsplash.com/photo-1618843479313', true, 4.8, 89),
-  ('cccccccc-3333-3333-3333-333333333333', 'short_term', 'Electric Performance', 'Pfister Neon', 'Premium electric performance with 2 seats', 2, 'Automatic', 'Electric', 410, 'https://images.unsplash.com/photo-1593941707882', true, 5.0, 42)
+  ('aaaaaaaa-1111-1111-1111-111111111111', 'premium', 'Grand Tourer', 'Audi A4 Premium', 'Executive sedan with 5 seats', 5, 'Automatic', 'Gasoline', 4500, 'https://images.unsplash.com/photo-1606664515524', true, 0, 0),
+  ('bbbbbbbb-2222-2222-2222-222222222222', 'premium', 'Luxury Sedan', 'Mercedes-Benz C-Class', 'Luxury grand tourer with 5 seats', 5, 'Automatic', 'Gasoline', 12000, 'https://images.unsplash.com/photo-1618843479313', true, 0, 0),
+  ('cccccccc-3333-3333-3333-333333333333', 'short_term', 'Electric Performance', 'Pfister Neon', 'Premium electric performance with 2 seats', 2, 'Automatic', 'Electric', 410, 'https://images.unsplash.com/photo-1593941707882', true, 0, 0)
 on conflict (id) do nothing;
 
 -- -----------------------------------------------------------------------------
