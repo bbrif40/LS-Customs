@@ -4,8 +4,8 @@
   "private": true,
   "description": "Supabase backend for LS Customs — schema, Edge Functions, seed data",
   "scripts": {
-    "dev": "npx supabase start && npx supabase functions serve --env-file supabase/.env",
-    "db:start": "npx supabase start",
+    "dev": "npx supabase start --yes && npx supabase functions serve --env-file supabase/.env",
+    "db:start": "npx supabase start --yes",
     "db:stop": "npx supabase stop",
     "db:reset": "npx supabase db reset",
     "db:push": "npx supabase db push",

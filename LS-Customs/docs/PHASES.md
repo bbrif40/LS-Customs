@@ -52,6 +52,8 @@
 - Write a `current_role()` / `is_admin()` / `is_mechanic()` SQL helper function (SECURITY DEFINER or based on `auth.uid()` + `profiles` lookup) for reuse across RLS policies.
 - Write trigger(s) to recompute `mechanic_profiles.rating_avg` and `vehicles.rating_avg` whenever a row is inserted/updated in `reviews`.
 - Write trigger to insert a `notifications` row whenever `service_bookings.status` or `vehicle_bookings.status` changes.
+- Write `tg_ticket_message_sync_status` trigger to auto-advance ticket status on new messages.
+- Write `notify_on_status_change` trigger for `support_tickets` status updates.
 - Seed at least one `admin` and one `mechanic` profile manually for testing role-based policies.
 
 **Acceptance Criteria:**
@@ -60,6 +62,8 @@
 - [ ] Inserting a review updates the target's `rating_avg` and `rating_count` correctly (verified with 2+ reviews).
 - [ ] Updating a `service_bookings.status` row produces a corresponding `notifications` row for the correct `user_id`.
 - [ ] `is_admin()` returns `true` only for the seeded admin session and `false` for customer/mechanic sessions.
+- [ ] A new `support_ticket_message` insert auto-advances the parent ticket status (`open → in_progress` on admin reply; `resolved/closed → in_progress` on customer reply).
+- [ ] A `support_tickets` status update produces a corresponding `notifications` row.
 
 ---
 
@@ -72,6 +76,9 @@
 - `create-payment-intent`: given a booking type + id, create a payment intent with the configured provider and store the reference in `payments`.
 - `payment-webhook`: receives provider callbacks (e.g., Stripe/PayMongo webhook), verifies signature, updates `payments.status` and the parent booking's status.
 - `dispatch-notification`: delivers unsent `notifications` via email (SendGrid) and SMS (Twilio), reading recipient contact info from `profiles` and `auth.users`.
+- `geocode-address`: convert a human-readable address to lat/lng coordinates via the Google Maps Geocoding API (server-side, API key hidden from client).
+- `create-ticket`: submit a structured support ticket with auto-generated `tracking_number` (`TKT-YYYYMMDD-XXXX`), category, priority, and description.
+- `flag-user`: admin-only permanent ban and profile deletion (irreversible; `banned_until` set to 9999-12-31).
 - Configure `apps/backend/supabase/functions/<name>/index.ts` per function with shared `_shared/` utilities (CORS headers, Supabase client factory, auth check, payment provider abstraction).
 - Document required secrets via `supabase secrets set`.
 
@@ -82,6 +89,10 @@
 - [ ] `create-payment-intent` returns a client secret/reference and a `payments` row is created with `status = 'pending'`.
 - [ ] A simulated webhook payload (signed with the test secret) correctly flips `payments.status` to `succeeded` and the parent booking accordingly.
 - [ ] An unsigned/invalid webhook payload is rejected with 401/400 and makes no DB changes.
+- [ ] Calling `geocode-address` with a valid address returns `lat`, `lng`, and `formatted_address`.
+- [ ] Calling `create-ticket` with a valid category/priority/description returns a `tracking_number` in `TKT-YYYYMMDD-XXXX` format and creates a `support_tickets` row.
+- [ ] Calling `flag-user` with a non-admin JWT returns `403 Forbidden`.
+- [ ] Calling `flag-user` with a valid admin JWT sets `banned_until` and deletes the profile row.
 
 ---
 
@@ -90,19 +101,21 @@
 **Goal:** The backend is verified end-to-end and deployed, ready for the Ionic frontend to consume.
 
 **Tasks:**
-- Write a seed script (`apps/backend/supabase/seed.sql`) covering: sample profiles per role, the full vehicle catalog (3 main × 3 sub × 5 products), the full mechanic service catalog (3 main × 3 sub × 5 services), a handful of sample bookings in different statuses.
+- Write a seed script (`apps/backend/supabase/seed.sql` + `seed_extra_services.sql`) covering: sample profiles per role, the full vehicle catalog (3 main × 3 sub × 5 products = 45 vehicles), the full mechanic service catalog (6 sub-categories × 5 services = 30 services), support ticket seed data (2–3 tickets per status with threaded messages), and a handful of sample bookings in different statuses.
 - Write integration test scripts (SQL or a small Node/Deno test runner) covering every acceptance criterion above.
 - Run `supabase db lint` / `supabase db diff` to confirm migrations match the live schema with no drift.
-- Review every RLS policy for the "authenticated but wrong owner" and "anonymous" cases explicitly (a checklist per table).
-- Deploy Edge Functions: `supabase functions deploy <name>` for each function; confirm secrets are set on the hosted project.
-- Set up the Vercel project: environment variables for `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-side only), and any payment provider keys.
+- Review every RLS policy for the "authenticated but wrong owner" and "anonymous" cases explicitly (a checklist per table), including `support_tickets` and `support_ticket_messages`.
+- Deploy Edge Functions: `supabase functions deploy <name>` for each function — `assign-mechanic`, `create-payment-intent`, `payment-webhook`, `dispatch-notification`, `geocode-address`, `create-ticket`, `flag-user`; confirm secrets are set on the hosted project.
+- Set up the Vercel project: environment variables for `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and any payment provider keys. **Never add `SUPABASE_SERVICE_ROLE_KEY` to Vercel — it must stay exclusively in Supabase Edge Function secrets.**
 - Confirm Vercel deploy succeeds with a placeholder/minimal Ionic build (or a health-check API route) that can reach Supabase.
 
 **Acceptance Criteria:**
-- [ ] `supabase db reset && supabase db seed` reproduces a full, demo-ready dataset from scratch.
+- [ ] `supabase db reset && supabase db seed` reproduces a full, demo-ready dataset from scratch (45 vehicles, 30 services, support tickets).
 - [ ] All Phase 1–3 acceptance criteria still pass after seeding (no test relies on manually-created data only).
-- [ ] `supabase db diff` shows no uncommitted schema drift between local and remote.
-- [ ] All Edge Functions are live on the hosted Supabase project and respond correctly to a real (non-local) request.
+- [ ] `supabase db diff` shows no uncommitted schema drift between local and remote, including the new `support_tickets`, `support_ticket_messages`, vehicle detail fields, and live location columns.
+- [ ] All Edge Functions are live on the hosted Supabase project and respond correctly to a real (non-local) request, including `create-ticket` and `flag-user`.
+- [ ] `create-ticket` returns a valid `TKT-YYYYMMDD-XXXX` tracking number and creates a `support_tickets` row.
+- [ ] `flag-user` correctly bans and deletes a profile when called with an admin JWT.
 - [ ] Vercel deployment succeeds and a deployed health-check endpoint successfully queries Supabase using the anon key.
 - [ ] `RULES.md` compliance check: no secret keys committed to git, no service-role key referenced from any client-side code path.
 
@@ -114,6 +127,6 @@
 |---|---|---|
 | 0 | Environment | Linked local + remote Supabase project |
 | 1 | Schema & RLS | Full schema, locked down per role |
-| 2 | Auth & Triggers | Auto-profile creation, rollups, notification triggers |
-| 3 | Edge Functions | Mechanic matching, payments, webhooks |
+| 2 | Auth & Triggers | Auto-profile creation, rollups, notification triggers, support ticket triggers |
+| 3 | Edge Functions | Mechanic matching, payments, webhooks, geocoding, support tickets, user flagging |
 | 4 | Test & Deploy | Seeded, tested, deployed backend ready for frontend |

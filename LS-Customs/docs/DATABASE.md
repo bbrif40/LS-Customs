@@ -1,4 +1,4 @@
-so confusi# DATABASE.md — Supabase PostgreSQL Schema
+# DATABASE.md — Supabase PostgreSQL Schema
 
 > All tables live in the `public` schema unless noted. All primary keys are `uuid default gen_random_uuid()`. All tables have `created_at timestamptz default now()`; mutable tables also have `updated_at timestamptz default now()` maintained by trigger.
 
@@ -33,6 +33,11 @@ create type service_main_category as enum (
 create type payment_status as enum ('pending', 'succeeded', 'failed', 'refunded');
 
 create type booking_type as enum ('vehicle', 'service');
+
+create type ticket_status as enum ('open', 'in_progress', 'resolved', 'closed');
+create type ticket_priority as enum ('low', 'medium', 'high', 'critical');
+create type ticket_category as enum ('general', 'rental', 'billing', 'bug', 'mechanic', 'other');
+create type ticket_message_author as enum ('customer', 'admin');
 ```
 
 ---
@@ -85,6 +90,15 @@ Rental catalog. Matches business proposal categories (3 main × 3 sub-category n
 | `is_active` | boolean | default true |
 | `rating_avg` | numeric(3,2) | default 0 |
 | `rating_count` | int | default 0 |
+| `gallery_urls` | text[] | default `'{}'` — customer-facing gallery images |
+| `location` | text | — e.g. "Makati City" |
+| `host_name` | text | — vehicle host/owner name |
+| `host_rating` | numeric(3,2) | — host rating if applicable |
+| `features` | text[] | default `'{}'` — e.g. `{'AC', 'Bluetooth', 'GPS'}` |
+| `rental_rules` | text[] | default `'{}'` |
+| `mileage_policy` | text | — e.g. "200km/day included" |
+| `max_trip` | text | — e.g. "Domestic only" |
+| `delivery_methods` | text[] | default `'{}'` — e.g. `{'doorstep', 'pickup_point'}` |
 | `created_at` | timestamptz | default now() |
 | `updated_at` | timestamptz | default now() |
 
@@ -163,6 +177,15 @@ Mobile mechanic service catalog (6 sub-categories from the proposal).
 
 Check: exactly one of `address_id` / (`pin_lat`,`pin_lng`) must be set — enforced via `check` constraint or application-level validation in the Edge Function.
 
+**Live location tracking** (added per `20260901120000_service_bookings_live_location` migration):
+| Column | Type | Constraints |
+|---|---|---|
+| `current_lat` | double precision | nullable — last known GPS fix while booking is live |
+| `current_lng` | double precision | nullable |
+| `location_updated_at` | timestamptz | nullable — server timestamp of the last GPS write |
+
+Customers update these via a dedicated UPDATE RLS policy while the booking is in `assigned`, `en_route`, or `in_progress` state. Admins may also write these columns.
+
 ### 2.8 `service_booking_items`
 Line items — a booking can include multiple services (e.g., oil change + battery test).
 
@@ -190,7 +213,40 @@ Line items — a booking can include multiple services (e.g., oil change + batte
 
 Unique constraint: `unique (booking_type, booking_id, customer_id)` — one review per booking.
 
-### 2.10 `notifications`
+### 2.10 `support_tickets`
+Customer support tickets, created via the `create-ticket` Edge Function or the chatbot form.
+
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | uuid | PK |
+| `customer_id` | uuid | not null, references `profiles(id)` on delete cascade |
+| `category` | ticket_category | not null, default `'general'` |
+| `priority` | ticket_priority | not null, default `'medium'` |
+| `subject` | text | not null |
+| `description` | text | not null |
+| `status` | ticket_status | not null, default `'open'` |
+| `assigned_admin_id` | uuid | nullable, references `profiles(id)` on delete set null |
+| `tracking_number` | text | unique — human-readable `TKT-YYYYMMDD-XXXX` |
+| `resolved_at` | timestamptz | nullable |
+| `closed_at` | timestamptz | nullable |
+| `created_at` | timestamptz | default now() |
+| `updated_at` | timestamptz | default now() |
+
+### 2.11 `support_ticket_messages`
+Append-only threaded messages within a support ticket. Customers and admins reply back and forth; no update or delete is allowed.
+
+| Column | Type | Constraints |
+|---|---|---|
+| `id` | uuid | PK |
+| `ticket_id` | uuid | not null, references `support_tickets(id)` on delete cascade |
+| `author_id` | uuid | not null, references `profiles(id)` |
+| `author_role` | ticket_message_author | not null — pinned at insert time by RLS |
+| `body` | text | not null, check (1–4000 chars) |
+| `created_at` | timestamptz | default now() |
+
+A `BEFORE INSERT` trigger (`tg_ticket_message_sync_status`) auto-advances the parent ticket: the first admin message on an `open` ticket → `in_progress`; a customer message on a `resolved`/`closed` ticket → `in_progress`.
+
+### 2.12 `notifications`
 
 | Column | Type | Constraints |
 |---|---|---|
@@ -203,7 +259,7 @@ Unique constraint: `unique (booking_type, booking_id, customer_id)` — one revi
 | `is_read` | boolean | default false |
 | `created_at` | timestamptz | default now() |
 
-### 2.11 `payments`
+### 2.13 `payments`
 
 | Column | Type | Constraints |
 |---|---|---|
@@ -229,10 +285,22 @@ profiles (1) ──▶ (0..n) addresses
 profiles (1) ──▶ (0..n) vehicle_bookings ◀── (1) vehicles
 profiles (1) ──▶ (0..n) service_bookings ◀── (0..1) mechanic_profiles
 service_bookings (1) ──▶ (1..n) service_booking_items ◀── (1) mechanic_services
+service_bookings (1) ──▶ (0..n) support_ticket_messages ◀── (1) support_tickets
 vehicle_bookings / service_bookings (1) ──▶ (0..1) reviews
 vehicle_bookings / service_bookings (1) ──▶ (0..n) payments
 profiles (1) ──▶ (0..n) notifications
+profiles (1) ──▶ (0..n) support_tickets
+profiles (1) ──▶ (0..n) support_ticket_messages
 ```
+
+**RPC Functions (server-side, callable via PostgREST):**
+
+| Function | Signature | Returns | Purpose |
+|---|---|---|---|
+| `available_vehicles` | `available_vehicles(p_start date, p_end date)` | `table(vehicle_id uuid, busy boolean)` | Returns vehicles with **no** overlapping active booking in the date range — used by the rental UI to mark dates as unavailable |
+| `unavailable_vehicles` | `unavailable_vehicles(p_start date, p_end date)` | `table(vehicle_id uuid)` | Returns vehicles **with** overlapping active bookings — the inverted view of `available_vehicles` |
+
+Both are `security definer`, stable, and granted to `anon` and `authenticated`.
 
 ---
 
@@ -303,6 +371,17 @@ language sql stable as $$ select current_role() = 'mechanic'; $$;
 - **Select:** the owning `customer_id`; admins.
 - **Insert/Update:** service role only (Edge Functions use the service-role key server-side) — **no client-side insert/update policy exists at all**. This is intentional: payment state must never be writable by a user session.
 
+### 4.11 `support_tickets`
+- **Select:** the owning `customer_id`; admins only.
+- **Insert:** authenticated customers only, with `customer_id` matching the caller's `auth.uid()` and `tracking_number` auto-generated by the `create-ticket` Edge Function (not client-set).
+- **Update:** the assigned admin may change `status`, `assigned_admin_id`, and `resolved_at`/`closed_at`; the owning customer may only cancel while `status = 'open'`.
+- **Delete:** not permitted from client (cancellation is a status update).
+
+### 4.12 `support_ticket_messages`
+- **Select:** the ticket's `customer_id` or any admin (via a subquery policy on the parent `support_tickets` row).
+- **Insert:** customers may insert as `author_role = 'customer'` only for tickets they own; admins may insert as `author_role = 'admin'` for any open ticket. The `author_id` is pinned to `auth.uid()` by the `WITH CHECK` policy.
+- **Update/Delete:** not permitted — messages are append-only.
+
 ---
 
 ## 5. Triggers
@@ -315,6 +394,8 @@ language sql stable as $$ select current_role() = 'mechanic'; $$;
 | `recalculate_mechanic_rating` | `reviews` | AFTER INSERT/UPDATE/DELETE (where `target_mechanic_id` is not null) | Recomputes `mechanic_profiles.rating_avg` / `rating_count` |
 | `notify_on_status_change` | `vehicle_bookings`, `service_bookings` | AFTER UPDATE OF `status` | Inserts a `notifications` row for the customer (and mechanic, if applicable) |
 | `enforce_service_status_transition` | `service_bookings` | BEFORE UPDATE OF `status` | Rejects illegal status jumps (e.g., `pending → completed` directly) based on caller role |
+| `tg_ticket_message_sync_status` | `support_ticket_messages` | BEFORE INSERT | Auto-advances parent ticket status (`open → in_progress` on first admin reply; `resolved/closed → in_progress` on customer reply) |
+| `notify_on_status_change` | `support_tickets` | AFTER UPDATE OF `status` | Inserts a `notifications` row for the customer when ticket status changes |
 
 Example trigger function skeleton:
 
@@ -346,4 +427,7 @@ create index idx_service_bookings_mechanic on service_bookings(mechanic_id);
 create index idx_service_bookings_status on service_bookings(status);
 create index idx_notifications_user_unread on notifications(user_id) where is_read = false;
 create index idx_mechanic_profiles_available on mechanic_profiles(is_available) where is_available = true;
+create index idx_support_tickets_customer on support_tickets(customer_id);
+create index idx_support_tickets_status on support_tickets(status);
+create index idx_support_ticket_messages_ticket on support_ticket_messages(ticket_id, created_at);
 ```

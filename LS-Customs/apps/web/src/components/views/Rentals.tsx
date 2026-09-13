@@ -73,7 +73,7 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
 
   if (selectedVehicle && bookingId) {
     const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
-    return <RentalPayment vehicle={selectedVehicle} bookingId={bookingId} startDate={startDate} endDate={endDate} total={days * selectedVehicle.pricePerDay} onBack={() => { setBookingId(null); setSelectedVehicle(null) }} onNotify={onNotify} />
+    return <RentalPayment vehicle={selectedVehicle} bookingId={bookingId} startDate={startDate} endDate={endDate} total={days * selectedVehicle.pricePerDay} userId={userId} onBack={() => { setBookingId(null); setSelectedVehicle(null) }} onNotify={onNotify} />
   }
 
   const chooseVehicle = async (vehicle: typeof vehicles[number]) => {

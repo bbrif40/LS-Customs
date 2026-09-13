@@ -193,7 +193,7 @@ export function useAdminMechanics() {
           rating_count,
           created_at,
           updated_at,
-          profiles!inner (
+          profiles!left (
             id,
             full_name,
             phone,
@@ -452,15 +452,12 @@ export function useAdminVehicleBookings() {
   }, [fetchData])
 
   const updateBookingStatus = async (id: string, status: VehicleBooking['status']) => {
-    const { data, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from('vehicle_bookings')
       .update({ status })
       .eq('id', id)
-      .select()
-      .single()
     if (updateError) throw updateError
     await fetchData()
-    return data as VehicleBooking
   }
 
   return { data, loading, error, refetch: fetchData, updateBookingStatus }
@@ -701,15 +698,12 @@ export function useAdminServiceBookings() {
   }, [fetchData])
 
   const updateBookingStatus = async (id: string, status: ServiceBooking['status']) => {
-    const { data, error: updateError } = await supabase
+    const { error: updateError } = await supabase
       .from('service_bookings')
       .update({ status })
       .eq('id', id)
-      .select()
-      .single()
     if (updateError) throw updateError
     await fetchData()
-    return data as ServiceBooking
   }
 
   return { data, loading, error, refetch: fetchData, updateBookingStatus }

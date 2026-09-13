@@ -4,7 +4,7 @@
  * Admin can update status via existing RLS policy (unrestricted for admins).
  */
 import { useEffect, useState } from 'react'
-import { Search, Filter, Truck, Wrench, X, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, Filter, Truck, Wrench, X, Loader2, ChevronLeft, ChevronRight, AlertTriangle, CreditCard } from 'lucide-react'
 import {
   useAdminVehicleBookings,
   useAdminServiceBookings,
@@ -66,6 +66,17 @@ const statusColors: Record<BookingStatus, string> = {
   cancelled: '#ef4444',
 }
 
+function getAdminErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error) return error.message
+  if (typeof error === 'object' && error !== null) {
+    const details = error as { message?: string; details?: string; hint?: string; code?: string }
+    return [details.message, details.details, details.hint, details.code ? `Code: ${details.code}` : '']
+      .filter(Boolean)
+      .join(' | ') || fallback
+  }
+  return fallback
+}
+
 export function AdminBookings() {
   const [activeTab, setActiveTab] = useState<BookingTab>('vehicles')
   const [searchQuery, setSearchQuery] = useState('')
@@ -77,6 +88,11 @@ export function AdminBookings() {
   const [availableMechanics, setAvailableMechanics] = useState<AvailableMechanic[]>([])
   const [assignOpenFor, setAssignOpenFor] = useState<string | null>(null)
   const [assigning, setAssigning] = useState(false)
+  const [completionBooking, setCompletionBooking] = useState<VehicleBooking | ServiceBooking | null>(null)
+  const [violationPaymentRequired, setViolationPaymentRequired] = useState(false)
+  const [violationAmount, setViolationAmount] = useState('')
+  const [violationNotes, setViolationNotes] = useState('')
+  const [completing, setCompleting] = useState(false)
   const pageSize = 10
 
   // Fetch available mechanics once on mount. Cheap query; the list
@@ -184,7 +200,68 @@ export function AdminBookings() {
         await updateServiceBookingStatus(booking.id, newStatus)
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update status')
+      console.error('[admin] failed to update booking status', err)
+      alert(getAdminErrorMessage(err, 'Failed to update status'))
+    }
+  }
+
+  const openCompletionModal = (booking: VehicleBooking | ServiceBooking) => {
+    setCompletionBooking(booking)
+    setViolationPaymentRequired(false)
+    setViolationAmount('')
+    setViolationNotes('')
+  }
+
+  const closeCompletionModal = () => {
+    if (completing) return
+    setCompletionBooking(null)
+  }
+
+  const completeRental = async () => {
+    if (!completionBooking || violationPaymentRequired) return
+    setCompleting(true)
+    try {
+      if (activeTab === 'vehicles') {
+        await updateVehicleBookingStatus(completionBooking.id, 'completed')
+      } else {
+        await updateServiceBookingStatus(completionBooking.id, 'completed')
+      }
+      setCompletionBooking(null)
+    } catch (err) {
+      console.error('[admin] failed to complete booking', err)
+      alert(getAdminErrorMessage(err, 'Failed to complete booking'))
+    } finally {
+      setCompleting(false)
+    }
+  }
+
+  const recordViolationPayment = async () => {
+    if (!completionBooking) return
+    const amount = Number(violationAmount)
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert('Enter a valid additional payment amount.')
+      return
+    }
+
+    setCompleting(true)
+    try {
+      const { error: paymentError } = await supabase.from('payments').insert({
+        booking_type: activeTab === 'vehicles' ? 'vehicle' : 'service',
+        booking_id: completionBooking.id,
+        customer_id: completionBooking.customer_id,
+        amount,
+        currency: 'PHP',
+        provider: 'admin_violation',
+        provider_reference: violationNotes.trim() || null,
+        status: 'pending',
+      })
+      if (paymentError) throw paymentError
+      setCompletionBooking(null)
+    } catch (err) {
+      console.error('[admin] failed to record payment requirement', err)
+      alert(getAdminErrorMessage(err, 'Failed to record payment requirement'))
+    } finally {
+      setCompleting(false)
     }
   }
 
@@ -222,11 +299,15 @@ export function AdminBookings() {
   }
 
   const getCustomerName = (booking: VehicleBookingWithDetails | ServiceBookingWithDetails) => {
-    return booking.profiles?.[0]?.full_name || 'Unknown'
+    const relation = booking.profiles as unknown as Profile | Profile[] | null | undefined
+    const profile = Array.isArray(relation) ? relation[0] : relation
+    return profile?.full_name || 'Customer name unavailable'
   }
 
   const getVehicleName = (booking: VehicleBookingWithDetails) => {
-    return booking.vehicles?.[0]?.name || 'Unknown'
+    const relation = booking.vehicles as unknown as Vehicle | Vehicle[] | null | undefined
+    const vehicle = Array.isArray(relation) ? relation[0] : relation
+    return vehicle?.name || 'Vehicle name unavailable'
   }
 
   const getServiceDetails = (booking: ServiceBookingWithDetails) => {
@@ -450,7 +531,10 @@ export function AdminBookings() {
                             {booking.status !== 'completed' && (
                               <button
                                 className="admin-vehicle-btn secondary"
-                                onClick={() => handleStatusChange(booking, 'completed')}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  openCompletionModal(booking)
+                                }}
                                 style={{ padding: '4px 8px', fontSize: 11 }}
                               >
                                 Complete
@@ -459,7 +543,10 @@ export function AdminBookings() {
                             {booking.status !== 'cancelled' && (
                               <button
                                 className="admin-vehicle-btn secondary"
-                                onClick={() => handleStatusChange(booking, 'cancelled')}
+                                onClick={(event) => {
+                                  event.stopPropagation()
+                                  void handleStatusChange(booking, 'cancelled')
+                                }}
                                 style={{ padding: '4px 8px', fontSize: 11, borderColor: '#ef4444', color: '#ef4444' }}
                               >
                                 Cancel
@@ -469,7 +556,10 @@ export function AdminBookings() {
                               <div style={{ position: 'relative', display: 'inline-block' }}>
                                 <button
                                   className="admin-vehicle-btn secondary"
-                                  onClick={() => setAssignOpenFor((cur) => (cur === booking.id ? null : booking.id))}
+                                  onClick={(event) => {
+                                    event.stopPropagation()
+                                    setAssignOpenFor((cur) => (cur === booking.id ? null : booking.id))
+                                  }}
                                   style={{ padding: '4px 8px', fontSize: 11 }}
                                   disabled={assigning}
                                 >
@@ -582,6 +672,87 @@ export function AdminBookings() {
         }
         onClose={() => setSelectedId(null)}
       />
+
+      {completionBooking && (
+        <div className="admin-modal-overlay" onClick={closeCompletionModal}>
+          <div className="admin-modal completion-modal" onClick={(event) => event.stopPropagation()}>
+            <div className="admin-modal-header">
+              <div>
+                <h2>Complete rental</h2>
+                <p className="admin-modal-subtitle">
+                  Booking {completionBooking.id.slice(0, 8)}... · {getCustomerName(completionBooking as VehicleBookingWithDetails)}
+                </p>
+              </div>
+              <button className="admin-modal-close" onClick={closeCompletionModal} aria-label="Close completion modal">
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="admin-modal-body">
+              <div className="completion-summary">
+                <strong>{activeTab === 'vehicles'
+                  ? getVehicleName(completionBooking as VehicleBookingWithDetails)
+                  : getServiceDetails(completionBooking as ServiceBookingWithDetails)}</strong>
+                <span>Total booking value: ₱{completionBooking.total_price.toLocaleString()}</span>
+              </div>
+
+              <label className="completion-warning-option">
+                <input
+                  type="checkbox"
+                  checked={violationPaymentRequired}
+                  onChange={(event) => setViolationPaymentRequired(event.target.checked)}
+                />
+                <span>
+                  <strong><AlertTriangle size={15} /> Payment is required for violations</strong>
+                  <small>Keep this booking active until the additional charge is collected.</small>
+                </span>
+              </label>
+
+              {violationPaymentRequired && (
+                <div className="completion-violation-fields">
+                  <div className="admin-form-field">
+                    <label htmlFor="violation-amount">Additional payment (₱)</label>
+                    <input
+                      id="violation-amount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={violationAmount}
+                      onChange={(event) => setViolationAmount(event.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div className="admin-form-field">
+                    <label htmlFor="violation-notes">Violation details</label>
+                    <textarea
+                      id="violation-notes"
+                      value={violationNotes}
+                      onChange={(event) => setViolationNotes(event.target.value)}
+                      placeholder="Describe the damage, late return, or other charge..."
+                    />
+                  </div>
+                  <p className="completion-payment-note"><CreditCard size={14} /> This booking will remain active and will not be marked completed.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="admin-modal-footer">
+              <button type="button" className="admin-modal-btn secondary" onClick={closeCompletionModal} disabled={completing}>
+                Cancel
+              </button>
+              {violationPaymentRequired ? (
+                <button type="button" className="admin-modal-btn primary completion-payment-btn" onClick={() => void recordViolationPayment()} disabled={completing}>
+                  {completing ? 'Recording...' : 'Record payment required'}
+                </button>
+              ) : (
+                <button type="button" className="admin-modal-btn primary" onClick={() => void completeRental()} disabled={completing}>
+                  {completing ? 'Completing...' : 'Complete rental'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

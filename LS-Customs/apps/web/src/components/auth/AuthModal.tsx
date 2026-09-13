@@ -1,8 +1,8 @@
 /**
- * AuthModal — sign-in / sign-up dialog with Google OAuth and email/password forms.
+ * AuthModal — sign-in dialog with Google OAuth only.
  */
 import { useState } from 'react'
-import { X, ChevronRight } from 'lucide-react'
+import { X } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import type { AuthMode } from '../../types'
 
@@ -16,11 +16,8 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: AuthModalProps) {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const creating = mode === 'create-account'
 
   const handleGoogleSignIn = async () => {
     setLoading(true)
@@ -36,54 +33,11 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         options: { redirectTo: window.location.origin },
       })
       if (authError) {
-        if (authError.message.includes('not enabled') || authError.message.includes('validation_failed')) {
-          setError('Google OAuth is not enabled on this local Supabase instance. Please sign in with email and password below.')
-        } else {
-          setError(authError.message)
-        }
+        setError(authError.message)
         setLoading(false)
       }
     } catch {
-      setError('Google Sign-in is unavailable on local development. Use email & password.')
-      setLoading(false)
-    }
-  }
-
-  const handleEmailAuth = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    setLoading(true)
-    setError('')
-
-    try {
-      if (creating) {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        })
-        if (signUpError) {
-          setError(signUpError.message)
-          setLoading(false)
-          return
-        }
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
-        if (signInError) {
-          if (signInError.message.toLowerCase().includes('invalid login credentials')) {
-            setError('Invalid email or password. If you do not have an account yet, click "Create an account" below.')
-          } else {
-            setError(signInError.message)
-          }
-          setLoading(false)
-          return
-        }
-      }
-      onAuthenticated()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Authentication failed')
+      setError('Google Sign-in is unavailable.')
       setLoading(false)
     }
   }
@@ -102,11 +56,9 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         </button>
         <div className="auth-logo">✳</div>
         <p className="eyebrow">WELCOME TO LS CUSTOMS</p>
-        <h2 id="auth-title">{creating ? 'Create your account.' : 'Welcome back.'}</h2>
+        <h2 id="auth-title">Welcome back.</h2>
         <p className="auth-description">
-          {creating
-            ? 'Save your favorites, bookings, and service history in one place.'
-            : 'Sign in to access your rentals, mechanic services, and AI assistant.'}
+          Sign in to access your rentals, mechanic services, and AI assistant.
         </p>
 
         {error && (
@@ -124,49 +76,16 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
           <span>G</span> {loading ? 'Connecting...' : 'Continue with Google'}
         </button>
 
-        <div className="auth-divider">
-          <span>or continue with email</span>
-        </div>
-
-        <form onSubmit={handleEmailAuth}>
-          <label>
-            Email address
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="name@example.com"
-              required
-            />
-          </label>
-
-          <label>
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              minLength={6}
-              placeholder="Enter your password"
-              required
-            />
-          </label>
-
-          <button className="button dark-button auth-submit" type="submit" disabled={loading} style={{ marginTop: '10px' }}>
-            {creating ? 'Create account' : 'Sign in'} <ChevronRight size={16} />
-          </button>
-        </form>
-
         <p className="auth-switch">
-          {creating ? 'Already have an account?' : 'New to LS Customs?'}
+          New to LS Customs?
           <button
             type="button"
             onClick={() => {
-              onModeChange(creating ? 'sign-in' : 'create-account')
+              onModeChange('create-account')
               setError('')
             }}
           >
-            {creating ? 'Sign in' : 'Create an account'}
+            Create an account
           </button>
         </p>
 

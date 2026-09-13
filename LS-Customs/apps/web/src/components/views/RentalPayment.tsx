@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { ArrowLeft, CheckCircle2, CreditCard, Fuel, Gauge, Loader2, LockKeyhole, MapPin, Settings2, Star, Users, Zap } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, CreditCard, Fuel, Gauge, Loader2, LockKeyhole, MapPin, Settings2, Star, Users, Zap, AlertTriangle } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
+import { useProfile } from '../../hooks/useProfile'
 import type { Vehicle } from '../../types'
 
 interface RentalPaymentProps {
@@ -9,16 +10,26 @@ interface RentalPaymentProps {
   startDate: string
   endDate: string
   total: number
+  userId: string | undefined
   onBack: () => void
   onNotify: (message: string) => void
 }
 
-export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, onBack, onNotify }: RentalPaymentProps) {
+export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, userId, onBack, onNotify }: RentalPaymentProps) {
   const [creating, setCreating] = useState(false)
   const [payment, setPayment] = useState<{ payment_id: string; provider: string; client_secret: string } | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [showProfileModal, setShowProfileModal] = useState(false)
+  const { profile, defaultAddress, loading } = useProfile(userId)
 
   async function createPaymentIntent() {
+    // Check profile completeness before proceeding
+    const phoneMissing = !profile?.phone
+    const addressMissing = !defaultAddress?.line1 || !defaultAddress?.city
+    if (phoneMissing || addressMissing) {
+      setShowProfileModal(true)
+      return
+    }
     setCreating(true); setError(null)
     const { data, error: invokeError } = await supabase.functions.invoke('create-payment-intent', {
       body: { booking_type: 'vehicle', booking_id: bookingId },
@@ -82,10 +93,24 @@ export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, o
               <code>{payment.payment_id}</code>
             </div>
           ) : (
-            <button className="button dark-button" onClick={() => void createPaymentIntent()} disabled={creating}>
+            <button className="button dark-button" onClick={() => void createPaymentIntent()} disabled={creating || loading}>
               {creating ? <Loader2 size={16} className="spin" /> : <CreditCard size={16} />}
-              {creating ? 'Preparing payment…' : 'Continue to payment'}
+              {creating ? 'Preparing payment…' : loading ? 'Loading profile…' : 'Continue to payment'}
             </button>
+          )}
+          {showProfileModal && (
+            <div className="modal-backdrop" onClick={() => setShowProfileModal(false)}>
+              <div className="modal-card" onClick={(event) => event.stopPropagation()}>
+                <div className="modal-icon-row"><AlertTriangle size={28} className="modal-icon-alert" /></div>
+                <h2>Complete your profile first</h2>
+                <p className="muted">
+                  {!profile?.phone && <span>Your <strong>phone number</strong> is missing. </span>}
+                  {(!defaultAddress?.line1 || !defaultAddress?.city) && <span>Your <strong>address</strong> is missing. </span>}
+                  Please update your profile before proceeding with payment.
+                </p>
+                <button className="button dark-button" onClick={() => setShowProfileModal(false)}>Got it</button>
+              </div>
+            </div>
           )}
           <div className="booking-policy"><Gauge size={22} /><div><strong>{vehicle.mileagePolicy || 'Mileage terms provided at pickup'}</strong><span>{vehicle.maxTrip || 'Rental duration confirmed above'}</span></div></div>
           {vehicle.deliveryMethods?.length ? <p className="delivery-note">Delivery: {vehicle.deliveryMethods.join(' · ')}</p> : null}

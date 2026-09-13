@@ -19,40 +19,65 @@
 
 ```
 /
-├── apps/backend/
-│   ├── supabase/
-│   │   ├── config.toml
-│   │   ├── .env
-│   │   ├── migrations/
-│   │   │   ├── 20260819120516_init_enums.sql
-│   │   │   ├── 20260819120520_init_schema.sql
-│   │   │   ├── 20260819120524_rls_policies.sql
-│   │   │   ├── 20260819120527_triggers.sql
-│   │   │   ├── 20260819120531_indexes.sql
-│   │   │   ├── 20260819120535_grants.sql
-│   │   │   └── 20260819120540_phase2_triggers.sql
-│   │   ├── functions/
-│   │   │   ├── assign-mechanic/index.ts
-│   │   │   ├── create-payment-intent/index.ts
-│   │   │   ├── payment-webhook/index.ts
-│   │   │   ├── dispatch-notification/index.ts
-│   │   │   ├── geocode-address/index.ts
-│   │   │   ├── _shared/ (cors.ts, supabaseClient.ts, paymentProvider.ts)
-│   │   └── seed.sql
-│   └── tests/
-│       ├── test_phase1_schema_rls_isolation.sql
-│       ├── test_phase2_auth_triggers_ratings.sql
-│       ├── seed_phase3_edge_functions.sql
-│       └── test_phase3_edge_functions.js
-├── .env.local          (frontend env — created later, ignored by git)
-├── .env                (local server/functions env — ignored by git)
-├── SPEC.md
-├── PHASES.md
-├── DATABASE.md
-├── API.md
-├── ARCHITECTURE.md
-├── DOCUMENTATION.md
-└── RULES.md
+├── apps/
+│   ├── backend/                  # Supabase project lives here
+│   │   ├── supabase/
+│   │   │   ├── config.toml
+│   │   │   ├── .env
+│   │   │   ├── migrations/       # Applied in filename order
+│   │   │   │   ├── 20260819120516_init_enums.sql
+│   │   │   │   ├── 20260819120520_init_schema.sql
+│   │   │   │   ├── 20260819120524_rls_policies.sql
+│   │   │   │   ├── 20260819120527_triggers.sql
+│   │   │   │   ├── 20260819120531_indexes.sql
+│   │   │   │   ├── 20260819120535_grants.sql
+│   │   │   │   └── ...           # new migrations added per phase
+│   │   │   ├── functions/        # Edge Functions (Deno, TS)
+│   │   │   │   ├── assign-mechanic/index.ts
+│   │   │   │   ├── create-payment-intent/index.ts
+│   │   │   │   ├── create-ticket/index.ts
+│   │   │   │   ├── dispatch-notification/index.ts
+│   │   │   │   ├── flag-user/index.ts
+│   │   │   │   ├── geocode-address/index.ts
+│   │   │   │   ├── payment-webhook/index.ts
+│   │   │   │   ├── chatbot/index.ts          # Phase 5+ — see API.md §2.6
+│   │   │   │   └── _shared/                  # cors.ts, supabaseClient.ts, paymentProvider.ts
+│   │   │   ├── seed.sql
+│   │   │   ├── seed_extra_services.sql
+│   │   │   └── tests/
+│   │   │       ├── test_phase1_schema_rls_isolation.sql
+│   │   │       ├── test_phase2_auth_triggers_ratings.sql
+│   │   │       └── test_phase3_edge_functions.js
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   └── web/                      # Frontend app — placeholder until frontend phase
+│       └── .gitkeep
+├── packages/
+│   ├── shared-types/             # Generated Supabase types + hand-written domain types
+│   │   ├── src/database.types.ts # output of `supabase gen types typescript`
+│   │   └── package.json
+│   └── config/                   # Shared lint/tsconfig/prettier base configs
+│       ├── eslint-preset.js
+│       └── tsconfig.base.json
+├── docs/                         # All specification documents
+│   ├── SPEC.md
+│   ├── PHASES.md
+│   ├── DATABASE.md
+│   ├── API.md
+│   ├── ARCHITECTURE.md
+│   ├── DOCUMENTATION.md
+│   ├── RULES.md
+│   └── BUILD_PROMPT.md
+├── .github/
+│   └── workflows/                # CI: lint, migration dry-run, function type-check
+├── images-customer/              # Static images used by the frontend
+├── supabase/                     # Legacy root-level supabase config (supabase init)
+├── package.json                  # workspace root (npm/pnpm/yarn workspaces)
+├── turbo.json                    # Turborepo config for task orchestration
+├── .env.example                  # Documents required keys, no real values
+├── .gitignore
+├── package-lock.json
+└── README.md                     # Top-level orientation, links into docs/
 ```
 
 ---
@@ -174,12 +199,23 @@ supabase db diff --linked
 
 ## 6. Seeding Test Data
 
-`apps/backend/supabase/seed.sql` is run automatically by `supabase db reset` (and can be re-run manually with `supabase db reset` again, or `psql -f apps/backend/supabase/seed.sql` against the local DB URL).
+Two seed files work together — **both must be run** for a complete dataset:
+
+1. **`apps/backend/supabase/seed.sql`** — Run automatically by `supabase db reset`. Contains the core schema seed: 3 vehicles and 3 mechanic services (minimal), plus deterministic UUIDs so tests can reference them reliably.
+2. **`apps/backend/supabase/seed_extra_services.sql`** — Run manually after `supabase db reset` (or append to `seed.sql`) to add the remaining 9 mechanic services and full vehicle detail fields. Contains the services that live in `apps/web/src/data/services.ts`.
+
+To get the full catalog matching `PHASES.md` Phase 4 targets, run both:
+```bash
+supabase db reset
+# seed_extra_services.sql is applied separately:
+psql "$(supabase db url)" -f apps/backend/supabase/seed_extra_services.sql
+```
 
 Seed data should include, per `PHASES.md` Phase 4:
 - 1 admin profile, 2–3 mechanic profiles (with varied `current_lat/lng` around a test city center), 3–5 customer profiles.
 - Full vehicle catalog: 3 main categories × 3 sub-categories × 5 products = 45 vehicles.
 - Full mechanic service catalog: 6 sub-categories × 5 services = 30 services.
+- Support ticket seed data: 2–3 tickets per status (`open`, `in_progress`, `resolved`, `closed`) with threaded messages for testing the ticket flow.
 - A handful of bookings in different statuses (`pending`, `assigned`, `completed`, `cancelled`) so every RLS/UI state can be tested without manual setup.
 
 Example snippet:
@@ -279,3 +315,6 @@ git commit -m "Add promo codes table"
 | Migration fails with "type already exists" | Ran a migration twice without `db reset` | Use `supabase db reset` for local iteration, not re-running the same file |
 | Edge Function can't find env var | Forgot `--env-file .env` locally, or forgot `supabase secrets set` remotely | Check both local and remote secret sources separately |
 | Webhook signature verification fails | Using the wrong secret (test vs. live, or local vs. deployed function URL) | Confirm the webhook is pointed at the right environment's secret |
+| Tables are empty after `supabase start` | `supabase start` only boots Docker — it doesn't run migrations or seed data | Run `supabase db reset` to apply migrations AND load `seed.sql`. Run `seed_extra_services.sql` separately via `psql` to get the full catalog |
+| Seed has only 3 vehicles instead of 45 | Only `seed.sql` was loaded; `seed_extra_services.sql` was not run | Run `psql "$(supabase db url)" -f apps/backend/supabase/seed_extra_services.sql` to add the remaining 9 mechanic services and full vehicle detail fields |
+| Support tickets table doesn't exist | The support ticket migrations haven't been applied | Check `apps/backend/supabase/migrations/` for `20260828120000_add_support_tickets.sql` through `20260830140000_realtime_ticket_messages.sql`; run `supabase db reset` to apply all |

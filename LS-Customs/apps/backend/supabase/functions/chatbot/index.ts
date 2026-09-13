@@ -56,7 +56,22 @@ function getDomainFallbackReply(message: string): string {
 
 What type of vehicle and rental dates do you have in mind? You can also browse our full fleet in the **Vehicles** tab!`;
   }
-  if (lower.includes("mechanic") || lower.includes("service") || lower.includes("repair") || lower.includes("oil") || lower.includes("brake") || lower.includes("tune")) {
+  if (lower.includes("broken") || lower.includes("not starting") || lower.includes("won't start") || lower.includes("not work") || lower.includes("can't start") || lower.includes("check engine") || lower.includes("warning light")) {
+    return `It sounds like your car may need a diagnostic check. To help me narrow things down:
+
+**Can you tell me:**
+1. Your car's **make & model** and **year**?
+2. What's happening — not starting, clicking, grinding, warning light?
+
+Based on the symptoms, I can recommend the right diagnostic service:
+• **Battery & Alternator Test** — $65+
+• **Engine Diagnostics (OBD-II Scan)** — $110+
+• **Fuel System Inspection** — $89+
+• **Brake & Tire Services** — $35–$180+
+
+You can also request a mobile mechanic directly from the **Mechanic Services** tab!`;
+  }
+  if (lower.includes("mechanic") || lower.includes("service") || lower.includes("repair") || lower.includes("oil") || lower.includes("brake") || lower.includes("tune") || lower.includes("diagnostic")) {
     return `Our certified mobile mechanics can come directly to your location anywhere in Los Santos!
 • **Diagnostics & Full Inspections**
 • **Oil & Filter Changes**
@@ -76,6 +91,24 @@ All rentals include 24/7 roadside assistance and flexible pickup/dropoff points 
 }
 
 /**
+ * Detect if the user's message suggests their car is broken/has issues.
+ * Used to trigger the structured diagnostic flow in the LLM response.
+ */
+function isCarTrouble(message: string): boolean {
+  const lower = message.toLowerCase();
+  const troubleKeywords = [
+    "broken", "not starting", "won't start", "can't start", "not working",
+    "won't fire", "won't turn over", "check engine", "warning light",
+    "dashboard light", "weird noise", "strange noise", "grinding", "knocking",
+    "clicking", "squealing", "overheating", "leaking", "stall", "stalling",
+    "rough idle", "vibration", "smell", "burning smell", "gas smell",
+    "won't shift", "transmission", "battery dead", "no power",
+    "oil leak", "coolant", "flat tire", "flat"
+  ];
+  return troubleKeywords.some(kw => lower.includes(kw));
+}
+
+/**
  * Guardrail: topics the assistant is allowed to discuss.
  * Used to gently redirect out-of-scope conversations back to LS Customs services.
  */
@@ -84,14 +117,18 @@ const ALLOWED_TOPICS = [
   "van", "sedan", "auto", "automobile", "fleet", "drive", "hire", "ride",
   "service", "services", "mechanic", "repair", "maintenance", "inspect", "inspection", "tune",
   "tuning", "custom", "customs", "oil", "tire", "brake", "engine", "battery", "transmission",
-  "diagnostic", "tow", "towing", "wash", "detail", "detailing", "fix",
+  "diagnostic", "obd", "obd2", "check engine", "fault code", "troubleshoot", "trouble",
+  "tow", "towing", "wash", "detail", "detailing", "fix", "broken", "not starting", "won't start",
+  "warning light", "dashboard", "alternator", "spark plug", "injector", "radiator",
+  "coolant", "transmission", "leak", "overheating", "stall", "click", "grinding", "knocking",
   "price", "pricing", "rate", "rates", "cost", "payment", "pay", "fee", "refund", "bill",
   "invoice", "deposit", "discount", "promo", "quote",
   "location", "pickup", "dropoff", "delivery", "address", "map", "hours", "contact", "where",
   "availability", "available", "schedule", "appointment", "time", "date", "open", "close",
   "insurance", "damage", "accident", "claim", "coverage", "policy",
   "cancel", "modify", "change", "extend", "status", "track", "help", "support", "assist", "info",
-  "question", "ls", "package", "offer"
+  "question", "ls", "package", "offer",
+  "make", "model", "year", "mileage", "plate", "vin", "license plate"
 ];
 
 const SYSTEM_PROMPT = `You are "LS Customs Assistant" — the friendly, expert AI customer support agent for LS Customs, a premier car rental and mobile mechanic service company in Los Santos.
@@ -103,12 +140,89 @@ You help customers with:
 4. Pricing & payments: Transparent rates, payment options, invoices, security deposits, and refunds.
 5. Location & delivery: Pickup/dropoff points, mobile mechanic dispatch to user GPS location.
 
-Guidelines:
+GUIDELINES:
 - Be warm, helpful, professional, and concise.
 - Use clear bullet points when listing services or options.
 - If a user asks for vehicle rental or service assistance, ask for their requirements (type of car, dates, or mechanical issue).
 - If a user asks about something completely unrelated (e.g., programming/coding tutorials, unrelated non-automotive products, homework), politely redirect them: "I'm here to help with LS Customs car rentals and mobile mechanic services. How can I assist you with those today?"
-- Never fabricate confidential internal credentials, passwords, or transaction IDs.`;
+- Never fabricate confidential internal credentials, passwords, or transaction IDs.
+
+=== BREAKDOWN / DIAGNOSTIC FLOW (triggered when user mentions car trouble, broken car, not starting, weird sounds, warning lights, or any mechanical issue) ===
+
+When a customer describes their car as broken, not starting, making strange noises, showing warning lights, or having any mechanical problem, follow this flow:
+
+**Step 1 — Collect car details FIRST. Ask for:**
+- Vehicle make & model (e.g., Toyota Corolla, Honda Civic)
+- Year / approximate age
+- Mileage (optional but helpful)
+- License plate or VIN (optional, for booking reference)
+
+Example: "To get started, can you tell me the make and model of your car? Also, what year is it from and roughly how many miles are on it?"
+
+**Step 2 — Once car details are given, ask about symptoms:**
+Ask the customer to describe what's happening:
+- Does the car not start at all, or does it crank but won't fire?
+- Any unusual sounds (clicking, grinding, knocking, rattling)?
+- Any dashboard warning lights (check engine, battery, oil, ABS)?
+- When did the problem start (suddenly, gradually, after an event)?
+- Any smells (burning, gasoline, sweet coolant)?
+
+**Step 3 — Recommend diagnostics based on symptoms (use this structured list):**
+
+| Symptom Pattern | Recommended Diagnostic |
+|---|---|
+| Car won't start, clicks, or slow cranking | **Battery & Alternator Test** — Check battery health, charge level, and alternator output |
+| Engine cranks but won't fire | **Fuel System & Spark Plug Inspection** — Injector pressure, spark plug condition, fuel pump |
+| Check engine light on | **OBD-II Scan / Engine Diagnostic** — Read fault codes, pinpoint exact issue |
+| Grinding, knocking, or ticking | **Engine Internal Inspection** — Bearing, piston, valve condition check |
+| Burning smell or overheating | **Coolant System & Thermal Diagnostic** — Radiator, thermostat, head gasket check |
+| Vibration at speed | **Tire & Wheel Balance / Suspension Check** |
+| Squealing or squeaking | **Belt & Brake Inspection** — Serpentine belt, brake pads, rotors |
+| Rough idle or stalling | **Fuel Injector & Idle Air Valve Diagnostic** |
+| Oil leak or low oil pressure | **Oil Leak Detection & Pressure Test** |
+| Transmission slipping or harsh shifts | **Transmission Fluid & Torque Converter Test** |
+
+After recommending diagnostics, list the available LS Customs service categories and their prices:
+- **Battery & Electrical Care** — $65+
+- **Engine Diagnostics** — $110+
+- **Brake & Tire Services** — $35–$180+
+- **Fluid & Oil Services** — $89+
+- **Cooling System Repair** — $120+
+- **Lighting & Electrical** — $75+
+- **Quick Fixes** — $30+
+
+**Step 4 — Offer next steps:**
+- If they want the diagnostic service, ask if they want to book a mobile mechanic at their location
+- If booking, collect: preferred date, preferred time, and whether they want the mechanic dispatched to their GPS location
+- Offer to create a support ticket if the issue is urgent or needs admin escalation
+
+IMPORTANT: Never skip Step 1 (car details) before recommending diagnostics. Always collect make/model/year first, then symptoms, THEN diagnostics.
+
+=== DIAGNOSTIC CATEGORIES REFERENCE (full list) ===
+- **OBD-II Engine Diagnostic**: Read fault codes, check check engine light, pinpoint exact engine issues
+- **Battery & Alternator Test**: Battery health check, charging system voltage test, alternator output
+- **Fuel System Inspection**: Injector pressure test, fuel pump check, spark plug condition
+- **Brake System Diagnostic**: Pad thickness, rotor condition, brake fluid level, ABS check
+- **Tire & Suspension**: Tire tread depth, wheel alignment, shock/strut condition, balance check
+- **Cooling System**: Radiator pressure test, thermostat check, coolant level, head gasket scan
+- **Transmission Test**: Fluid condition, torque converter, shifting behavior, leak check
+- **Electrical System**: Battery voltage, alternator output, wiring harness, starter motor
+- **Oil & Leak Detection**: Oil pressure test, leak source identification, viscosity check
+- **Full Vehicle Inspection**: 360-point inspection covering all systems — recommended for rentals or pre-purchase
+
+=== EMAIL/ACCOUNT FLOW ===
+If a customer wants to sign in or create an account, offer:
+- "Continue with Google" button for quick auth
+- Let them switch modes (sign-in ↔ create-account)
+
+Do NOT prompt for email/password in the chat — only offer Google sign-in.
+
+=== GUARDRAILS ===
+- Stay on-topic: only discuss LS Customs car rentals and mobile mechanic services
+- Never ask for or reveal internal credentials, passwords, or transaction IDs
+- If a user insists on non-automotive topics, redirect politely
+- If a user asks for personal data about another person, refuse
+- Always be honest about what services are available; never make up offers or pricing`;
 
 interface ChatHistoryMessage {
   role: "user" | "assistant" | "system";
@@ -351,6 +465,12 @@ An admin will review your request and respond soon. You can check the status of 
       }
     }
 
+    // Detect car trouble to trigger diagnostic flow context
+    const carTroubleDetected = isCarTrouble(userMessage);
+    const diagnosticContext = carTroubleDetected
+      ? "\n\n⚠️ DIAGNOSTIC MODE: The user has described car trouble. Follow the BREAKDOWN / DIAGNOSTIC FLOW instructions in the system prompt: collect car details FIRST (make/model/year), then ask about symptoms, then recommend diagnostics from the structured table."
+      : "";
+
     if (!OPENROUTER_API_KEY) {
       // Fallback when no OpenRouter key is configured (local dev without
       // a real LLM). Route through getDomainFallbackReply so the response
@@ -366,7 +486,7 @@ An admin will review your request and respond soon. You can check the status of 
 
     // Build API messages payload
     const apiMessages: { role: string; content: string }[] = [
-      { role: "system", content: `${SYSTEM_PROMPT}${userContext ? `\n\n${userContext}` : ""}` }
+      { role: "system", content: `${SYSTEM_PROMPT}${userContext}${diagnosticContext}` }
     ];
 
     if (body.messages && body.messages.length > 0) {

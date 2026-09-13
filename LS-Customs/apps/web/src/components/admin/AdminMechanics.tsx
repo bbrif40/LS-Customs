@@ -19,12 +19,12 @@ export function AdminMechanics() {
 
   const filteredMechanics = mechanics?.filter((m) => {
     const profile = m.profiles?.[0]
-    if (!profile) return false
     if (availabilityFilter === 'available' && !m.is_available) return false
     if (availabilityFilter === 'unavailable' && m.is_available) return false
     const searchTerm = searchQuery.toLowerCase()
     if (searchTerm) {
-      const nameMatch = profile.full_name?.toLowerCase().includes(searchTerm)
+      const name = profile?.full_name?.toLowerCase() ?? ''
+      const nameMatch = name.includes(searchTerm)
       const specialtyMatch = m.specialties?.some(s => s.toLowerCase().includes(searchTerm))
       if (!nameMatch && !specialtyMatch) return false
     }

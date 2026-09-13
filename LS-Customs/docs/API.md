@@ -236,7 +236,247 @@ When no contact info or provider is configured:
 }
 ```
 
-### 2.6 `chatbot`
+### 2.5 `geocode-address`
+
+**Purpose:** Convert a human-readable address to geographic coordinates (`lat`, `lng`) using the Google Maps Geocoding API. Server-side wrapper so the Google Maps API key never reaches the client bundle.
+
+**Auth:** Requires authenticated customer JWT; addresses are user-scoped.
+
+**Request:**
+```json
+POST /functions/v1/geocode-address
+{
+  "address": "123 Main St",
+  "city": "Quezon City"
+}
+```
+
+**Logic:**
+1. Validate the caller's JWT.
+2. Read `GOOGLE_MAPS_API_KEY` from environment (never from the client).
+3. Call Google Maps Geocoding API with the address string.
+4. Return the first result's `lat`/`lng` and the formatted address string.
+
+**Response (success):**
+```json
+{
+  "data": {
+    "lat": 14.6769,
+    "lng": 121.0437,
+    "formatted_address": "123 Main St, Quezon City, Metro Manila, Philippines"
+  },
+  "error": null
+}
+```
+
+**Response (no API key configured):**
+```json
+{
+  "data": null,
+  "error": { "code": "PROVIDER_ERROR", "message": "Geocoding provider is not configured" }
+}
+```
+
+---
+
+### 2.6 `create-ticket`
+
+**Purpose:** Submit a structured support ticket. Replaces the old "free-text in chat" flow with an explicit form that captures category, priority, description, and an optional subject. Returns a human-readable tracking number (`TKT-YYYYMMDD-XXXX`).
+
+**Auth:** Requires authenticated customer JWT. `customer_id` is taken from `auth.uid()` — never trusted from the request body.
+
+**Request:**
+```json
+POST /functions/v1/create-ticket
+{
+  "category": "billing",
+  "priority": "high",
+  "description": "I was charged twice for the same rental",
+  "subject": "Double charge on recent booking"
+}
+```
+
+**Logic:**
+1. Validate the caller's JWT; extract `customer_id` from `auth.uid()`.
+2. Validate `category` against `ticket_category` enum (`general`, `rental`, `billing`, `bug`, `mechanic`, `other`).
+3. Validate `priority` against `ticket_priority` enum (`low`, `medium`, `high`, `critical`).
+4. Validate description length (5–4000 characters).
+5. Generate a unique `tracking_number` in the format `TKT-YYYYMMDD-XXXX` (FNV-1a hash-based 4-char suffix). If a collision occurs (extremely rare), retry once with a perturbed timestamp.
+6. Prefix the subject with the category (e.g., `[BILLING] Double charge...`).
+7. Insert the `support_tickets` row and return the result.
+
+**Response (success):**
+```json
+{
+  "data": {
+    "id": "uuid",
+    "tracking_number": "TKT-20260913-ABCD",
+    "category": "billing",
+    "priority": "high",
+    "status": "open",
+    "subject": "[BILLING] Double charge on recent booking",
+    "created_at": "2026-09-13T10:00:00Z"
+  },
+  "error": null
+}
+```
+
+**Response (validation error):**
+```json
+{
+  "data": null,
+  "error": { "code": "VALIDATION_ERROR", "message": "Invalid category. Must be one of: general, rental, billing, bug, mechanic, other" }
+}
+```
+
+---
+
+### 2.7 `flag-user`
+
+**Purpose:** Admin-only action to permanently ban a user and remove their profile row. Used by admins to handle abusive or fraudulent users.
+
+**Effect:**
+1. Sets `auth.users.banned_until` to `9999-12-31T23:59:59.999Z` so the user can never sign in again. The only way to lift this is to clear `banned_until` in the Supabase dashboard.
+2. Deletes the `profiles` row. `ON DELETE CASCADE` cleans up dependent rows (addresses, vehicle_bookings, service_bookings, support_tickets, etc.) so the user has no residual data.
+3. The `auth.users` row itself is kept (Supabase does not allow deleting `auth.users` from a regular service-role client). This means the same email cannot re-register.
+
+**Auth:** Requires authenticated admin JWT. An admin cannot ban themselves.
+
+**Request:**
+```json
+POST /functions/v1/flag-user
+{
+  "user_id": "uuid"
+}
+```
+
+**Logic:**
+1. Verify the caller's JWT and confirm the caller's `profiles.role = 'admin'`.
+2. Validate `user_id` is a valid UUID v4.
+3. Reject if the target is the admin themselves (`INVALID_STATE`, 409).
+4. Call Supabase Admin Auth API to set `ban_duration = "876000h"` (100 years).
+5. Delete the `profiles` row.
+6. Return the ban result. If profile deletion fails after the ban succeeds, return a `207 Multi-Status` with `PARTIAL_SUCCESS`.
+
+**Response (success):**
+```json
+{
+  "data": {
+    "user_id": "uuid",
+    "banned_until": "9999-12-31T23:59:59.999Z",
+    "deleted_profile": true
+  },
+  "error": null
+}
+```
+
+**Response (admin only):**
+```json
+{
+  "data": null,
+  "error": { "code": "FORBIDDEN", "message": "Admin privileges required" }
+}
+```
+HTTP status: `403`.
+
+---
+
+### 2.8 `chatbot` *(Phase 5+ — out of scope for v1 per `SPEC.md` §6)*
+
+> **Note:** This function is implemented in the codebase but explicitly marked as out of scope in `SPEC.md` §6 ("AI-powered vehicle diagnostics / chatbot triage... not v1"). It is documented here for reference and should not be deployed or maintained until a future phase authorizes it.
+
+**Purpose:** AI customer support assistant for LS Customs' car rental & mobile mechanic services, powered by OpenRouter. Handles FAQ, rental inquiries, booking lookups, and mechanic service scheduling.
+
+Includes topic guardrails that intercept out-of-scope requests (e.g., general conversation, non-LS-Customs questions) and redirect them to LS Customs services.
+
+Provider is configured via `OPENROUTER_API_KEY` (required), `OPENROUTER_MODEL` (optional, defaults to `google/gemma-4-31b-it:free`), and `OPENROUTER_BASE_URL` (optional, defaults to `https://openrouter.ai/api/v1`). The base URL can be overridden to point to any OpenAI-compatible endpoint (e.g., Ollama, local LLM, Together.ai).
+
+**Auth:** None (public) — `verify_jwt = false`. Customer support must be accessible to anonymous visitors.
+
+**Request:**
+```json
+POST /functions/v1/chatbot
+{
+  "message": "What are your business hours?",
+  "conversation_id": "optional-uuid",
+  "user_id": "optional-uuid"
+}
+```
+
+**Logic:**
+1. Validate `message` is non-empty.
+2. If `user_id` is provided, look up the user's 3 most recent `vehicle_bookings` for context.
+3. If `OPENROUTER_API_KEY` is not configured, return `PROVIDER_ERROR` (500) with setup instructions.
+4. Call the provider's `/chat/completions` endpoint with the system prompt + user message (optionally enriched with booking context).
+5. Return the AI reply in the standard `{ data, error }` envelope.
+
+**Response (success):**
+```json
+{
+  "data": {
+    "conversation_id": "uuid",
+    "reply": "We're open Monday–Friday 8am–6pm...",
+    "context_used": false,
+    "model": "gpt-3.5-turbo"
+  },
+  "error": null
+}
+```
+
+**Response (no API key configured):**
+```json
+{
+  "data": null,
+  "error": {
+    "code": "PROVIDER_ERROR",
+    "message": "OPENROUTER_API_KEY not configured. Set it via `supabase secrets set OPENROUTER_API_KEY=...`."
+  }
+}
+```
+HTTP status: `500`.
+
+**Response (out-of-scope guardrail — e.g., "tell me a joke about quantum physics"):**
+```json
+{
+  "data": {
+    "conversation_id": "uuid",
+    "reply": "I'm here to help with LS Customs car rental and mechanic services only. Would you like assistance with a booking, pricing, or service schedule?",
+    "context_used": false,
+    "model": "guardrail"
+  },
+  "error": null
+}
+```
+No call to the AI provider is made — the guardrail intercepts pre-emptively.
+
+**Response (validation error — empty message):**
+```json
+{
+  "data": null,
+  "error": { "code": "VALIDATION_ERROR", "message": "Message is required" }
+}
+```
+HTTP status: `400`.
+
+---
+
+### 2.9 Shared Utilities (`_shared/`)
+
+All Edge Functions share three utility modules under `apps/backend/supabase/functions/_shared/`:
+
+### `supabaseClient.ts`
+Creates and exports a Supabase client instance using the `service_role` key from `Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")`. Every function imports this to interact with Postgres. Also exports `extractJwt(req)` for parsing the `Authorization: Bearer <jwt>` header and `createServiceClient` for the admin-facing client.
+
+### `cors.ts`
+Exports `corsHeaders` (CORS configuration) and `jsonResponse(data, error, status)` — the standard JSON envelope responder every function uses. Also exports the `EdgeFunctionError` type for consistent error shapes.
+
+### `paymentProvider.ts`
+Abstracts the active payment provider (PayMongo default for local dev, Stripe fallback). Exports functions to:
+- Create a payment intent (`createPaymentIntent`)
+- Verify a webhook signature (`verifyWebhookSignature`)
+- Normalize provider-specific event payloads into a common shape (`normalizePaymentEvent`)
+
+Reads `PAYMENT_PROVIDER`, `PAYMONGO_SECRET_KEY`, `PAYMONGO_WEBHOOK_SECRET`, `STRIPE_SECRET_KEY`, and `STRIPE_WEBHOOK_SECRET` from `Deno.env`.
 
 **Purpose:** AI customer support assistant for LS Customs' car rental & mobile mechanic services, powered by OpenRouter. Handles FAQ, rental inquiries, booking lookups, and mechanic service scheduling.
 
