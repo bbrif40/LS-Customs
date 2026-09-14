@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ArrowLeft, CheckCircle2, CreditCard, Fuel, Gauge, Loader2, LockKeyhole, MapPin, Settings2, Star, Users, Zap, AlertTriangle } from 'lucide-react'
-import { supabase } from '../../supabaseClient'
 import { useProfile } from '../../hooks/useProfile'
+import { usePaymentIntent } from '../../hooks/usePaymentIntent'
+import { usePaymentStatus } from '../../hooks/usePaymentStatus'
+import { PaymentForm } from '../common/PaymentForm'
 import type { Vehicle } from '../../types'
+import type { PaymentIntentResult } from '../../hooks/usePaymentIntent'
 
 interface RentalPaymentProps {
   vehicle: Vehicle
@@ -16,13 +19,31 @@ interface RentalPaymentProps {
 }
 
 export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, userId, onBack, onNotify }: RentalPaymentProps) {
-  const [creating, setCreating] = useState(false)
-  const [payment, setPayment] = useState<{ payment_id: string; provider: string; client_secret: string } | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [payment, setPayment] = useState<PaymentIntentResult | null>(null)
   const [showProfileModal, setShowProfileModal] = useState(false)
+  const [formStatus, setFormStatus] = useState<'idle' | 'processing' | 'succeeded' | 'failed' | 'refunded'>('idle')
   const { profile, defaultAddress, loading } = useProfile(userId)
+  const { creating, error: intentError, createIntent } = usePaymentIntent()
 
-  async function createPaymentIntent() {
+  // Subscribe to the payment row's status for async webhook confirmations
+  const paymentId = payment?.payment_id ?? null
+  const { status: paymentStatus, loading: statusLoading } = usePaymentStatus(paymentId)
+
+  // When the backend webhook flips the status to 'succeeded' or 'failed',
+  // reflect it in the UI.
+  useEffect(() => {
+    if (paymentStatus?.status === 'succeeded') {
+      setFormStatus('succeeded')
+      onNotify('Payment confirmed. Your booking is now locked in.')
+    } else if (paymentStatus?.status === 'failed') {
+      setFormStatus('failed')
+      onNotify('Payment could not be processed. Please try a different payment method.')
+    } else if (paymentStatus?.status === 'refunded') {
+      setFormStatus('refunded')
+    }
+  }, [paymentStatus, onNotify])
+
+  const handleInitiatePayment = async () => {
     // Check profile completeness before proceeding
     const phoneMissing = !profile?.phone
     const addressMissing = !defaultAddress?.line1 || !defaultAddress?.city
@@ -30,15 +51,16 @@ export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, u
       setShowProfileModal(true)
       return
     }
-    setCreating(true); setError(null)
-    const { data, error: invokeError } = await supabase.functions.invoke('create-payment-intent', {
-      body: { booking_type: 'vehicle', booking_id: bookingId },
-      headers: { 'Idempotency-Key': `vehicle:${bookingId}` },
-    })
-    if (invokeError) setError(invokeError.message)
-    else if (!data?.payment_id) setError(data?.message ?? 'Payment intent could not be created')
-    else { setPayment(data); onNotify('Payment intent created. Complete payment with your provider.') }
-    setCreating(false)
+
+    const intent = await createIntent('vehicle', bookingId)
+    if (intent) {
+      setPayment(intent)
+      onNotify('Payment intent created. Complete payment with your provider.')
+    }
+  }
+
+  const handleFormComplete = (result: 'succeeded' | 'failed' | 'processing') => {
+    setFormStatus(result === 'succeeded' ? 'succeeded' : result === 'failed' ? 'failed' : 'processing')
   }
 
   const gallery = vehicle.galleryImages?.length ? vehicle.galleryImages : vehicle.image ? [vehicle.image] : []
@@ -84,16 +106,42 @@ export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, u
           <strong>₱{total.toLocaleString()}</strong><span> total</span>
           <div className="booking-summary-dates"><span>{startDate}</span><span>{endDate}</span></div>
           <p className="booking-reference">Booking reference: <code>{bookingId}</code></p>
-          {error && <p className="form-helper review-error">{error}</p>}
-          {payment ? (
+          {intentError && <p className="form-helper review-error">{intentError}</p>}
+
+          {payment && formStatus === 'succeeded' ? (
             <div className="confirmation-card">
               <CheckCircle2 size={28} />
-              <h2>Payment session ready</h2>
-              <p className="muted">Provider: {payment.provider}. Your booking stays pending until the provider webhook confirms payment.</p>
-              <code>{payment.payment_id}</code>
+              <h2>Payment confirmed</h2>
+              <p className="muted">Your booking is now locked in. Payment ID: <code>{payment.payment_id}</code></p>
+            </div>
+          ) : payment && formStatus === 'failed' ? (
+            <div className="payment-failed-state">
+              <AlertTriangle size={24} />
+              <h3>Payment failed</h3>
+              <p className="muted">Your card was declined or could not be processed.</p>
+              <button className="button dark-button" onClick={() => setFormStatus('idle')} style={{ marginTop: '8px' }}>
+                Try again
+              </button>
+            </div>
+          ) : payment ? (
+            <div className="payment-form-wrapper">
+              {formStatus === 'processing' && (
+                <div className="payment-processing-banner">
+                  <Loader2 size={16} className="spin" />
+                  <span>Waiting for provider confirmation…</span>
+                </div>
+              )}
+              <PaymentForm
+                clientSecret={payment.client_secret}
+                amount={payment.amount}
+                currency={payment.currency}
+                provider={payment.provider}
+                onComplete={handleFormComplete}
+                onError={(msg) => onNotify(msg)}
+              />
             </div>
           ) : (
-            <button className="button dark-button" onClick={() => void createPaymentIntent()} disabled={creating || loading}>
+            <button className="button dark-button" onClick={() => void handleInitiatePayment()} disabled={creating || loading}>
               {creating ? <Loader2 size={16} className="spin" /> : <CreditCard size={16} />}
               {creating ? 'Preparing payment…' : loading ? 'Loading profile…' : 'Continue to payment'}
             </button>

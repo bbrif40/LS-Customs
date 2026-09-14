@@ -57,7 +57,7 @@ export function StepReview({
         <button type="button" className="text-button step-back" onClick={onBack}>
           <ChevronLeft size={15} /> Back
         </button>
-        <p className="eyebrow">STEP 5 OF 5</p>
+        <p className="eyebrow">STEP 5 OF 6</p>
         <h2>Review & confirm</h2>
         <p className="muted">Double-check the details before we book the mechanic.</p>
       </header>

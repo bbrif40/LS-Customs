@@ -115,6 +115,11 @@ export const unassignedJobs: UnassignedJob[] = [
 ]
 
 // ── Revenue Stats ───────────────────────────────────
+/**
+ * @deprecated Use the live `payments` table via `useAdminPayments()` instead.
+ * These mock values match the Figma design screenshots and are kept for
+ * backward compatibility with any component that still imports them.
+ */
 export const revenueStats: AdminStat[] = [
   { label: 'Total Revenue', value: '₱1,245,000', trend: '+7.8%', trendUp: true, icon: 'revenue' },
   { label: 'Average Order Value', value: '₱8,450', trend: '+4.5%', trendUp: true, icon: 'avg' },
@@ -122,6 +127,11 @@ export const revenueStats: AdminStat[] = [
 ]
 
 // ── Revenue Chart Data ──────────────────────────────
+/**
+ * @deprecated Use the live `payments` table via `useAdminPayments()` instead.
+ * These mock chart values match the Figma design screenshots and are kept
+ * for backward compatibility with any component that still imports them.
+ */
 export const revenueChartData = {
   labels: ['Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar'],
   rentals: [1800, 2100, 1900, 2300, 2600, 3100],
@@ -129,6 +139,12 @@ export const revenueChartData = {
 }
 
 // ── Transactions ────────────────────────────────────
+/**
+ * @deprecated Use the live `payments` table via `useAdminPayments()` and
+ * the <AdminTransactions /> component instead. These mock transactions
+ * match the Figma design screenshots and are kept for backward
+ * compatibility with any component that still imports them.
+ */
 export const transactions: Transaction[] = [
   { date: 'Oct 24, 2023', customer: 'Eleanor Pura', serviceType: 'Premium Sedan Rental', serviceIcon: '🚗', amount: '12,000.00', status: 'completed' },
   { date: 'Oct 24, 2023', customer: 'Wade Warren', serviceType: 'Emergency Engine Diagnostic', serviceIcon: '🔧', amount: '4,200.00', status: 'completed' },

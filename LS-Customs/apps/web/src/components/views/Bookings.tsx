@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
-import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag } from 'lucide-react'
+import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag, CreditCard } from 'lucide-react'
+import { supabase } from '../../supabaseClient'
+import { usePaymentStatus } from '../../hooks/usePaymentStatus'
+import { PaymentForm } from '../common/PaymentForm'
 import { PageHeading } from '../common/PageHeading'
 import { MapView } from '../common/map'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { useCustomerBookings, type CustomerServiceBooking, type CustomerVehicleBooking } from '../../hooks/useCustomerBookings'
-import { supabase } from '../../supabaseClient'
 
 interface BookingsProps {
   userId: string | undefined
@@ -18,6 +20,22 @@ interface BookingsProps {
 }
 function statusLabel(status: string) { return status.replace('_', ' ').toUpperCase() }
 function statusClass(status: string) { return ['assigned', 'en_route', 'in_progress', 'confirmed'].includes(status) ? 'green' : status === 'cancelled' ? 'red' : 'amber' }
+
+/** Payment status pill — maps payment.status to a colored pill. */
+function paymentStatusLabel(status: string): string {
+  if (status === 'succeeded') return 'PAID'
+  if (status === 'failed') return 'FAILED'
+  if (status === 'refunded') return 'REFUNDED'
+  if (status === 'pending') return 'PENDING'
+  return status.toUpperCase()
+}
+function paymentStatusClass(status: string): string {
+  if (status === 'succeeded') return 'green'
+  if (status === 'failed') return 'red'
+  if (status === 'refunded') return 'blue'
+  if (status === 'pending') return 'amber'
+  return 'amber'
+}
 
 /** Mechanic contact block — shown for service bookings that have a
  *  mechanic_id (i.e. status moved past pending). Phone is a tel: link. */
@@ -60,7 +78,7 @@ type BookingDetails =
   | { kind: 'service'; booking: CustomerServiceBooking; onViewMap: () => void }
   | { kind: 'rental'; booking: CustomerVehicleBooking }
 
-function BookingDetailsModal({ details, userId, onClose }: { details: BookingDetails; userId: string | undefined; onClose: () => void }) {
+function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: BookingDetails; userId: string | undefined; onClose: () => void; onNotify: (message: string) => void }) {
   const isService = details.kind === 'service'
   const serviceNames = isService
     ? details.booking.service_booking_items?.map((item) => item.mechanic_services?.name).filter(Boolean).join(', ')
@@ -84,6 +102,12 @@ function BookingDetailsModal({ details, userId, onClose }: { details: BookingDet
   const [reviewId, setReviewId] = useState<string | null>(null)
   const [ratingError, setRatingError] = useState<string | null>(null)
   const [savingRating, setSavingRating] = useState(false)
+  const [retryingPayment, setRetryingPayment] = useState(false)
+  const [retryIntent, setRetryIntent] = useState<{ payment_id: string; client_secret: string; provider: string; amount: number; currency: string } | null>(null)
+  const [retryError, setRetryError] = useState<string | null>(null)
+  // Track the original payment's status for realtime webhook updates
+  const { status: originalPaymentStatus } = usePaymentStatus(shared.payments?.id ?? null)
+  const { status: retryPaymentInfo } = usePaymentStatus(retryIntent?.payment_id ?? null)
 
   useEffect(() => {
     let active = true
@@ -146,6 +170,66 @@ function BookingDetailsModal({ details, userId, onClose }: { details: BookingDet
             <span className={`status-pill ${statusClass(shared.status)}`}>{statusLabel(shared.status)}</span>
             <span className="muted"><Hash size={11} /> {shared.id.slice(0, 8)}</span>
           </div>
+
+          {/* Payment section */}
+          {shared.payments ? (
+            <div className="booking-payment-section">
+              <h4>Payment</h4>
+              <div className="booking-payment-status-row">
+                <span className={`status-pill ${paymentStatusClass(shared.payments.status)}`}>{paymentStatusLabel(shared.payments.status)}</span>
+                <span className="muted">{shared.payments.provider ?? 'Unknown provider'} · ₱{Number(shared.payments.amount).toLocaleString()}</span>
+              </div>
+              {shared.payments.status === 'failed' && !retryIntent && (
+                <button
+                  className="button dark-button payment-retry-button"
+                  disabled={retryingPayment}
+                  onClick={async () => {
+                    setRetryingPayment(true)
+                    setRetryError(null)
+                    const { data, error: invokeError } = await supabase.functions.invoke('create-payment-intent', {
+                      body: { booking_type: isService ? 'service' : 'vehicle', booking_id: shared.id },
+                    })
+                    if (invokeError || !data?.payment_id) {
+                      setRetryError(invokeError?.message ?? data?.message ?? 'Could not create payment intent')
+                    } else {
+                      setRetryIntent(data)
+                    }
+                    setRetryingPayment(false)
+                  }}
+                >
+                  {retryingPayment ? <Loader2 size={14} className="spin" /> : <CreditCard size={14} />}
+                  {retryingPayment ? 'Preparing…' : 'Retry payment'}
+                </button>
+              )}
+              {retryError && <p className="form-helper review-error">{retryError}</p>}
+            </div>
+          ) : (
+            <div className="booking-payment-section">
+              <h4>Payment</h4>
+              <p className="muted">No payment record found for this booking.</p>
+            </div>
+          )}
+
+          {/* Retry payment form */}
+          {retryIntent && retryPaymentInfo?.status !== 'succeeded' && retryPaymentInfo?.status !== 'refunded' && (
+            <div className="payment-retry-form">
+              <PaymentForm
+                clientSecret={retryIntent.client_secret}
+                amount={retryIntent.amount}
+                currency={retryIntent.currency}
+                provider={retryIntent.provider}
+                onComplete={(result) => {
+                  if (result === 'succeeded') {
+                    setRetryIntent(null)
+                    onNotify('Payment confirmed. Booking is now locked in.')
+                  } else if (result === 'failed') {
+                    setRetryError('Payment failed. Please try a different card.')
+                  }
+                }}
+                onError={(msg) => setRetryError(msg)}
+              />
+            </div>
+          )}
 
           {isService ? (
             <>
@@ -217,7 +301,7 @@ function BookingDetailsModal({ details, userId, onClose }: { details: BookingDet
   )
 }
 
-export function Bookings({ userId, selectedBookingId, onClearSelection }: BookingsProps) {
+export function Bookings({ userId, onNotify, selectedBookingId, onClearSelection }: BookingsProps) {
   const { vehicleBookings, serviceBookings, loading, error, refetch } = useCustomerBookings(userId)
   const [liveBooking, setLiveBooking] = useState<CustomerServiceBooking | null>(null)
   const [details, setDetails] = useState<BookingDetails | null>(null)
@@ -273,7 +357,7 @@ export function Bookings({ userId, selectedBookingId, onClearSelection }: Bookin
                 onClick={() => setDetails({ kind: 'rental', booking })}
                 aria-label={`View details for ${booking.vehicles?.name ?? 'rental'}`}
               >
-                <div className="booking-card-head"><div><span className={`status-pill ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span><p>Rental · {booking.start_date} to {booking.end_date}</p></div><CarFront size={22} /></div>
+                <div className="booking-card-head"><div><span className={`status-pill ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span>{booking.payments && <span className={`status-pill ${paymentStatusClass(booking.payments.status)}`}>{paymentStatusLabel(booking.payments.status)}</span>}<p>Rental · {booking.start_date} to {booking.end_date}</p></div><CarFront size={22} /></div>
                 <h3>{booking.vehicles?.name ?? 'Vehicle rental'}</h3><p className="muted">{booking.pickup_location ?? 'Pickup location to be confirmed'}</p>
                 <div className="booking-actions"><strong>₱{Number(booking.total_price).toLocaleString()}</strong><span className="muted">Booking {booking.id.slice(0, 8)}</span></div>
               </button>
@@ -295,6 +379,7 @@ export function Bookings({ userId, selectedBookingId, onClearSelection }: Bookin
                 <div className="booking-card-head">
                   <div>
                     <span className={`status-pill ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span>
+                    {booking.payments && <span className={`status-pill ${paymentStatusClass(booking.payments.status)}`}>{paymentStatusLabel(booking.payments.status)}</span>}
                     <p>Mobile service · {new Date(booking.scheduled_at).toLocaleString()}</p>
                   </div>
                   <Wrench size={22} />
@@ -323,6 +408,7 @@ export function Bookings({ userId, selectedBookingId, onClearSelection }: Bookin
         <BookingDetailsModal
           details={details}
           userId={userId}
+          onNotify={onNotify}
           onClose={() => {
             setDetails(null)
             if (onClearSelection) onClearSelection()

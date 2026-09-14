@@ -12,6 +12,7 @@ import {
 import { supabase } from '../../supabaseClient'
 import { MapView, type MapPin } from '../common/map'
 import { AdminBookingDetail } from './AdminBookingDetail'
+import { AdminTransactions } from './AdminTransactions'
 import type { VehicleBooking, ServiceBooking, Profile, Vehicle, Address, MechanicProfile, MechanicService } from '@ls-customs/shared-types'
 
 interface AvailableMechanic {
@@ -22,7 +23,7 @@ interface AvailableMechanic {
   rating_avg: number | null
 }
 
-type BookingTab = 'vehicles' | 'services'
+type BookingTab = 'vehicles' | 'services' | 'transactions'
 type BookingStatus = VehicleBooking['status'] | ServiceBooking['status']
 
 // Extended types for joined data
@@ -377,6 +378,13 @@ export function AdminBookings() {
             {serviceBookings?.length || 0}
           </span>
         </button>
+        <button
+          className={`admin-filter-btn ${activeTab === 'transactions' ? 'active' : ''}`}
+          onClick={() => { setActiveTab('transactions'); setCurrentPage(1); }}
+          style={{ display: 'flex', alignItems: 'center', gap: 8 }}
+        >
+          <CreditCard size={16} /> Transactions
+        </button>
 
         <div style={{ flex: 1 }} />
         <div className="admin-fleet-search" style={{ minWidth: 250 }}>
@@ -390,6 +398,10 @@ export function AdminBookings() {
         </div>
       </div>
 
+      {activeTab === 'transactions' ? (
+        <AdminTransactions />
+      ) : (
+        <>
       {/* ── Status Filter ────────────────────────────────────── */}
       <div className="admin-filter-row" style={{ marginBottom: 16, gap: 8 }}>
         <span style={{ color: 'var(--admin-muted)', fontSize: 13, alignSelf: 'center' }}>Status:</span>
@@ -752,6 +764,8 @@ export function AdminBookings() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   )

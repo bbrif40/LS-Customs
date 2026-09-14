@@ -93,6 +93,10 @@ Deno.serve(async (req: Request) => {
       case "charge.failed":
         newPaymentStatus = "failed";
         break;
+      case "charge.refunded":
+      case "payment_intent.refunded":
+        newPaymentStatus = "refunded";
+        break;
       default:
         // Unhandled event type — ack but don't process
         console.log(`Ignoring unhandled webhook event type: ${event.type} (provider=${event.provider})`);

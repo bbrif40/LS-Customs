@@ -21,6 +21,7 @@ import { StepSchedule } from './StepSchedule'
 import { StepLocation } from './StepLocation'
 import { StepReview } from './StepReview'
 import { StepConfirmed } from './StepConfirmed'
+import { StepPayment } from './StepPayment'
 import { preloadMap } from '../../common/map/preload'
 import type { Service, ServiceBooking } from '../../../types'
 
@@ -74,6 +75,14 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
   const [address, setAddress] = useState<ChosenAddress | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [confirmedBooking, setConfirmedBooking] = useState<ServiceBooking | null>(null)
+  const [pendingPayment, setPendingPayment] = useState<{
+    bookingId: string
+    serviceName: string
+    servicePrice: string
+    scheduledAt: string
+    addressLabel: string
+    addressCity: string
+  } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   const goTo = useCallback((target: Step) => {
@@ -105,6 +114,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     setAddress(null)
     setSubmitError(null)
     setConfirmedBooking(null)
+    setPendingPayment(null)
   }, [])
 
   const handleConfirm = useCallback(async () => {
@@ -191,18 +201,21 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
       return
     }
 
-    setConfirmedBooking({
-      id: bookingId ?? localRef,
+    const servicePrice = service.priceCents != null ? formatPriceCents(service.priceCents) : service.price
+    const addressLabel = effectiveAddressId === defaultAddress?.id ? (defaultAddress?.label ?? defaultAddress?.line1 ?? address.label ?? address.line1) : (address.label ?? address.line1)
+    const addressCity = effectiveAddressId === defaultAddress?.id ? defaultAddress.city : address.city
+
+    setPendingPayment({
+      bookingId: bookingId ?? localRef,
       serviceName: service.name,
-      servicePrice: service.priceCents != null ? formatPriceCents(service.priceCents) : service.price,
+      servicePrice,
       scheduledAt,
-      addressLine1: effectiveAddressId === defaultAddress?.id ? defaultAddress.line1 : address.line1,
-      addressCity: effectiveAddressId === defaultAddress?.id ? defaultAddress.city : address.city,
-      status,
+      addressLabel,
+      addressCity,
     })
     setSubmitting(false)
-    goTo('review') // the Confirmed view is rendered via the orchestrator below
-  }, [userId, service, date, time, address, defaultAddress, onNotify, goTo])
+    goTo('payment')
+  }, [userId, service, date, time, address, defaultAddress, goTo])
 
   // Once a booking is confirmed we render the Confirmed step regardless
   // of the current step value.
@@ -228,7 +241,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
       <PageHeading
         eyebrow="MOBILE MECHANIC"
         title="Book a mechanic"
-        detail="Five quick steps. Choose a category, pick a service, set a time, confirm a location."
+        detail="Six quick steps. Choose a category, pick a service, set a time, confirm a location, and pay."
       />
       <BookingStepper current={step} onJump={goTo} />
 
@@ -296,6 +309,22 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
           onBack={goBack}
           onConfirm={() => void handleConfirm()}
           onJumpTo={goTo}
+        />
+      )}
+
+      {step === 'payment' && pendingPayment && (
+        <StepPayment
+          bookingId={pendingPayment.bookingId}
+          serviceName={pendingPayment.serviceName}
+          servicePrice={pendingPayment.servicePrice}
+          scheduledAt={pendingPayment.scheduledAt}
+          addressLabel={pendingPayment.addressLabel}
+          addressCity={pendingPayment.addressCity}
+          onConfirm={(booking) => {
+            setConfirmedBooking(booking)
+            setPendingPayment(null)
+          }}
+          onBack={() => goTo('review')}
         />
       )}
     </div>

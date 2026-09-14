@@ -70,6 +70,11 @@ export function StepConfirmed({ booking, onBookAnother, onBackToHome }: StepConf
           value={<span className="status-pill green">{prettyStatus(booking.status).toUpperCase()}</span>}
           action={null}
         />
+        <SummaryRow
+          label="Payment"
+          value={<span className="status-pill green">PAID</span>}
+          action={null}
+        />
       </div>
 
       <div className="mechanic-mini confirmation-mechanic">

@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@ionic/react": "^8.5.0",
+    "@stripe/react-stripe-js": "^6.10.0",
+    "@stripe/stripe-js": "^9.16.0",
     "@supabase/supabase-js": "^2.49.0",
     "ionicons": "^7.4.0",
     "leaflet": "^1.9.4",

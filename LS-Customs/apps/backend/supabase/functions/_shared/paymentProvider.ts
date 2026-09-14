@@ -42,6 +42,17 @@ export interface WebhookVerificationResult {
 }
 
 // ---------------------------------------------------------------------------
+// Refund support
+// ---------------------------------------------------------------------------
+
+export interface CreateRefundResult {
+  refundReference: string;  // e.g. "re_123..." (Stripe) or "re_..." (PayMongo)
+  amount: number;           // in display units (e.g. 7500.00 PHP), same as CreatePaymentIntentResult
+  currency: string;
+  provider: PaymentProvider;
+}
+
+// ---------------------------------------------------------------------------
 // Provider configuration
 // ---------------------------------------------------------------------------
 
@@ -235,6 +246,144 @@ async function createStripePaymentIntent(
     clientSecret: intent.client_secret,
     amount: intent.amount / 100,
     currency: intent.currency ?? "php",
+    provider: "stripe",
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Refund Creation
+// ---------------------------------------------------------------------------
+
+/**
+ * Issue a refund for a previously created payment intent.
+ *
+ * The `providerReference` is the provider's payment intent id stored on
+ * the `payments.provider_reference` column. The `amount` (if provided)
+ * is in the same currency unit as the original charge (e.g. PHP); it is
+ * converted to cents before sending to the provider. When omitted, the
+ * full amount is refunded.
+ *
+ * @param providerReference  The provider's payment intent id (from payments.provider_reference)
+ * @param amount             Optional partial refund amount in display units (e.g. 7500.00)
+ * @returns                  Refund details with the provider's refund id
+ */
+export async function createRefund(
+  providerReference: string,
+  amount?: number,
+): Promise<CreateRefundResult> {
+  const config = getProviderConfig();
+
+  if (config.provider === "paymongo") {
+    return createPaymongoRefund(config, providerReference, amount);
+  }
+
+  return createStripeRefund(config, providerReference, amount);
+}
+
+/**
+ * Create a refund via the PayMongo API.
+ *
+ * PayMongo refund endpoint:
+ *   POST /v1/refunds
+ *   Basic auth: base64(secret_key:)
+ *   Body: { data: { attributes: { payment_intent_id, amount (in cents) } } }
+ *
+ * @see https://docs.paymongo.com/docs/api/api-reference/refunds/create-refund
+ */
+async function createPaymongoRefund(
+  config: ProviderConfig,
+  providerReference: string,
+  amount?: number,
+): Promise<CreateRefundResult> {
+  const authHeader = "Basic " + btoa(`${config.secretKey}:`);
+
+  const attributes: Record<string, unknown> = {
+    payment_intent_id: providerReference,
+  };
+
+  if (amount != null) {
+    attributes.amount = Math.round(amount * 100); // to cents
+  }
+
+  const response = await fetch(`${config.baseUrl}/v1/refunds`, {
+    method: "POST",
+    headers: {
+      Authorization: authHeader,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({ data: { attributes } }),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    const errMsg = errBody?.errors?.[0]?.detail
+      ?? errBody?.errors?.[0]?.code
+      ?? response.statusText;
+    throw new Error(`PayMongo refund API error: ${errMsg}`);
+  }
+
+  const data = await response.json();
+  const attributes_ = data?.data?.attributes;
+
+  if (!attributes_ || !attributes_.id) {
+    throw new Error("PayMongo refund response missing id");
+  }
+
+  const refundId = data.data.id as string;
+  const refundAmount = attributes_.amount ? attributes_.amount / 100 : 0;
+  const refundCurrency = attributes_.currency ?? "PHP";
+
+  return {
+    refundReference: refundId,
+    amount: refundAmount,
+    currency: refundCurrency,
+    provider: "paymongo",
+  };
+}
+
+/**
+ * Create a refund via the Stripe API.
+ *
+ * Stripe refund endpoint:
+ *   POST https://api.stripe.com/v1/refunds
+ *   Bearer auth
+ *   Body: URL-encoded payment_intent=<id> [& amount=<cents>]
+ */
+async function createStripeRefund(
+  config: ProviderConfig,
+  providerReference: string,
+  amount?: number,
+): Promise<CreateRefundResult> {
+  const params: Record<string, string> = {
+    payment_intent: providerReference,
+  };
+
+  if (amount != null) {
+    params.amount = Math.round(amount * 100).toString(); // to cents
+  }
+
+  const response = await fetch(`${config.baseUrl}/refunds`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${config.secretKey}`,
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: new URLSearchParams(params),
+  });
+
+  if (!response.ok) {
+    const errBody = await response.json().catch(() => ({}));
+    const errMsg = errBody?.error?.message ?? response.statusText;
+    throw new Error(`Stripe refund API error: ${errMsg}`);
+  }
+
+  const refund = await response.json();
+
+  return {
+    refundReference: refund.id,
+    amount: (refund.amount ?? 0) / 100, // convert back to display units
+    currency: refund.currency ?? "php",
     provider: "stripe",
   };
 }
@@ -519,6 +668,7 @@ function mapPaymongoEventType(eventType: string): string {
   const mapping: Record<string, string> = {
     "payment_intent.succeeded": "payment_intent.succeeded",
     "payment_intent.failed": "payment_intent.payment_failed",
+    "payment_intent.refunded": "payment_intent.refunded",
     "payment_intent.awaiting_payment_method": "payment_intent.awaiting_payment_method",
     "payment_intent.chargeable": "payment_intent.chargeable",
   };
