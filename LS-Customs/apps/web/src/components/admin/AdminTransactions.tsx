@@ -149,9 +149,6 @@ export function AdminTransactions() {
                   </td>
                   <td style={{ fontWeight: 500 }}>
                     {payment.customer_name ?? '—'}
-                    {payment.customer_email && (
-                      <div style={{ fontSize: 11, color: 'var(--admin-muted)' }}>{payment.customer_email}</div>
-                    )}
                   </td>
                   <td style={{ fontSize: 13, textTransform: 'capitalize' }}>
                     {payment.booking_type === 'vehicle' ? '🚗 Rental' : '🔧 Service'}

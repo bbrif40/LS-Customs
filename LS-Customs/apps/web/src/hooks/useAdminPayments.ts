@@ -17,7 +17,6 @@ export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded'
 
 export interface AdminPayment extends Omit<Payment, 'customer_id'> {
   customer_name: string | null
-  customer_email: string | null
   booking_ref: string | null  // vehicle: "VS-{plate}", service: "LSC-{id}"
 }
 
@@ -54,7 +53,7 @@ export function useAdminPayments(): UseAdminPaymentsResult {
           status,
           created_at,
           updated_at,
-          profiles!left ( full_name, email )
+          profiles!left ( full_name )
         `)
         .order('created_at', { ascending: false })
 
@@ -76,7 +75,7 @@ export function useAdminPayments(): UseAdminPaymentsResult {
         status: PaymentStatus
         created_at: string
         updated_at: string
-        profiles: { full_name: string | null; email: string | null } | null
+        profiles: { full_name: string | null } | null
       }>
 
       // Fetch vehicle booking plates (for reference labels)
@@ -136,7 +135,6 @@ export function useAdminPayments(): UseAdminPaymentsResult {
           created_at: row.created_at,
           updated_at: row.updated_at,
           customer_name: row.profiles?.full_name ?? null,
-          customer_email: row.profiles?.email ?? null,
           booking_ref: bookingRef,
         }
       })
