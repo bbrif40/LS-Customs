@@ -22,13 +22,38 @@ import { ActiveBookingTracker } from './components/views/mechanic/ActiveBookingT
 import { Bookings } from './components/views/Bookings'
 import { Profile } from './components/views/Profile'
 import { ChatBot } from './components/chat/ChatBot'
+import { PublicLayout } from './components/layout/PublicLayout'
 import { AdminLayout } from './components/admin/AdminLayout'
 import { AdminLogin } from './components/admin/AdminLogin'
 import { TicketRealtimeProvider } from './components/common/TicketRealtimeProvider'
-import type { View } from './types'
+import { HelpCenter } from './pages/public/HelpCenter'
+import { ContactSupport } from './pages/public/ContactSupport'
+import { Terms } from './pages/public/Terms'
+import { PrivacyPolicy } from './pages/public/PrivacyPolicy'
+import { Faqs } from './pages/public/Faqs'
+import { Documentation } from './pages/public/Documentation'
+import type { View, PublicView } from './types'
 import { useCustomerNotifications } from './hooks/useCustomerNotifications'
 
-type AppMode = 'customer' | 'admin' | 'admin-login'
+/** Maps URL path prefixes to their public page view. */
+const PUBLIC_ROUTES: { prefix: string; view: PublicView }[] = [
+  { prefix: '/help', view: 'help' },
+  { prefix: '/contact', view: 'contact' },
+  { prefix: '/terms', view: 'terms' },
+  { prefix: '/privacy', view: 'privacy' },
+  { prefix: '/faqs', view: 'faqs' },
+  { prefix: '/docs', view: 'docs' },
+]
+
+/** Resolve the public view from a URL path, or null if not a public route. */
+const resolvePublicView = (path: string): PublicView | null => {
+  for (const { prefix, view } of PUBLIC_ROUTES) {
+    if (path === prefix || path.startsWith(prefix + '/')) return view
+  }
+  return null
+}
+
+type AppMode = 'customer' | 'admin' | 'admin-login' | 'public'
 
 /**
  * RootErrorBoundary — last-resort safety net for the whole app.
@@ -126,8 +151,11 @@ export function App() {
     const path = window.location.pathname
     if (path.startsWith('/admin/login')) return 'admin-login'
     if (path.startsWith('/admin')) return 'admin'
+    if (resolvePublicView(path)) return 'public'
     return 'customer'
   })
+
+  const [publicView, setPublicView] = useState<PublicView>(() => resolvePublicView(window.location.pathname) ?? 'help')
 
   const [view, setView] = useState<View>('home')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -146,6 +174,9 @@ export function App() {
         setAppMode('admin-login')
       } else if (path.startsWith('/admin')) {
         setAppMode('admin')
+      } else if (resolvePublicView(path)) {
+        setAppMode('public')
+        setPublicView(resolvePublicView(path) ?? 'help')
       } else {
         setAppMode('customer')
       }
@@ -206,6 +237,22 @@ export function App() {
             }}
           />
         </TicketRealtimeProvider>
+      </RootErrorBoundary>
+    )
+  }
+
+  // ── Render Public Content Pages ─────────────────────────────────
+  if (appMode === 'public') {
+    return (
+      <RootErrorBoundary>
+        <PublicLayout publicView={publicView}>
+          {publicView === 'help' && <HelpCenter />}
+          {publicView === 'contact' && <ContactSupport />}
+          {publicView === 'terms' && <Terms />}
+          {publicView === 'privacy' && <PrivacyPolicy />}
+          {publicView === 'faqs' && <Faqs />}
+          {publicView === 'docs' && <Documentation />}
+        </PublicLayout>
       </RootErrorBoundary>
     )
   }

@@ -61,7 +61,7 @@ export function GuestWorkspace({ onOpenAuth }: GuestWorkspaceProps) {
           </span>
         </button>
         <div className="sidebar-bottom">
-          <button className="nav-item" onClick={() => onOpenAuth('sign-in')}>
+          <button className="nav-item" onClick={() => (window.location.href = '/help')}>
             <CircleHelp size={18} /> Help Center
           </button>
           <button className="signout" onClick={() => onOpenAuth('sign-in')}>

@@ -6,6 +6,43 @@ import type { ReactNode, ComponentType } from 'react'
 
 export type View = 'home' | 'rentals' | 'services' | 'bookings' | 'profile'
 
+/** Public-facing content pages accessible without authentication. */
+export type PublicView = 'help' | 'contact' | 'terms' | 'privacy' | 'faqs' | 'docs'
+
+/** Legal document section used by TableOfContents on Terms / Privacy pages. */
+export interface LegalSection {
+  id: string
+  title: string
+  level: 2 | 3
+  content: string
+}
+
+/** FAQ item used by the Accordion on the FAQs page. */
+export interface FaqItem {
+  id: string
+  question: string
+  answer: string
+  category: 'rentals' | 'mechanic' | 'billing' | 'account' | 'bookings' | 'general'
+}
+
+/** Help-center article used by the Help Center page. */
+export interface HelpArticle {
+  id: string
+  title: string
+  description: string
+  category: string
+  href: string
+}
+
+/** Documentation article used by the Documentation page. */
+export interface DocArticle {
+  id: string
+  title: string
+  description: string
+  category: string
+  href: string
+}
+
 export type AuthMode = 'sign-in' | 'create-account'
 
 export interface Vehicle {

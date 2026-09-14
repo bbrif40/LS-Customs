@@ -3,10 +3,14 @@
  */
 
 interface WorkspaceFooterProps {
-  onNotify: (message: string) => void
+  onNotify?: (message: string) => void
 }
 
-export function WorkspaceFooter({ onNotify }: WorkspaceFooterProps) {
+const navigateTo = (href: string) => {
+  window.location.href = href
+}
+
+export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
   return (
     <footer className="workspace-footer">
       <div className="workspace-footer-brand">
@@ -15,10 +19,10 @@ export function WorkspaceFooter({ onNotify }: WorkspaceFooterProps) {
         <small>Professional automotive solutions.</small>
       </div>
       <div className="workspace-footer-links">
-        <button onClick={() => onNotify('Help Center opened')}>Help Center</button>
-        <button onClick={() => onNotify('Contact Support opened')}>Contact Support</button>
-        <button onClick={() => onNotify('Terms of Service opened')}>Terms of Service</button>
-        <button onClick={() => onNotify('Privacy Policy opened')}>Privacy Policy</button>
+        <button onClick={() => navigateTo('/help')}>Help Center</button>
+        <button onClick={() => navigateTo('/contact')}>Contact Support</button>
+        <button onClick={() => navigateTo('/terms')}>Terms of Service</button>
+        <button onClick={() => navigateTo('/privacy')}>Privacy Policy</button>
       </div>
       <small className="workspace-copyright">© 2024 LS Customs</small>
     </footer>

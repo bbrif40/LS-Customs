@@ -9,8 +9,8 @@ import { useState, useEffect, useRef } from 'react'
 import { X, TicketPlus, Loader2, CheckCircle2 } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 
-type Category = 'general' | 'rental' | 'billing' | 'bug' | 'mechanic' | 'other'
-type Priority = 'low' | 'medium' | 'high' | 'critical'
+export type Category = 'general' | 'rental' | 'billing' | 'bug' | 'mechanic' | 'other'
+export type Priority = 'low' | 'medium' | 'high' | 'critical'
 
 const CATEGORIES: { value: Category; label: string; helper: string }[] = [
   { value: 'rental', label: 'Rental', helper: 'Vehicle booking, pickup, or rental issues' },
@@ -28,7 +28,7 @@ const PRIORITIES: { value: Priority; label: string; color: string; helper: strin
   { value: 'critical', label: 'Critical', color: '#ef4444', helper: 'Blocking my work' },
 ]
 
-interface SubmitResult {
+export interface SubmitResult {
   id: string
   tracking_number: string
   category: Category
