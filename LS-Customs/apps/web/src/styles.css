@@ -838,9 +838,9 @@ html { scroll-behavior: smooth; }
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Public Layout ── */
-.public-layout { display: flex; flex-direction: column; min-height: 100vh; }
+.public-layout { display: flex; flex-direction: column; height: 100vh; overflow-y: auto; }
 .public-header { height: 72px; max-width: 1320px; margin: auto; padding: 0 5%; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: var(--white); }.public-header .brand { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 18px; font-weight: 700; text-decoration: none; }.public-header .brand .brand-spark { font-size: 24px; color: var(--yellow); }.public-nav { display: flex; gap: 28px; }.public-nav a { color: var(--muted); font-size: 12px; font-weight: 600; text-decoration: none; transition: color .15s; }.public-nav a:hover { color: var(--ink); }.public-nav a.active { color: var(--green); border-bottom: 2px solid var(--green); padding-bottom: 4px; }.public-footer { margin-top: auto; border-top: 1px solid var(--line); background: var(--white); padding: 38px 5% 42px; max-width: 1320px; margin-left: auto; margin-right: auto; }.public-footer .footer-brand { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 16px; font-weight: 700; }.public-footer .footer-brand .brand-spark { font-size: 22px; }.public-footer .footer-links { display: flex; gap: 24px; margin: 18px 0; flex-wrap: wrap; }.public-footer .footer-links a { color: var(--muted); font-size: 11px; font-weight: 600; text-decoration: none; transition: color .15s; }.public-footer .footer-links a:hover { color: var(--green); }.public-footer .footer-copy { color: var(--muted); font-size: 10px; }
-.public-main { flex: 1 1 auto; min-height: 0; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 5%; overflow-y: auto; }
+.public-main { flex: 1 1 auto; min-height: 0; width: 100%; max-width: 1320px; margin: 0 auto; padding: 0 5%; }
 
 /* ── Utility ── */
 .spin { animation: spin-rotate .8s linear infinite; }
