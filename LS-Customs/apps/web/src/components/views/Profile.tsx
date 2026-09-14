@@ -7,12 +7,49 @@
  *
  * The two saves are independent so a contact change does not require
  * re-submitting the address, and vice versa.
+ *
+ * Settings rows:
+ *   - Notification preferences — expandable panel with toggle switches
+ *     persisted to localStorage (email/SMS for bookings, tickets, payments,
+ *     plus promotional emails).
+ *   - Saved addresses — smooth-scrolls to the Address form above.
+ *   - Help center — navigates to the public /help page.
  */
 import { useRef, useState, useEffect } from 'react'
-import { Bell, ShieldCheck, MapPin, Headset, Loader2 } from 'lucide-react'
+import { Bell, MapPin, Headset, Loader2 } from 'lucide-react'
 import { PageHeading } from '../common/PageHeading'
 import { SettingsRow } from '../common/SettingsRow'
 import { useProfile } from '../../hooks/useProfile'
+
+/** Storage key for customer notification preference toggles. */
+const NOTIFICATION_PREFS_KEY = 'ls-customs-notification-preferences'
+
+interface NotificationPrefs {
+  bookingUpdates: boolean
+  ticketReplies: boolean
+  paymentUpdates: boolean
+  promotions: boolean
+}
+
+const DEFAULT_PREFS: NotificationPrefs = {
+  bookingUpdates: true,
+  ticketReplies: true,
+  paymentUpdates: true,
+  promotions: false,
+}
+
+/**
+ * ToggleSwitch — a simple on/off toggle with localStorage persistence
+ * handled by the parent. Renders a styled checkbox for accessibility.
+ */
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <label className="toggle-switch">
+      <input type="checkbox" checked={checked} onChange={onChange} readOnly />
+      <span className="toggle-track" />
+    </label>
+  )
+}
 
 interface ProfileProps {
   userId: string | undefined
@@ -33,6 +70,45 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
     upsertDefaultAddress,
   } = useProfile(userId)
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const addressSectionRef = useRef<HTMLDivElement>(null)
+
+  // Notification preference toggles — persisted to localStorage so they
+  // survive page reloads until a backend preferences table is wired up.
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(DEFAULT_PREFS)
+  const [prefsExpanded, setPrefsExpanded] = useState(false)
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(NOTIFICATION_PREFS_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored) as Partial<NotificationPrefs>
+        setNotificationPrefs({ ...DEFAULT_PREFS, ...parsed })
+      }
+    } catch {
+      // Ignore corrupt localStorage entries — fall back to defaults.
+    }
+  }, [])
+
+  const togglePref = (key: keyof NotificationPrefs) => {
+    setNotificationPrefs((prev) => {
+      const next = { ...prev, [key]: !prev[key] }
+      try {
+        localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(next))
+      } catch {
+        // Ignore write errors (e.g. private mode).
+      }
+      return next
+    })
+  }
+
+  const handleSavedAddresses = () => {
+    addressSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    onNotify('Saved addresses')
+  }
+
+  const handleHelpCenter = () => {
+    window.location.href = '/help'
+  }
 
   // Local form state — initialized once the profile loads.
   const [fullName, setFullName] = useState('')
@@ -238,7 +314,7 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
             </div>
 
             {/* ── Address section ──────────────────────────── */}
-            <div className="profile-section">
+            <div className="profile-section" ref={addressSectionRef}>
               <h3 className="profile-section-title">Address</h3>
               <label>
                 Street address
@@ -293,26 +369,67 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
             icon={<Bell size={18} />}
             title="Notification preferences"
             detail="Manage email, SMS, and push alerts"
-            onClick={() => onNotify('Notification preferences opened')}
-          />
-          <SettingsRow
-            icon={<ShieldCheck size={18} />}
-            title="Security & password"
-            detail="Update password and 2FA settings"
-            onClick={() => onNotify('Security settings opened')}
+            onClick={() => {
+              setPrefsExpanded((open) => !open)
+              onNotify('Notification preferences')
+            }}
           />
           <SettingsRow
             icon={<MapPin size={18} />}
             title="Saved addresses"
             detail="Home, office, and frequent locations"
-            onClick={() => onNotify('Saved addresses opened')}
+            onClick={handleSavedAddresses}
           />
           <SettingsRow
             icon={<Headset size={18} />}
             title="Help center"
             detail="FAQs, contact support, and documentation"
-            onClick={() => onNotify('Help center opened')}
+            onClick={handleHelpCenter}
           />
+
+          {/* ── Notification preferences panel ───────────────────── */}
+          <div className={`notification-prefs${prefsExpanded ? ' expanded' : ''}`}>
+            <div className="notification-pref-group">
+              <span>
+                <strong>Booking updates</strong>
+                <small>Status changes for your rentals and services</small>
+              </span>
+              <ToggleSwitch
+                checked={notificationPrefs.bookingUpdates}
+                onChange={() => togglePref('bookingUpdates')}
+              />
+            </div>
+            <div className="notification-pref-group">
+              <span>
+                <strong>Ticket replies</strong>
+                <small>When support responds to your tickets</small>
+              </span>
+              <ToggleSwitch
+                checked={notificationPrefs.ticketReplies}
+                onChange={() => togglePref('ticketReplies')}
+              />
+            </div>
+            <div className="notification-pref-group">
+              <span>
+                <strong>Payment updates</strong>
+                <small>Confirmations, failures, and refunds</small>
+              </span>
+              <ToggleSwitch
+                checked={notificationPrefs.paymentUpdates}
+                onChange={() => togglePref('paymentUpdates')}
+              />
+            </div>
+            <div className="notification-pref-group">
+              <span>
+                <strong>Promotions</strong>
+                <small>Special offers and new service announcements</small>
+              </span>
+              <ToggleSwitch
+                checked={notificationPrefs.promotions}
+                onChange={() => togglePref('promotions')}
+              />
+            </div>
+          </div>
         </aside>
       </div>
     </div>
