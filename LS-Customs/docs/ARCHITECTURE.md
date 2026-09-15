@@ -71,7 +71,7 @@
 
 ### 2.6 Vercel
 - Hosts the built Ionic web app (static/SPA output) and, if needed later, any lightweight Node/Edge API routes that don't belong in Supabase (e.g., a BFF layer for third-party services that shouldn't be called directly from the client).
-- Environment variables on Vercel hold only client-safe values (`SUPABASE_URL`, `SUPABASE_ANON_KEY`); anything requiring the service-role key runs in Supabase Edge Functions, not Vercel, to keep the privileged surface in one place.
+- Environment variables on Vercel hold only client-safe values (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` — the `VITE_` prefix is required by Vite to expose them to the browser); anything requiring the service-role key runs in Supabase Edge Functions, not Vercel, to keep the privileged surface in one place.
 - Deployment is triggered from the same monorepo/git flow as the backend, but the backend (Supabase project) is deployed independently via the Supabase CLI — the two are not coupled in a single deploy step.
 
 ---
@@ -122,8 +122,8 @@ This flow demonstrates **service composability** (checkout/booking composes matc
 
 | Key | Lives in | Exposed to client? |
 |---|---|---|
-| `SUPABASE_ANON_KEY` | Ionic app, Vercel env | Yes — safe, RLS-protected |
-| `SUPABASE_URL` | Ionic app, Vercel env | Yes |
+| `VITE_SUPABASE_ANON_KEY` | Ionic app, Vercel env | Yes — safe, RLS-protected |
+| `VITE_SUPABASE_URL` | Ionic app, Vercel env | Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase Edge Function secrets only | **Never** |
 | Payment provider secret key | Supabase Edge Function secrets only | **Never** |
 | Payment provider webhook secret | Supabase Edge Function secrets only | **Never** |

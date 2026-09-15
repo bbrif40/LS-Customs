@@ -106,7 +106,7 @@
 - Run `supabase db lint` / `supabase db diff` to confirm migrations match the live schema with no drift.
 - Review every RLS policy for the "authenticated but wrong owner" and "anonymous" cases explicitly (a checklist per table), including `support_tickets` and `support_ticket_messages`.
 - Deploy Edge Functions: `supabase functions deploy <name>` for each function — `assign-mechanic`, `create-payment-intent`, `payment-webhook`, `dispatch-notification`, `geocode-address`, `create-ticket`, `flag-user`; confirm secrets are set on the hosted project.
-- Set up the Vercel project: environment variables for `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and any payment provider keys. **Never add `SUPABASE_SERVICE_ROLE_KEY` to Vercel — it must stay exclusively in Supabase Edge Function secrets.**
+- Set up the Vercel project: environment variables for `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and any payment provider keys. **Never add `SUPABASE_SERVICE_ROLE_KEY` to Vercel — it must stay exclusively in Supabase Edge Function secrets.** The `VITE_` prefix is required — Vite only exposes prefixed variables to the browser.
 - Confirm Vercel deploy succeeds with a placeholder/minimal Ionic build (or a health-check API route) that can reach Supabase.
 
 **Acceptance Criteria:**

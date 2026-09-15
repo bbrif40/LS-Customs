@@ -632,8 +632,8 @@ Does it need to happen:             ┌── DB Webhook → Edge Function
 
 | Secret | Where It Lives | Exposed to Client? |
 |---|---|---|
-| `SUPABASE_ANON_KEY` | `.env.local` (frontend) + Vercel env | ✅ Yes — safe, RLS-protected |
-| `SUPABASE_URL` | `.env.local` (frontend) + Vercel env | ✅ Yes |
+| `VITE_SUPABASE_ANON_KEY` | `.env.local` (frontend) + Vercel env | ✅ Yes — safe, RLS-protected |
+| `VITE_SUPABASE_URL` | `.env.local` (frontend) + Vercel env | ✅ Yes |
 | `SUPABASE_SERVICE_ROLE_KEY` | `supabase/.env` + `supabase secrets set` | ❌ NEVER |
 | Payment provider secret key | `supabase secrets set` (Edge Function env) | ❌ NEVER |
 | Payment webhook signing secret | `supabase secrets set` | ❌ NEVER |
