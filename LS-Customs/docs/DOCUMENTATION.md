@@ -276,11 +276,51 @@ Copy the signing secret it gives you into `supabase secrets set PAYMENT_PROVIDER
 ### 8.4 Deploy the frontend to Vercel *(when the Ionic app exists)*
 1. Import the repo into Vercel.
 2. Set environment variables in Vercel Project Settings → Environment Variables:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
+   - `VITE_SUPABASE_URL` — the hosted Supabase project URL (e.g. `https://<project-ref>.supabase.co`)
+   - `VITE_SUPABASE_ANON_KEY` — the anon key from the hosted Supabase project
    - *(never add `SUPABASE_SERVICE_ROLE_KEY` here — it does not belong on Vercel)*
-3. Build command / output directory follow Ionic's standard Vercel deployment guide for the chosen framework (Angular/React/Vue) — to be finalized when the frontend phase starts.
-4. Confirm the deployed app can reach Supabase by checking a simple authenticated query in the browser console or a health-check page.
+
+   > **Important:** Vite only exposes variables prefixed with `VITE_` to the browser.
+   > The frontend code reads `import.meta.env.VITE_SUPABASE_URL` and
+   > `import.meta.env.VITE_SUPABASE_ANON_KEY`, so the Vercel env var keys **must**
+   > include the `VITE_` prefix. Setting `SUPABASE_URL` (without the prefix) would
+   > leave these values `undefined` at runtime, and the app would throw
+   > "Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY."
+3. Configure Google OAuth redirect URIs for production (see §8.5 below).
+4. Build command / output directory follow Ionic's standard Vercel deployment guide for the chosen framework (Angular/React/Vue) — to be finalized when the frontend phase starts.
+5. Confirm the deployed app can reach Supabase by checking a simple authenticated query in the browser console or a health-check page.
+
+### 8.5 Configure production Google OAuth redirect URIs
+Google OAuth requires matching redirect URIs on **both** Supabase and Google Cloud
+Console. The `config.toml` `additional_redirect_urls` only applies to local
+development — on the hosted project you must configure these via the dashboard:
+
+1. **Supabase Dashboard** → Authentication → Settings → Redirect URLs
+   Add every production origin, e.g.:
+   - `https://<your-app>.vercel.app`
+   - `https://<your-app>.vercel.app/auth/v1/callback`
+   - `https://<your-custom-domain>`
+   - `https://<your-custom-domain>/auth/v1/callback`
+   - `http://localhost:5173` (keep for local dev)
+
+2. **Google Cloud Console** → APIs & Services → OAuth consent screen →
+   Authorized redirect URIs
+   Add the same set of URLs plus the Supabase callback, e.g.:
+   - `https://<your-supabase-project-ref>.supabase.co/auth/v1/callback`
+
+3. **Google Cloud Console** → APIs & Services → Credentials
+   Ensure the OAuth 2.0 client ID and secret match what you set via
+   `supabase secrets set SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID=...`
+   and `SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=...`.
+
+4. Set the production site URL on the hosted project:
+   ```bash
+   supabase secrets set GOTRUE_SITE_URL=https://<your-app>.vercel.app
+   ```
+
+If any redirect URI is missing, Google will display
+"redirect_uri_mismatch" after sign-in and the user will be unable to
+complete authentication.
 
 ---
 
