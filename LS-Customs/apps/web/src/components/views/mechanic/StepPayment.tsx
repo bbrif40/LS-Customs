@@ -15,6 +15,7 @@ import { useState, useEffect } from 'react'
 import { CheckCircle2, ChevronLeft, CreditCard, Loader2 } from 'lucide-react'
 import { usePaymentIntent } from '../../../hooks/usePaymentIntent'
 import { usePaymentStatus } from '../../../hooks/usePaymentStatus'
+import { useSmsNotification } from '../../../hooks/useSmsNotification'
 import { PaymentForm } from '../../common/PaymentForm'
 import { SummaryRow } from './SummaryRow'
 import type { ServiceBooking } from '../../../types'
@@ -27,7 +28,7 @@ interface StepPaymentProps {
   scheduledAt: string
   addressLabel: string
   addressCity: string
-  /** Called with the confirmed booking details once payment succeeds. */
+  userId: string | undefined
   onConfirm: (booking: ServiceBooking) => void
   onBack: () => void
 }
@@ -51,10 +52,12 @@ export function StepPayment({
   scheduledAt,
   addressLabel,
   addressCity,
+  userId,
   onConfirm,
   onBack,
 }: StepPaymentProps) {
   const { creating, error: intentError, createIntent } = usePaymentIntent()
+  const { sendSms: sendSmsNotification } = useSmsNotification()
   const [intent, setIntent] = useState<{
     payment_id: string
     client_secret: string
@@ -70,6 +73,15 @@ export function StepPayment({
   useEffect(() => {
     if (paymentStatus?.status === 'succeeded') {
       setFormStatus('succeeded')
+      // Send SMS confirmation
+      if (userId) {
+        void sendSmsNotification({
+          userId,
+          type: 'service_payment_confirmed',
+          title: 'Service payment confirmed',
+          body: `Your mobile mechanic service (${serviceName}) is confirmed for ${new Date(scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. Our team will be in touch shortly.`,
+        })
+      }
       onConfirm({
         id: bookingId,
         serviceName,
@@ -82,7 +94,7 @@ export function StepPayment({
     } else if (paymentStatus?.status === 'failed') {
       setFormStatus('failed')
     }
-  }, [paymentStatus, bookingId, serviceName, servicePrice, scheduledAt, addressLabel, addressCity, onConfirm])
+  }, [paymentStatus, bookingId, serviceName, servicePrice, scheduledAt, addressLabel, addressCity, onConfirm, userId])
 
   const handleInitiatePayment = async () => {
     const result = await createIntent('service', bookingId)

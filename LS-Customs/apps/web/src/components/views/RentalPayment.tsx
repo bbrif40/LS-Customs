@@ -3,6 +3,7 @@ import { ArrowLeft, CheckCircle2, CreditCard, Fuel, Gauge, Loader2, LockKeyhole,
 import { useProfile } from '../../hooks/useProfile'
 import { usePaymentIntent } from '../../hooks/usePaymentIntent'
 import { usePaymentStatus } from '../../hooks/usePaymentStatus'
+import { useSmsNotification } from '../../hooks/useSmsNotification'
 import { PaymentForm } from '../common/PaymentForm'
 import type { Vehicle } from '../../types'
 import type { PaymentIntentResult } from '../../hooks/usePaymentIntent'
@@ -24,6 +25,7 @@ export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, u
   const [formStatus, setFormStatus] = useState<'idle' | 'processing' | 'succeeded' | 'failed' | 'refunded'>('idle')
   const { profile, defaultAddress, loading } = useProfile(userId)
   const { creating, error: intentError, createIntent } = usePaymentIntent()
+  const { sendSms: sendSmsNotification } = useSmsNotification()
 
   // Subscribe to the payment row's status for async webhook confirmations
   const paymentId = payment?.payment_id ?? null
@@ -35,13 +37,22 @@ export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, u
     if (paymentStatus?.status === 'succeeded') {
       setFormStatus('succeeded')
       onNotify('Payment confirmed. Your booking is now locked in.')
+      // Send SMS confirmation
+      if (userId) {
+        void sendSmsNotification({
+          userId,
+          type: 'payment_confirmed',
+          title: 'Payment confirmed',
+          body: `Hi ${profile?.full_name || 'there'}! Your rental of ${vehicle.name} is confirmed. Booking ref: VS-${bookingId.slice(0, 8).toUpperCase()}. See you soon!`,
+        })
+      }
     } else if (paymentStatus?.status === 'failed') {
       setFormStatus('failed')
       onNotify('Payment could not be processed. Please try a different payment method.')
     } else if (paymentStatus?.status === 'refunded') {
       setFormStatus('refunded')
     }
-  }, [paymentStatus, onNotify])
+  }, [paymentStatus, onNotify, userId, bookingId, vehicle.name, profile?.full_name])
 
   const handleInitiatePayment = async () => {
     // Check profile completeness before proceeding
