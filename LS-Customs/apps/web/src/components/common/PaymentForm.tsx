@@ -150,7 +150,7 @@ function StripeCardForm({
 
     const { paymentIntent, error } = await stripe.confirmCardPayment(clientSecret, {
       payment_method: {
-        card: cardElement,
+        card: cardElement as any,
       },
     })
 

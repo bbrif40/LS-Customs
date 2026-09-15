@@ -89,7 +89,7 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
   }, [services, activeCategory])
 
   return (
-    <div className={`page ${scrollRef.className}`} ref={scrollRef.ref}>
+    <div className={`page ${scrollRef.className}`} ref={scrollRef.ref as React.RefObject<HTMLDivElement>}>
       <PageHeading
         eyebrow="MOBILE MECHANIC"
         title="Care that comes to you"

@@ -88,7 +88,7 @@ export function GuestWorkspace({ onOpenAuth }: GuestWorkspaceProps) {
         </header>
 
         {guestView === 'home' && (
-          <div className={`guest-page ${scrollRef.className}`} ref={scrollRef.ref}>
+          <div className={`guest-page ${scrollRef.className}`} ref={scrollRef.ref as React.RefObject<HTMLDivElement>}>
             <p className="eyebrow">LS CUSTOMS WORKSPACE</p>
             <h1>
               Your automotive care,
