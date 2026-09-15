@@ -150,6 +150,39 @@ async function sendSms(
   }
 }
 
+/**
+ * Send an SMS via TextBee (alternative to Twilio).
+ * TextBee is a self-hostable SMS gateway API — get your API key at textbee.dev.
+ */
+async function sendSmsTextBee(
+  to: string,
+  body: string,
+  apiKey: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch("https://api.textbee.dev/sms/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        to: to,
+        message: body,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text().catch(() => "(no body)");
+      return { success: false, error: `HTTP ${res.status}: ${errText}` };
+    }
+    return { success: true };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { success: false, error: msg };
+  }
+}
+
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -275,12 +308,14 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // --- SMS via Twilio ---
+    // --- SMS via Twilio (primary) or TextBee (fallback) ---
     if (profile?.phone) {
       const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
       const twilioToken = Deno.env.get("TWILIO_AUTH_TOKEN");
       const twilioFrom = Deno.env.get("TWILIO_FROM_NUMBER");
+      const textbeeKey = Deno.env.get("TEXTBEE_API_KEY");
 
+      // Try Twilio first
       if (twilioSid && twilioToken && twilioFrom) {
         const result = await sendSms(
           profile.phone,
@@ -291,13 +326,27 @@ Deno.serve(async (req: Request) => {
         );
         if (result.success) {
           channels.push("sms");
-          console.log(`[dispatch-notification] SMS sent to ${profile.phone} for notification ${notification.id}`);
+          console.log(`[dispatch-notification] SMS (Twilio) sent to ${profile.phone} for notification ${notification.id}`);
         } else {
           errors.push(`sms_failed: ${result.error}`);
           console.error("Twilio delivery failed:", result.error);
         }
+      } else if (textbeeKey) {
+        // Fallback: TextBee
+        const result = await sendSmsTextBee(
+          profile.phone,
+          notification.body,
+          textbeeKey,
+        );
+        if (result.success) {
+          channels.push("sms");
+          console.log(`[dispatch-notification] SMS (TextBee) sent to ${profile.phone} for notification ${notification.id}`);
+        } else {
+          errors.push(`sms_failed: ${result.error}`);
+          console.error("TextBee delivery failed:", result.error);
+        }
       } else {
-        console.warn("Twilio not configured — skipping SMS delivery");
+        console.warn("No SMS provider configured (Twilio or TextBee) — skipping SMS delivery");
       }
     }
 

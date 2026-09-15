@@ -320,6 +320,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
           scheduledAt={pendingPayment.scheduledAt}
           addressLabel={pendingPayment.addressLabel}
           addressCity={pendingPayment.addressCity}
+          userId={userId}
           onConfirm={(booking) => {
             setConfirmedBooking(booking)
             setPendingPayment(null)

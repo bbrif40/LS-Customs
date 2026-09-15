@@ -3,8 +3,11 @@
  * Shows live stats, service map, technician status, and recent bookings.
  * Matches the "Admin Command Center" Figma screen exactly.
  */
-import { ChevronRight, Calendar, Star, MapPin } from 'lucide-react'
-import { overviewStats, technicians, recentBookings } from '../../data/adminData'
+import { ChevronRight, Calendar, Star, MapPin as MapPinIcon, Loader2 } from 'lucide-react'
+import { useAdminOverviewStats } from '../../hooks/useAdminOverviewStats'
+import { useLiveTechnicians } from '../../hooks/useLiveTechnicians'
+import { useRecentBookings } from '../../hooks/useRecentBookings'
+import { MapView, type MapPin as MapViewPin } from '../common/map'
 import type { AdminView } from './AdminSidebar'
 
 interface AdminOverviewProps {
@@ -12,6 +15,28 @@ interface AdminOverviewProps {
 }
 
 export function AdminOverview({ onViewChange }: AdminOverviewProps) {
+  const { stats, loading: statsLoading, error: statsError, refetch: refetchStats } = useAdminOverviewStats()
+  const { technicians, mechanicPins, loading: techLoading, error: techError } = useLiveTechnicians()
+  const { bookings, loading: bookingsLoading, error: bookingsError } = useRecentBookings(5)
+
+  const loading = statsLoading || techLoading || bookingsLoading
+  const error = statsError || techError || bookingsError
+
+  // Convert mechanicPins to MapView-compatible pins
+  const mapPins: MapViewPin[] = mechanicPins.map((pin) => ({
+    id: pin.id,
+    lat: pin.lat,
+    lng: pin.lng,
+    title: pin.title,
+    description: pin.status,
+    color: pin.status === 'on-job' ? '#e8a838' : pin.status === 'en-route' ? '#06b6d4' : '#22c55e',
+  }))
+
+  // Fallback center if no mechanics are on the map
+  const mapCenter = mapPins.length > 0
+    ? undefined
+    : { lat: 34.0522, lng: -118.2437 }
+
   return (
     <div className="admin-main">
       {/* ── Top Bar ──────────────────────────────────────────── */}
@@ -28,9 +53,18 @@ export function AdminOverview({ onViewChange }: AdminOverviewProps) {
         </div>
       </div>
 
+      {error && (
+        <div style={{
+          marginBottom: 16, padding: '12px 16px', background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid #ef444440', borderRadius: 8, color: '#ef4444', fontSize: 13,
+        }}>
+          {error} — <button onClick={() => { void refetchStats() }} style={{ color: '#ef4444', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Retry</button>
+        </div>
+      )}
+
       {/* ── Stats Row ────────────────────────────────────────── */}
       <div className="admin-stats-row">
-        {overviewStats.map((stat) => (
+        {stats.map((stat) => (
           <div className="admin-stat-card" key={stat.label}>
             <div className="admin-stat-header">
               <span className="admin-stat-label">{stat.label}</span>
@@ -75,37 +109,15 @@ export function AdminOverview({ onViewChange }: AdminOverviewProps) {
             </div>
           </div>
           <div className="admin-map-container">
-            <div className="admin-map-bg">
-              {/* Stylized roads */}
-              <div className="admin-map-road h1" />
-              <div className="admin-map-road h2" />
-              <div className="admin-map-road h3" />
-              <div className="admin-map-road v1" />
-              <div className="admin-map-road v2" />
-              <div className="admin-map-road v3" />
-              <div className="admin-map-road v4" />
-              <div className="admin-map-road d1" />
-
-              {/* Map labels */}
-              <span className="admin-map-label" style={{ top: '12%', left: '8%' }}>Buena Vista</span>
-              <span className="admin-map-label" style={{ top: '22%', left: '38%' }}>El Monte</span>
-              <span className="admin-map-label" style={{ top: '8%', left: '62%' }}>Duarte Ave</span>
-              <span className="admin-map-label" style={{ top: '45%', left: '15%' }}>Covina</span>
-              <span className="admin-map-label" style={{ top: '60%', left: '50%' }}>La Verne</span>
-              <span className="admin-map-label" style={{ top: '75%', left: '25%' }}>El Cerro</span>
-              <span className="admin-map-label" style={{ top: '85%', left: '70%' }}>Valle Bay</span>
-              <span className="admin-map-label" style={{ top: '35%', left: '82%' }}>Irwindale</span>
-
-              {/* Mechanic markers */}
-              <div className="admin-map-marker mechanic" style={{ top: '25%', left: '30%' }} title="Marcus T.">🔧</div>
-              <div className="admin-map-marker mechanic" style={{ top: '55%', left: '55%' }} title="Sarah J.">🔧</div>
-              <div className="admin-map-marker mechanic" style={{ top: '70%', left: '20%' }} title="David R.">🔧</div>
-
-              {/* Rental markers */}
-              <div className="admin-map-marker rental" style={{ top: '15%', left: '58%' }} title="Sentinel XS">🚗</div>
-              <div className="admin-map-marker rental" style={{ top: '40%', left: '72%' }} title="Elegy RH8">🚗</div>
-              <div className="admin-map-marker rental" style={{ top: '50%', left: '35%' }} title="Baller">🚗</div>
-            </div>
+            {mapPins.length > 0 ? (
+              <MapView pins={mapPins} height={320} center={mapCenter} />
+            ) : (
+              <div className="admin-map-bg" style={{ opacity: 0.5 }}>
+                <div style={{ padding: 24, color: 'var(--admin-muted)', fontSize: 13, textAlign: 'center' }}>
+                  {techLoading ? 'Loading mechanic locations…' : 'No mechanics with live locations available.'}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -117,33 +129,40 @@ export function AdminOverview({ onViewChange }: AdminOverviewProps) {
               Technician Status
             </h3>
           </div>
-          <div className="admin-tech-list">
-            {technicians.map((tech) => (
-              <div className="admin-tech-item" key={tech.name}>
-                <div className={`admin-tech-avatar ${tech.status}`}>
-                  {tech.avatar}
-                </div>
-                <div className="admin-tech-info">
-                  <div className="admin-tech-name">{tech.name}</div>
-                  <div className="admin-tech-role">{tech.role}</div>
-                  <span className={`admin-tech-status ${tech.status}`}>
-                    {tech.status === 'on-job' && 'On Job'}
-                    {tech.status === 'available' && 'Available'}
-                    {tech.status === 'en-route' && 'En Route'}
-                  </span>
-                </div>
-                <div className="admin-tech-right">
-                  <div className="admin-tech-rating">
-                    <Star size={14} className="admin-tech-rating-star" fill="currentColor" />
-                    {tech.rating}
+          {techLoading ? (
+            <div style={{ padding: 24, color: 'var(--admin-muted)', fontSize: 13, textAlign: 'center' }}>
+              <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
+              Loading technicians…
+            </div>
+          ) : (
+            <div className="admin-tech-list">
+              {technicians.map((tech) => (
+                <div className="admin-tech-item" key={tech.name}>
+                  <div className={`admin-tech-avatar ${tech.status}`}>
+                    {tech.avatar}
                   </div>
-                  <div className="admin-tech-distance">
-                    <MapPin size={10} /> {tech.distance}
+                  <div className="admin-tech-info">
+                    <div className="admin-tech-name">{tech.name}</div>
+                    <div className="admin-tech-role">{tech.role}</div>
+                    <span className={`admin-tech-status ${tech.status}`}>
+                      {tech.status === 'on-job' && 'On Job'}
+                      {tech.status === 'available' && 'Available'}
+                      {tech.status === 'en-route' && 'En Route'}
+                    </span>
+                  </div>
+                  <div className="admin-tech-right">
+                    <div className="admin-tech-rating">
+                      <Star size={14} className="admin-tech-rating-star" fill="currentColor" />
+                      {tech.rating > 0 ? tech.rating.toFixed(1) : '—'}
+                    </div>
+                    <div className="admin-tech-distance">
+                      <MapPinIcon size={10} /> {tech.distance}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -151,45 +170,61 @@ export function AdminOverview({ onViewChange }: AdminOverviewProps) {
       <div className="admin-bookings-card">
         <div className="admin-section-header">
           <h3 className="admin-section-title">Recent Bookings</h3>
-          <button className="admin-view-all">
+          <button
+            className="admin-view-all"
+            onClick={() => onViewChange('bookings')}
+            style={{ cursor: 'pointer' }}
+          >
             View All <ChevronRight size={14} />
           </button>
         </div>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Service Type</th>
-              <th>Customer</th>
-              <th>Status</th>
-              <th style={{ textAlign: 'right' }}>Price (₱)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {recentBookings.map((booking, i) => (
-              <tr key={i}>
-                <td>
-                  <div className="admin-table-service">
-                    <div className="admin-table-service-icon">{booking.icon}</div>
-                    <div>
-                      <div className="admin-table-service-name">{booking.serviceType}</div>
-                      <div className="admin-table-service-id">{booking.serviceId}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>{booking.customer}</td>
-                <td>
-                  <span className={`admin-status-badge ${booking.status}`}>
-                    <span className={`admin-status-dot ${booking.status}`} />
-                    {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
-                  </span>
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <span className="admin-table-price">{booking.price}</span>
-                </td>
+        {bookingsLoading ? (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--admin-muted)' }}>
+            <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
+            Loading recent bookings…
+          </div>
+        ) : (
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Service Type</th>
+                <th>Customer</th>
+                <th>Status</th>
+                <th style={{ textAlign: 'right' }}>Price (₱)</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {bookings.map((booking, i) => (
+                <tr key={`${booking.serviceId}-${i}`}>
+                  <td>
+                    <div className="admin-table-service">
+                      <div className="admin-table-service-icon">{booking.icon}</div>
+                      <div>
+                        <div className="admin-table-service-name">{booking.serviceType}</div>
+                        <div className="admin-table-service-id">{booking.serviceId}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>{booking.customer}</td>
+                  <td>
+                    <span className={`admin-status-badge ${booking.status}`}>
+                      <span className={`admin-status-dot ${booking.status}`} />
+                      {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <span className="admin-table-price">{booking.price}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {bookings.length === 0 && !bookingsLoading && (
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--admin-muted)', fontSize: 13 }}>
+            No recent bookings found.
+          </div>
+        )}
       </div>
 
       {/* ── Manage Schedule CTA ──────────────────────────────── */}
