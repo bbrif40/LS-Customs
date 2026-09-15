@@ -309,7 +309,10 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- SMS via Twilio (primary) or TextBee (fallback) ---
-    if (profile?.phone) {
+    // Only send SMS when the trigger explicitly requests it via metadata.dispatch_sms
+    // (e.g., "mechanic assigned" notifications). Other notifications rely on
+    // in-app display only, avoiding SMS fatigue.
+    if (profile?.phone && metadata.dispatch_sms === true) {
       const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
       const twilioToken = Deno.env.get("TWILIO_AUTH_TOKEN");
       const twilioFrom = Deno.env.get("TWILIO_FROM_NUMBER");

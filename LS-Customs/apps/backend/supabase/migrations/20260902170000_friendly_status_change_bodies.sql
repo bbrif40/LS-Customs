@@ -16,12 +16,13 @@ security definer
 set search_path = public
 as $$
 declare
-  booking_type  text;
-  mech_id       uuid;
-  mech_name     text;
-  mech_phone    text;
-  title_text    text;
-  body_text     text;
+  booking_type    text;
+  mech_id         uuid;
+  mech_name       text;
+  mech_phone      text;
+  title_text      text;
+  body_text       text;
+  dispatch_sms    boolean := false;
 begin
   booking_type := case when TG_TABLE_NAME = 'service_bookings' then 'service' else 'vehicle' end;
 
@@ -40,6 +41,8 @@ begin
   if TG_TABLE_NAME = 'service_bookings' and new.status = 'assigned' and new.mechanic_id is not null then
     title_text := 'Mechanic assigned';
     body_text  := format('Your service is assigned to %s. They''ll be on the way at the scheduled time.', coalesce(mech_name, 'a mechanic'));
+    -- Signal to dispatch-notification that SMS should be sent immediately
+    dispatch_sms := true;
   elsif new.status = 'completed' then
     title_text := 'Service completed';
     body_text  := case
@@ -62,13 +65,14 @@ begin
     title_text,
     body_text,
     jsonb_build_object(
-      'booking_id',   new.id,
-      'booking_type', booking_type,
-      'old_status',   old.status,
-      'new_status',   new.status,
+      'booking_id',     new.id,
+      'booking_type',   booking_type,
+      'old_status',     old.status,
+      'new_status',     new.status,
       'mechanic_id',    case when mech_name is not null then new.mechanic_id else null end,
       'mechanic_name',  mech_name,
-      'mechanic_phone', mech_phone
+      'mechanic_phone', mech_phone,
+      'dispatch_sms',   dispatch_sms
     )
   );
 
