@@ -20,7 +20,7 @@ declare
   email_marco  constant text := 'mechanic.marco@lscustoms.local';
   email_andre  constant text := 'mechanic.andre@lscustoms.local';
 begin
-  -- 1. auth.users — encrypted_password is the bcrypt hash of a
+-- 1. auth.users — encrypted_password is the bcrypt hash of a
   --    throwaway dev password. Real onboarding uses the sign-up API.
   insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
   values
@@ -28,9 +28,9 @@ begin
     -- seeded mechanics are NOT sign-in-able from this file alone. A real
     -- onboarding flow (supabase.auth.signUp) sets a real password at
     -- creation time; this seed only exists to populate the admin list.
-    (uid_rico,  '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated', email_rico,  crypt('', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', ''),
-    (uid_marco, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated', email_marco, crypt('', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', ''),
-    (uid_andre, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated', email_andre, crypt('', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', '')
+    (uid_rico,  '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated', email_rico,  extensions.crypt('', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', ''),
+    (uid_marco, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated', email_marco, extensions.crypt('', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', ''),
+    (uid_andre, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated', email_andre, extensions.crypt('', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{}'::jsonb, now(), now(), '', '', '', '')
   on conflict (id) do nothing;
 
   -- Identities — required by Supabase auth so the account is

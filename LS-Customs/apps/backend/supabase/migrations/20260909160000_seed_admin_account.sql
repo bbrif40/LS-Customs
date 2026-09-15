@@ -11,11 +11,11 @@ declare
   uid_admin constant uuid := 'aaaaaaaa-0000-0000-0000-000000000001';
   email_admin constant text := 'admin@lscustoms.local';
 begin
-  -- 1. auth.users — admin account with role 'authenticated'
+-- 1. auth.users — admin account with role 'authenticated'
   --    encrypted_password is bcrypt hash of "admin123"
   insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_token_new, recovery_token)
   values
-    (uid_admin, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated', email_admin, crypt('admin123', gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"LS Admin","name":"LS Admin"}'::jsonb, now(), now(), '', '', '', '')
+    (uid_admin, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated', email_admin, extensions.crypt('admin123', extensions.gen_salt('bf')), now(), '{"provider":"email","providers":["email"]}'::jsonb, '{"full_name":"LS Admin","name":"LS Admin"}'::jsonb, now(), now(), '', '', '', '')
   on conflict (id) do nothing;
 
   -- 2. auth.identities — required for email-based sign-in
