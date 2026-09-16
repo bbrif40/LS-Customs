@@ -32,6 +32,7 @@ import { Terms } from './pages/public/Terms'
 import { PrivacyPolicy } from './pages/public/PrivacyPolicy'
 import { Faqs } from './pages/public/Faqs'
 import { Documentation } from './pages/public/Documentation'
+import { EmergencyMechanicModal, type EmergencyDispatchData } from './components/common/EmergencyMechanicModal'
 import type { View, PublicView } from './types'
 import { useCustomerNotifications } from './hooks/useCustomerNotifications'
 
@@ -165,6 +166,8 @@ export function App() {
   // booking. Bookings reads this to expand the matching card.
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
   const { unreadCount } = useCustomerNotifications(userId, 'nav')
+  const [emergencyModalOpen, setEmergencyModalOpen] = useState(false)
+  const [activeEmergencyDispatch, setActiveEmergencyDispatch] = useState<EmergencyDispatchData | null>(null)
 
   // Listen to browser forward/back buttons
   useEffect(() => {
@@ -270,7 +273,10 @@ export function App() {
     return (
       <RootErrorBoundary>
         <>
-          <GuestWorkspace onOpenAuth={openAuth} />
+          <GuestWorkspace
+            onOpenAuth={openAuth}
+            onEmergencyClick={() => setEmergencyModalOpen(true)}
+          />
           {authOpen && (
             <AuthModal
               mode={authMode}
@@ -282,6 +288,18 @@ export function App() {
               }}
             />
           )}
+          <EmergencyMechanicModal
+            open={emergencyModalOpen}
+            onClose={() => setEmergencyModalOpen(false)}
+            onNotify={notify}
+            userId={userId}
+            activeDispatch={activeEmergencyDispatch}
+            setActiveDispatch={setActiveEmergencyDispatch}
+            onViewBookings={() => {
+              setEmergencyModalOpen(false)
+              openAuth('sign-in')
+            }}
+          />
         </>
       </RootErrorBoundary>
     )
@@ -296,10 +314,14 @@ export function App() {
             menuOpen={menuOpen}
             displayName={identity.displayName}
             initials={identity.initials}
+            userId={userId}
             onView={(v) => { setView(v); setMenuOpen(false) }}
             onNotify={notify}
             onSignOut={() => setConfirmSignOut(true)}
             unreadCount={unreadCount}
+            onEmergencyClick={() => setEmergencyModalOpen(true)}
+            activeDispatch={activeEmergencyDispatch}
+            setActiveDispatch={setActiveEmergencyDispatch}
           />
 
           <main className="main-content">
@@ -384,6 +406,19 @@ export function App() {
           )}
 
           <ChatBot userId={userId} onNotify={notify} />
+
+          <EmergencyMechanicModal
+            open={emergencyModalOpen}
+            onClose={() => setEmergencyModalOpen(false)}
+            onNotify={notify}
+            userId={userId}
+            activeDispatch={activeEmergencyDispatch}
+            setActiveDispatch={setActiveEmergencyDispatch}
+            onViewBookings={() => {
+              setEmergencyModalOpen(false)
+              setView('bookings')
+            }}
+          />
         </div>
       </TicketRealtimeProvider>
     </RootErrorBoundary>

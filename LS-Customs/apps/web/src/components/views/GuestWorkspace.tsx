@@ -3,7 +3,7 @@
  * Same layout as the signed-in workspace but gates actions behind sign-in.
  */
 import { useState } from 'react'
-import { Phone, CircleHelp, ChevronRight, Menu, CarFront, Wrench, ClipboardList } from 'lucide-react'
+import { Phone, CircleHelp, ChevronRight, Menu, CarFront, Wrench, ClipboardList, AlertTriangle } from 'lucide-react'
 import { navItems } from '../../data/navigation'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { Rentals } from './Rentals'
@@ -15,9 +15,10 @@ import type { AuthMode, View } from '../../types'
 
 interface GuestWorkspaceProps {
   onOpenAuth: (mode?: AuthMode) => void
+  onEmergencyClick?: () => void
 }
 
-export function GuestWorkspace({ onOpenAuth }: GuestWorkspaceProps) {
+export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceProps) {
   const [guestView, setGuestView] = useState<View>('home')
   const scrollRef = useScrollAnimation()
 
@@ -34,8 +35,25 @@ export function GuestWorkspace({ onOpenAuth }: GuestWorkspaceProps) {
       <aside className="sidebar">
         <div className="brand-mark">
           <span className="brand-spark">✳</span>
-          <span>LS Customs</span>
+          <div className="brand-copy">
+            <span className="brand-name">LS Customs</span>
+            <span className="brand-tagline">AUTOMOTIVE & FLEET</span>
+          </div>
         </div>
+
+        {/* Live Fleet Dispatch Status Indicator */}
+        <div className="sidebar-fleet-status">
+          <div className="fleet-status-radar">
+            <span className="radar-wave" />
+            <span className="radar-dot" />
+          </div>
+          <div className="fleet-status-info">
+            <span className="fleet-label">FLEET RADAR ACTIVE</span>
+            <small className="fleet-sub">12 Mobile Units on Patrol</small>
+          </div>
+          <span className="fleet-badge">24/7</span>
+        </div>
+
         <div className="sidebar-label">MY WORKSPACE</div>
         <nav className="side-nav">
           {navItems.map(({ id, label, icon: Icon }) => (
@@ -44,23 +62,39 @@ export function GuestWorkspace({ onOpenAuth }: GuestWorkspaceProps) {
               key={id}
               onClick={() => navigateGuest(id)}
             >
-              <Icon size={18} strokeWidth={1.8} />
-              {label}
+              <span className="nav-icon-wrapper">
+                <Icon size={18} strokeWidth={1.8} />
+              </span>
+              <span className="nav-label-text">{label}</span>
             </button>
           ))}
         </nav>
-        <button
-          className="emergency-button"
-          onClick={() => onOpenAuth('sign-in')}
-        >
-          <span className="emergency-icon">
-            <Phone size={16} />
-          </span>
-          <span>
-            <strong>Emergency Mechanic</strong>
-            <small>Sign in to get help on the road</small>
-          </span>
-        </button>
+
+        {/* Dynamic Emergency Mechanic Button */}
+        <div className="emergency-button-container">
+          <button
+            className="emergency-button"
+            onClick={() => onEmergencyClick ? onEmergencyClick() : onOpenAuth('sign-in')}
+            type="button"
+            aria-label="Request Emergency Mechanic Roadside Dispatch"
+          >
+            <div className="emergency-btn-shimmer" />
+            <div className="emergency-beacon-wrapper">
+              <span className="beacon-ping" />
+              <span className="beacon-core" />
+            </div>
+            <span className="emergency-icon">
+              <AlertTriangle size={17} className="emergency-icon-pulse" />
+            </span>
+            <div className="emergency-text-col">
+              <div className="emergency-title-row">
+                <strong>Emergency Mechanic</strong>
+                <span className="emergency-pill-tag">SOS</span>
+              </div>
+              <small>Instant 24/7 Roadside SOS</small>
+            </div>
+          </button>
+        </div>
         <div className="sidebar-bottom">
           <button className="nav-item" onClick={() => navigateTo('/help')}>
             <CircleHelp size={18} /> Help Center
