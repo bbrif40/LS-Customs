@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm install --prefix LS-Customs",
+  "installCommand": "npm install --prefix LS-Customs --ignore-scripts",
   "buildCommand": "npm run web:build --prefix LS-Customs",
   "outputDirectory": "LS-Customs/apps/web/dist",
   "rewrites": [

@@ -19,7 +19,7 @@
     "turbo": "^2.1.0"
   },
   "scripts": {
-    "prepare": "git config core.hooksPath LS-Customs/.githooks",
+    "prepare": "git config core.hooksPath LS-Customs/.githooks || true",
     "build": "turbo run build",
     "dev": "npm run db:start --workspace=apps/backend && concurrently --names \"FNS,WEB\" --prefix-colors \"cyan,magenta\" \"npm run functions:serve --workspace=apps/backend\" \"npm run dev --workspace=apps/web\"",
     "web:dev": "npm run db:start && npm run dev --workspace=apps/web",
