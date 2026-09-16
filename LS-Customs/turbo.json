@@ -1,9 +1,9 @@
 {
-  "$schema": "https://turbo.build/task.json",
-  "pipeline": {
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": ["dist/**"]
     },
     "lint": {
       "dependsOn": [],

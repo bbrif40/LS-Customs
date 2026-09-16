@@ -10,6 +10,7 @@ import { Rentals } from './Rentals'
 import { MechanicServices } from './MechanicServices'
 import { WorkspaceFooter } from '../layout/WorkspaceFooter'
 import { LocationCard } from '../common/LocationCard'
+import { navigateTo } from '../../utils/navigation'
 import type { AuthMode, View } from '../../types'
 
 interface GuestWorkspaceProps {
@@ -61,7 +62,7 @@ export function GuestWorkspace({ onOpenAuth }: GuestWorkspaceProps) {
           </span>
         </button>
         <div className="sidebar-bottom">
-          <button className="nav-item" onClick={() => (window.location.href = '/help')}>
+          <button className="nav-item" onClick={() => navigateTo('/help')}>
             <CircleHelp size={18} /> Help Center
           </button>
           <button className="signout" onClick={() => onOpenAuth('sign-in')}>

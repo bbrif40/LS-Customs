@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Search, CarFront, Wrench, ClipboardList, UserRound, CreditCard, Bug } from 'lucide-react'
 import { SearchBox } from '../../components/common/SearchBox'
 import { HELP_CATEGORIES, POPULAR_ARTICLES } from '../../data/helpArticles'
+import { navigateTo } from '../../utils/navigation'
 
 const CATEGORY_ICONS: Record<string, JSX.Element> = {
   car: <CarFront size={24} />,
@@ -68,7 +69,7 @@ export function HelpCenter() {
                 className="category-card"
                 onClick={(e) => {
                   e.preventDefault()
-                  window.location.href = cat.href
+                  setQuery(cat.label)
                 }}
               >
                 {CATEGORY_ICONS[cat.icon] ?? <Search size={24} />}

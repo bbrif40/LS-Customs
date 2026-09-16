@@ -10,6 +10,7 @@
 import type { ReactNode } from 'react'
 import { ChatBot } from '../chat/ChatBot'
 import type { PublicView } from '../../types'
+import { navigateTo } from '../../utils/navigation'
 
 interface PublicLayoutProps {
   publicView: PublicView
@@ -26,14 +27,17 @@ const PUBLIC_NAV: { id: PublicView; label: string; href: string }[] = [
 ]
 
 export function PublicLayout({ publicView, children }: PublicLayoutProps) {
-  const navigatePublic = (href: string) => {
-    window.location.href = href
-  }
-
   return (
     <div className="public-layout">
       <header className="public-header">
-        <a href="/" className="brand" onClick={() => navigatePublic('/')}>
+        <a
+          href="/"
+          className="brand"
+          onClick={(e) => {
+            e.preventDefault()
+            navigateTo('/')
+          }}
+        >
           <span className="brand-spark">✳</span>
           <span>LS Customs</span>
         </a>
@@ -45,7 +49,7 @@ export function PublicLayout({ publicView, children }: PublicLayoutProps) {
               className={publicView === id ? 'active' : ''}
               onClick={(e) => {
                 e.preventDefault()
-                navigatePublic(href)
+                navigateTo(href)
               }}
             >
               {label}
@@ -64,12 +68,18 @@ export function PublicLayout({ publicView, children }: PublicLayoutProps) {
           <strong>LS Customs</strong>
         </div>
         <div className="footer-links">
-          <a href="/help">Help Center</a>
-          <a href="/contact">Contact Support</a>
-          <a href="/docs">Documentation</a>
-          <a href="/terms">Terms of Service</a>
-          <a href="/privacy">Privacy Policy</a>
-          <a href="/faqs">FAQs</a>
+          {PUBLIC_NAV.map(({ id, label, href }) => (
+            <a
+              key={id}
+              href={href}
+              onClick={(e) => {
+                e.preventDefault()
+                navigateTo(href)
+              }}
+            >
+              {label}
+            </a>
+          ))}
         </div>
         <small className="footer-copy">
           © 2024 LS Customs. All rights reserved.

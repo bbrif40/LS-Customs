@@ -4,6 +4,7 @@
 import { Phone, CircleHelp, ChevronRight } from 'lucide-react'
 import { navItems } from '../../data/navigation'
 import type { View } from '../../types'
+import { navigateTo } from '../../utils/navigation'
 
 interface SidebarProps {
   view: View
@@ -45,7 +46,7 @@ export function Sidebar({ view, menuOpen, onView, onNotify, onSignOut, unreadCou
         </span>
       </button>
       <div className="sidebar-bottom">
-        <button className="nav-item" onClick={() => onNotify('Help center coming soon')}>
+        <button className="nav-item" onClick={() => navigateTo('/help')}>
           <CircleHelp size={18} /> Help Center
         </button>
         <button className="signout" onClick={onSignOut}>

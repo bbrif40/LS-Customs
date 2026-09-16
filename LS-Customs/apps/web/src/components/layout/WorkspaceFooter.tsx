@@ -2,12 +2,10 @@
  * WorkspaceFooter — persistent footer with brand, help, support, and legal links.
  */
 
+import { navigateTo } from '../../utils/navigation'
+
 interface WorkspaceFooterProps {
   onNotify?: (message: string) => void
-}
-
-const navigateTo = (href: string) => {
-  window.location.href = href
 }
 
 export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {

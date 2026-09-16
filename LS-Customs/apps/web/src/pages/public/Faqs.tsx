@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { SearchBox } from '../../components/common/SearchBox'
 import { Accordion } from '../../components/common/Accordion'
 import { faqItems } from '../../data/faqs'
+import { navigateTo } from '../../utils/navigation'
 import type { FaqItem } from '../../types'
 
 const FAQ_CATEGORIES = [
@@ -102,7 +103,7 @@ export function Faqs() {
           <button
             className="button dark-button"
             style={{ marginTop: 12 }}
-            onClick={() => { window.location.href = '/contact' }}
+            onClick={() => navigateTo('/contact')}
           >
             Contact Support
           </button>
