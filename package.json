@@ -2,7 +2,7 @@
   "name": "ls-customs-root",
   "private": true,
   "scripts": {
-    "build": "npm run build --prefix LS-Customs/apps/web",
-    "web:build": "npm run build --prefix LS-Customs/apps/web"
+    "build": "npm run web:build --prefix LS-Customs",
+    "web:build": "npm run web:build --prefix LS-Customs"
   }
 }
