@@ -171,21 +171,37 @@ export function AdminBookings() {
 
   const totalPages = Math.ceil(filteredBookings.length / pageSize)
 
-  // Service bookings carry the customer's dropped pin. Vehicle rentals do
-  // not need the dispatch map, so this data is only used on the services tab.
-  const servicePins: MapPin[] = (serviceBookingsWithDetails ?? [])
-    .filter(
-      (booking): booking is ServiceBookingWithDetails & { pin_lat: number; pin_lng: number } =>
-        booking.pin_lat != null && booking.pin_lng != null,
-    )
-    .map((booking) => ({
+  // Service bookings carry the customer's dropped pin. Dynamically filters
+  // by the current status filter and highlights the active selected booking.
+  const activeServiceBookings = (serviceBookingsWithDetails ?? []).filter(
+    (booking): booking is ServiceBookingWithDetails & { pin_lat: number; pin_lng: number } =>
+      booking.pin_lat != null && booking.pin_lng != null,
+  )
+
+  const relevantServiceBookings = activeServiceBookings.filter((booking) => {
+    if (statusFilter !== 'all' && booking.status !== statusFilter) return false
+    return true
+  })
+
+  const selectedBooking = (serviceBookingsWithDetails ?? []).find((b) => b.id === selectedId)
+
+  const servicePins: MapPin[] = relevantServiceBookings.map((booking) => {
+    const isSelected = selectedId === booking.id
+    const customer = booking.profiles?.[0]?.full_name ?? `Booking #${booking.id.slice(0, 8)}`
+    const serviceName = booking.service_booking_items?.[0]?.mechanic_services?.name ?? 'Service'
+    return {
       id: booking.id,
       lat: booking.pin_lat,
       lng: booking.pin_lng,
-      title: booking.profiles?.[0]?.full_name ?? `Booking #${booking.id.slice(0, 8)}`,
-      description: `${booking.service_booking_items?.[0]?.mechanic_services?.name ?? 'Service'} - ${statusLabels[booking.status] ?? booking.status}`,
-      color: statusColors[booking.status] ?? undefined,
-    }))
+      title: `${isSelected ? '★ ' : ''}${customer}`,
+      description: `${serviceName} · ${statusLabels[booking.status] ?? booking.status} · ₱${booking.total_price.toLocaleString()}`,
+      color: isSelected ? '#e8a838' : (statusColors[booking.status] ?? '#3b82f6'),
+    }
+  })
+
+  const mapCenter = (selectedBooking?.pin_lat != null && selectedBooking?.pin_lng != null)
+    ? { lat: selectedBooking.pin_lat, lng: selectedBooking.pin_lng }
+    : undefined
 
   const handleStatusChange = async (
     booking: VehicleBooking | ServiceBooking,
@@ -426,11 +442,13 @@ export function AdminBookings() {
         <section className="admin-map-panel">
           <h3>Service customer locations</h3>
           <p className="admin-map-panel-sub">
-            {servicePins.length === 0
-              ? 'No service bookings have a pinned customer location yet.'
-              : `${servicePins.length} pinned service customer${servicePins.length === 1 ? '' : 's'} on the map.`}
+            {selectedBooking
+              ? `Focused on Booking #${selectedBooking.id.slice(0, 8)} (${selectedBooking.profiles?.[0]?.full_name ?? 'Customer'}) · ${statusLabels[selectedBooking.status] ?? selectedBooking.status}`
+              : servicePins.length === 0
+                ? 'No service bookings have a pinned customer location yet.'
+                : `${servicePins.length} pinned service customer${servicePins.length === 1 ? '' : 's'} on the map.`}
           </p>
-          <MapView pins={servicePins} height={360} />
+          <MapView pins={servicePins} center={mapCenter} height={360} />
         </section>
       )}
 

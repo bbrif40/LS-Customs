@@ -1096,10 +1096,18 @@ export function useAdminBookingsCount(): number {
     }
     void fetchCount()
 
-    const id = window.setInterval(fetchCount, 1_000)
+    // Real-time listener for any status changes or new bookings
+    const channel = supabase
+      .channel('admin-active-bookings-count')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicle_bookings' }, () => { void fetchCount() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'service_bookings' }, () => { void fetchCount() })
+      .subscribe()
+
+    const id = window.setInterval(fetchCount, 3_000)
     return () => {
       cancelled = true
       window.clearInterval(id)
+      void supabase.removeChannel(channel)
     }
   }, [])
 

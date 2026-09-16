@@ -10,7 +10,7 @@
  * no new dependencies.
  */
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react'
-import { X, MapPin, Clock, User, Wrench, Calendar, Hash } from 'lucide-react'
+import { X, MapPin, Clock, User, Wrench, Calendar, Hash, Phone } from 'lucide-react'
 import { MapView, type MapPin as MapPinData } from '../common/map'
 
 
@@ -140,7 +140,7 @@ class DetailErrorBoundary extends Component<{ children: ReactNode }, { error: Er
           style={{
             position: 'fixed', top: 0, right: 0, bottom: 0,
             width: 'min(480px, 100vw)', background: '#0f1320',
-            borderLeft: '1px solid #2d3748', zIndex: 50,
+            borderLeft: '1px solid #2d3748', zIndex: 1200,
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
             color: '#d4d9e6', padding: 24, textAlign: 'center',
@@ -263,8 +263,9 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
               <strong>{getCustomerName(booking)}</strong>
             </p>
             {booking.profiles?.[0]?.phone && (
-              <p style={{ marginTop: 4, color: '#9ca3af', fontSize: 12 }}>
-                📞 {booking.profiles[0].phone}
+              <p style={{ marginTop: 4, color: '#9ca3af', fontSize: 12, display: 'flex', alignItems: 'center' }}>
+                <Phone size={12} style={{ display: 'inline', marginRight: 6, flexShrink: 0 }} />
+                <span>{booking.profiles[0].phone}</span>
               </p>
             )}
           </section>

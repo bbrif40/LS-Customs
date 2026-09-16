@@ -2287,11 +2287,22 @@
 }
 
 /* ── Map panel ─────────────────────────────────────────────────── */
-.admin-map-panel { background: var(--admin-card); border: 1px solid var(--admin-border); border-radius: var(--admin-radius); padding: 16px; margin-bottom: 16px; box-shadow: var(--admin-shadow); }
+.admin-map-panel {
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  background: var(--admin-card);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--admin-shadow);
+  overflow: hidden;
+}
 .admin-map-panel h3 { margin: 0 0 4px; font-size: 14px; color: var(--admin-ink); }
 .admin-map-panel .admin-map-panel-sub { color: var(--admin-muted); font-size: 12px; margin: 0 0 12px; }
 .admin-map-panel .map-skeleton { background: #f3f4f6; }
-.admin-map-panel .leaflet-container { border: 1px solid var(--admin-border); }
+.admin-map-panel .leaflet-container { border: 1px solid var(--admin-border); border-radius: 8px; }
 
 /* ═══════════════════════════════════════════════════════════════════
    Admin Booking Detail Drawer
@@ -2300,9 +2311,10 @@
 .admin-booking-detail-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(20,32,38, 0.4);
-  z-index: 49;
+  background: rgba(20,32,38, 0.6);
+  z-index: 1100;
   animation: adminFadeIn 0.15s ease-out;
+  backdrop-filter: blur(2px);
 }
 
 .admin-booking-detail {
@@ -2313,10 +2325,10 @@
   width: min(480px, 100vw);
   background: var(--admin-sidebar);
   border-left: 1px solid var(--admin-sidebar-hover);
-  z-index: 50;
+  z-index: 1200;
   display: flex;
   flex-direction: column;
-  box-shadow: -8px 0 24px rgba(20,32,38,.4);
+  box-shadow: -12px 0 32px rgba(20,32,38,.6);
   animation: adminSlideInRight 0.2s ease-out;
 }
 
@@ -2388,6 +2400,9 @@
 .admin-booking-detail-section strong { color: #f1f5f9; }
 
 .admin-booking-detail-map-wrap {
+  position: relative;
+  isolation: isolate;
+  z-index: 1;
   border-radius: 10px;
   overflow: hidden;
   border: 1px solid var(--admin-sidebar-hover);

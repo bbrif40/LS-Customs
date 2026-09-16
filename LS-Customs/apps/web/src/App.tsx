@@ -35,6 +35,7 @@ import { Documentation } from './pages/public/Documentation'
 import { EmergencyMechanicModal, type EmergencyDispatchData } from './components/common/EmergencyMechanicModal'
 import type { View, PublicView } from './types'
 import { useCustomerNotifications } from './hooks/useCustomerNotifications'
+import { useCustomerActiveBookingsCount } from './hooks/useCustomerBookings'
 
 /** Maps URL path prefixes to their public page view. */
 const PUBLIC_ROUTES: { prefix: string; view: PublicView }[] = [
@@ -166,6 +167,7 @@ export function App() {
   // booking. Bookings reads this to expand the matching card.
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
   const { unreadCount } = useCustomerNotifications(userId, 'nav')
+  const activeBookingsCount = useCustomerActiveBookingsCount(userId)
   const [emergencyModalOpen, setEmergencyModalOpen] = useState(false)
   const [activeEmergencyDispatch, setActiveEmergencyDispatch] = useState<EmergencyDispatchData | null>(null)
 
@@ -319,6 +321,7 @@ export function App() {
             onNotify={notify}
             onSignOut={() => setConfirmSignOut(true)}
             unreadCount={unreadCount}
+            activeBookingsCount={activeBookingsCount}
             onEmergencyClick={() => setEmergencyModalOpen(true)}
             activeDispatch={activeEmergencyDispatch}
             setActiveDispatch={setActiveEmergencyDispatch}

@@ -119,3 +119,79 @@ export function useCustomerBookings(userId: string | undefined) {
   useEffect(() => { void refetch() }, [refetch])
   return { vehicleBookings, serviceBookings, loading, error, refetch }
 }
+
+export const CUSTOMER_ACTIVE_STATUSES = [
+  'pending',
+  'confirmed',
+  'assigned',
+  'en_route',
+  'in_progress',
+] as const
+
+/**
+ * useCustomerActiveBookingsCount — provides a real-time reactive count of
+ * the customer's current active bookings (both vehicle rentals and mechanic
+ * services) to display in the sidebar.
+ */
+export function useCustomerActiveBookingsCount(userId: string | undefined): number {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    if (!userId) {
+      setCount(0)
+      return
+    }
+
+    let cancelled = false
+    const fetchCount = async () => {
+      try {
+        const [vehicles, services] = await Promise.all([
+          supabase
+            .from('vehicle_bookings')
+            .select('id', { count: 'exact', head: true })
+            .eq('customer_id', userId)
+            .in('status', [...CUSTOMER_ACTIVE_STATUSES]),
+          supabase
+            .from('service_bookings')
+            .select('id', { count: 'exact', head: true })
+            .eq('customer_id', userId)
+            .in('status', [...CUSTOMER_ACTIVE_STATUSES]),
+        ])
+        if (cancelled) return
+        const v = vehicles.count ?? 0
+        const s = services.count ?? 0
+        setCount(v + s)
+      } catch (err) {
+        // Non-fatal
+      }
+    }
+
+    void fetchCount()
+
+    // Real-time listener on changes to customer bookings
+    const channel = supabase
+      .channel(`customer-active-bookings-count-${userId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'vehicle_bookings', filter: `customer_id=eq.${userId}` },
+        () => { void fetchCount() },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'service_bookings', filter: `customer_id=eq.${userId}` },
+        () => { void fetchCount() },
+      )
+      .subscribe()
+
+    // Polling fallback to guarantee accuracy
+    const intervalId = window.setInterval(fetchCount, 5_000)
+
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+      void supabase.removeChannel(channel)
+    }
+  }, [userId])
+
+  return count
+}

@@ -667,9 +667,10 @@ html, body, #root { min-height: 100%; height: auto !important; overflow-y: auto 
 .admin-booking-detail-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 49;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1100;
   animation: adminFadeIn 0.15s ease-out;
+  backdrop-filter: blur(2px);
 }
 .admin-booking-detail {
   position: fixed;
@@ -679,10 +680,10 @@ html, body, #root { min-height: 100%; height: auto !important; overflow-y: auto 
   width: min(480px, 100vw);
   background: #0f1320;
   border-left: 1px solid #2d3748;
-  z-index: 50;
+  z-index: 1200;
   display: flex;
   flex-direction: column;
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.4);
+  box-shadow: -12px 0 32px rgba(0, 0, 0, 0.6);
   animation: adminSlideInRight 0.2s ease-out;
 }
 @keyframes adminFadeIn {
@@ -746,6 +747,9 @@ html, body, #root { min-height: 100%; height: auto !important; overflow-y: auto 
 }
 .admin-booking-detail-section strong { color: #f1f5f9; }
 .admin-booking-detail-map-wrap {
+  position: relative;
+  isolation: isolate;
+  z-index: 1;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid #2d3748;

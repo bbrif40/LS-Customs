@@ -21,6 +21,7 @@ interface SidebarProps {
   onNotify: (message: string) => void
   onSignOut: () => void
   unreadCount: number
+  activeBookingsCount?: number
   onEmergencyClick?: () => void
   activeDispatch?: EmergencyDispatchData | null
   setActiveDispatch?: (dispatch: EmergencyDispatchData | null) => void
@@ -34,6 +35,7 @@ export function Sidebar({
   onNotify,
   onSignOut,
   unreadCount,
+  activeBookingsCount,
   onEmergencyClick,
   activeDispatch: parentActiveDispatch,
   setActiveDispatch: parentSetActiveDispatch,
@@ -92,7 +94,11 @@ export function Sidebar({
                 <Icon size={18} strokeWidth={1.8} />
               </span>
               <span className="nav-label-text">{label}</span>
-              {id === 'bookings' && unreadCount > 0 && <span className="nav-count">{unreadCount}</span>}
+              {id === 'bookings' && (activeBookingsCount !== undefined ? activeBookingsCount > 0 : unreadCount > 0) && (
+                <span className="nav-count" aria-label="Active bookings count">
+                  {activeBookingsCount !== undefined ? activeBookingsCount : unreadCount}
+                </span>
+              )}
               {view === id && <span className="nav-active-pill" />}
             </button>
           ))}
