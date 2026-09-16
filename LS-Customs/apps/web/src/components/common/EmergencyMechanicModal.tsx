@@ -1,35 +1,39 @@
 /**
  * EmergencyMechanicModal — high-priority roadside assistance dispatch modal.
+ * Uses Ionic Icons (IonIcon from @ionic/react) exclusively — NO emojis.
  * Light mode design adhering to LS Customs color scheme.
  * Features Philippine Peso (₱) pricing, live satellite GPS lock,
  * and an interactive Virtual Mechanic GPS Tracker with live vehicle movement,
  * speed, distance, and real-time ETA calculation.
  */
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
+import { IonIcon } from '@ionic/react'
 import {
-  AlertTriangle,
-  Zap,
-  Disc,
-  Key,
-  Fuel,
-  Wrench,
-  Navigation,
-  PhoneCall,
-  Clock,
-  CheckCircle2,
-  X,
-  Radio,
-  ChevronRight,
-  ShieldAlert,
-  Car,
-  MapPin,
-  Volume2,
-  VolumeX,
-  Compass,
-  Gauge,
-  Route,
-  ShieldCheck,
-} from 'lucide-react'
+  warningOutline,
+  flashOutline,
+  discOutline,
+  keyOutline,
+  flameOutline,
+  constructOutline,
+  navigateOutline,
+  callOutline,
+  timeOutline,
+  checkmarkCircle,
+  closeOutline,
+  shieldCheckmarkOutline,
+  speedometerOutline,
+  locationOutline,
+  volumeHighOutline,
+  volumeMuteOutline,
+  radioOutline,
+  chevronForwardOutline,
+  checkmark,
+  star,
+  cashOutline,
+  carSportOutline,
+  compassOutline,
+  buildOutline,
+} from 'ionicons/icons'
 import { supabase } from '../../supabaseClient'
 
 export interface EmergencyDispatchData {
@@ -66,7 +70,7 @@ interface EmergencyScenario {
   id: string
   label: string
   description: string
-  icon: typeof Zap
+  ionicIcon: string
   avgEta: string
   cost: number // in Philippine Peso (₱)
   color: string
@@ -77,7 +81,7 @@ const EMERGENCY_SCENARIOS: EmergencyScenario[] = [
     id: 'battery',
     label: 'Dead Battery / Jump Start',
     description: 'Rapid battery health test, heavy-duty booster jump, or alternator check',
-    icon: Zap,
+    ionicIcon: flashOutline,
     avgEta: '8 - 12 min',
     cost: 1850,
     color: '#d97706',
@@ -86,7 +90,7 @@ const EMERGENCY_SCENARIOS: EmergencyScenario[] = [
     id: 'tire',
     label: 'Flat Tire / Blowout',
     description: 'On-site tire swap with spare or rapid puncture vulcanizing plug',
-    icon: Disc,
+    ionicIcon: discOutline,
     avgEta: '10 - 15 min',
     cost: 1250,
     color: '#0284c7',
@@ -95,7 +99,7 @@ const EMERGENCY_SCENARIOS: EmergencyScenario[] = [
     id: 'engine',
     label: 'Engine Breakdown / Smoke',
     description: 'OBD-II scanner diagnostic, radiator overheating check, belt inspection',
-    icon: AlertTriangle,
+    ionicIcon: warningOutline,
     avgEta: '12 - 18 min',
     cost: 2950,
     color: '#dc2626',
@@ -104,7 +108,7 @@ const EMERGENCY_SCENARIOS: EmergencyScenario[] = [
     id: 'lockout',
     label: 'Vehicle Lockout',
     description: 'Non-destructive rapid door unlocking & safe key retrieval tools',
-    icon: Key,
+    ionicIcon: keyOutline,
     avgEta: '8 - 12 min',
     cost: 1650,
     color: '#7c3aed',
@@ -113,7 +117,7 @@ const EMERGENCY_SCENARIOS: EmergencyScenario[] = [
     id: 'fuel',
     label: 'Emergency Fuel / Fluids',
     description: 'Delivery of 10L gasoline/diesel or emergency radiator coolant top-up',
-    icon: Fuel,
+    ionicIcon: flameOutline,
     avgEta: '8 - 12 min',
     cost: 1200,
     color: '#ea580c',
@@ -122,7 +126,7 @@ const EMERGENCY_SCENARIOS: EmergencyScenario[] = [
     id: 'towing',
     label: 'Critical Tow / Flatbed',
     description: 'Immediate heavy-duty hydraulic flatbed dispatch to your location',
-    icon: Wrench,
+    ionicIcon: constructOutline,
     avgEta: '15 - 22 min',
     cost: 3800,
     color: '#db2777',
@@ -174,7 +178,7 @@ export function EmergencyMechanicModal({
   const [coords, setCoords] = useState<{ lat: number; lng: number }>(DEFAULT_COORDS)
   const [gpsStatus, setGpsStatus] = useState<'idle' | 'locating' | 'locked' | 'failed'>('idle')
   const [isScanning, setIsScanning] = useState<boolean>(false)
-  const [scanStepMessage, setScanStepMessage] = useState<string>('Broadcasting SOS packet to fleet...')
+  const [scanStepMessage, setScanStepMessage] = useState<string>('Broadcasting SOS telemetry to fleet mesh...')
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true)
   const [remainingSeconds, setRemainingSeconds] = useState<number>(540) // 9 minutes default
 
@@ -310,7 +314,7 @@ export function EmergencyMechanicModal({
 
       setActiveDispatch(newDispatch)
       setIsScanning(false)
-      onNotify(`🚨 Unit #04 (Marcus Vance) is en route to your GPS location!`)
+      onNotify(`Emergency Dispatch: Unit #04 (${newDispatch.mechanic.name}) is en route to your location!`)
     }, 3300)
   }
 
@@ -336,7 +340,7 @@ export function EmergencyMechanicModal({
         <div className="emergency-modal-header">
           <div className="emergency-header-title">
             <div className="emergency-pulse-icon">
-              <ShieldAlert size={20} />
+              <IonIcon icon={shieldCheckmarkOutline} style={{ fontSize: '22px' }} />
             </div>
             <div>
               <h2>LS Customs Roadside SOS</h2>
@@ -353,10 +357,10 @@ export function EmergencyMechanicModal({
               title={soundEnabled ? 'Mute radar sounds' : 'Enable radar sounds'}
               aria-label="Toggle sound"
             >
-              {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+              <IonIcon icon={soundEnabled ? volumeHighOutline : volumeMuteOutline} style={{ fontSize: '18px' }} />
             </button>
             <button className="emergency-modal-close" onClick={onClose} aria-label="Close emergency modal">
-              <X size={18} />
+              <IonIcon icon={closeOutline} style={{ fontSize: '22px' }} />
             </button>
           </div>
         </div>
@@ -367,7 +371,7 @@ export function EmergencyMechanicModal({
             {/* Status Banner */}
             <div className="active-dispatch-banner">
               <div className="dispatch-radar-pulse">
-                <Radio size={24} className="radar-icon-spin" />
+                <IonIcon icon={radioOutline} style={{ fontSize: '24px' }} className="radar-icon-spin" />
               </div>
               <div className="dispatch-banner-text">
                 <span className="dispatch-badge-enroute">UNIT EN ROUTE • EMERGENCY MODE</span>
@@ -384,17 +388,23 @@ export function EmergencyMechanicModal({
             {/* Stepper Progress */}
             <div className="emergency-progress-track">
               <div className="step-item completed">
-                <span className="step-dot"><CheckCircle2 size={13} /></span>
+                <span className="step-dot">
+                  <IonIcon icon={checkmarkCircle} style={{ fontSize: '15px' }} />
+                </span>
                 <span className="step-title">SOS Confirmed</span>
               </div>
               <div className="step-connector active" />
               <div className="step-item active">
-                <span className="step-dot pulse-beacon">2</span>
+                <span className="step-dot pulse-beacon">
+                  <IonIcon icon={radioOutline} style={{ fontSize: '13px' }} />
+                </span>
                 <span className="step-title">En Route (Live GPS)</span>
               </div>
               <div className="step-connector" />
               <div className="step-item pending">
-                <span className="step-dot">3</span>
+                <span className="step-dot">
+                  <IonIcon icon={buildOutline} style={{ fontSize: '13px' }} />
+                </span>
                 <span className="step-title">On-Site Service</span>
               </div>
             </div>
@@ -409,19 +419,29 @@ export function EmergencyMechanicModal({
             <div className="assigned-mechanic-card">
               <div className="mechanic-avatar-box">
                 <span>{activeDispatch.mechanic.initials}</span>
-                <span className="mechanic-verified-check">✓</span>
+                <span className="mechanic-verified-check">
+                  <IonIcon icon={checkmark} style={{ fontSize: '10px' }} />
+                </span>
               </div>
               <div className="mechanic-info-main">
                 <div className="mechanic-name-row">
                   <h4>{activeDispatch.mechanic.name}</h4>
-                  <span className="mechanic-rating-badge">★ {activeDispatch.mechanic.rating}</span>
+                  <span className="mechanic-rating-badge">
+                    <IonIcon icon={star} style={{ fontSize: '11px', color: '#eab308' }} /> {activeDispatch.mechanic.rating}
+                  </span>
                   <span className="mechanic-plate-tag">Plate: {activeDispatch.mechanic.plateNumber}</span>
                 </div>
                 <p className="mechanic-unit-tag">{activeDispatch.mechanic.unit} • {activeDispatch.mechanic.vehicle}</p>
                 <div className="mechanic-detail-chips">
-                  <span>📍 Destination: {activeDispatch.locationLabel}</span>
-                  <span>🔧 Service: {activeDispatch.issueLabel}</span>
-                  <span>💵 Total: <strong>{formatPeso(selectedScenario.cost)}</strong></span>
+                  <span>
+                    <IonIcon icon={locationOutline} style={{ fontSize: '12px' }} /> Destination: {activeDispatch.locationLabel}
+                  </span>
+                  <span>
+                    <IonIcon icon={constructOutline} style={{ fontSize: '12px' }} /> Service: {activeDispatch.issueLabel}
+                  </span>
+                  <span>
+                    <IonIcon icon={cashOutline} style={{ fontSize: '12px' }} /> Total: <strong>{formatPeso(selectedScenario.cost)}</strong>
+                  </span>
                 </div>
               </div>
               <div className="mechanic-call-action">
@@ -430,7 +450,7 @@ export function EmergencyMechanicModal({
                   className="button emergency-call-tech-btn"
                   onClick={() => onNotify('Connecting to roadside driver direct line...')}
                 >
-                  <PhoneCall size={15} />
+                  <IonIcon icon={callOutline} style={{ fontSize: '15px' }} />
                   <span>Call Driver</span>
                 </a>
               </div>
@@ -439,7 +459,7 @@ export function EmergencyMechanicModal({
             {/* Roadside Safety Protocol */}
             <div className="roadside-safety-box">
               <div className="safety-title">
-                <AlertTriangle size={16} />
+                <IonIcon icon={warningOutline} style={{ fontSize: '16px' }} />
                 <strong>Driver Safety Protocol:</strong>
               </div>
               <ul>
@@ -521,8 +541,8 @@ export function EmergencyMechanicModal({
                 onClick={locateUser}
                 disabled={gpsStatus === 'locating'}
               >
-                <Navigation size={13} />
-                {gpsStatus === 'locating' ? 'Locating...' : 'Re-scan GPS'}
+                <IonIcon icon={navigateOutline} style={{ fontSize: '13px' }} />
+                <span>{gpsStatus === 'locating' ? 'Locating...' : 'Re-scan GPS'}</span>
               </button>
             </div>
 
@@ -532,7 +552,6 @@ export function EmergencyMechanicModal({
             </div>
             <div className="emergency-scenarios-grid">
               {EMERGENCY_SCENARIOS.map((sc) => {
-                const IconComponent = sc.icon
                 const isSelected = sc.id === selectedIssueId
                 return (
                   <button
@@ -545,17 +564,23 @@ export function EmergencyMechanicModal({
                     }}
                   >
                     <div className="scenario-icon" style={{ color: sc.color, background: `${sc.color}16` }}>
-                      <IconComponent size={20} />
+                      <IonIcon icon={sc.ionicIcon} style={{ fontSize: '20px' }} />
                     </div>
                     <div className="scenario-info">
                       <h4>{sc.label}</h4>
                       <p>{sc.description}</p>
                     </div>
                     <div className="scenario-meta">
-                      <span className="scenario-eta"><Clock size={11} /> {sc.avgEta}</span>
+                      <span className="scenario-eta">
+                        <IonIcon icon={timeOutline} style={{ fontSize: '12px' }} /> {sc.avgEta}
+                      </span>
                       <strong className="scenario-price">{formatPeso(sc.cost)}</strong>
                     </div>
-                    {isSelected && <div className="scenario-check-badge">✓</div>}
+                    {isSelected && (
+                      <div className="scenario-check-badge">
+                        <IonIcon icon={checkmark} style={{ fontSize: '10px' }} />
+                      </div>
+                    )}
                   </button>
                 )
               })}
@@ -567,7 +592,9 @@ export function EmergencyMechanicModal({
                 <span>2</span> VEHICLE & LOCATION NOTES (OPTIONAL):
               </div>
               <div className="vehicle-input-wrapper">
-                <Car size={16} className="input-icon" />
+                <span className="input-icon">
+                  <IonIcon icon={carSportOutline} style={{ fontSize: '16px' }} />
+                </span>
                 <input
                   type="text"
                   placeholder="e.g. 2024 White Toyota Fortuner, hazard lights on, near highway tollgate"
@@ -591,15 +618,15 @@ export function EmergencyMechanicModal({
                 onClick={handleStartDispatch}
               >
                 <div className="btn-beacon-glow" />
-                <AlertTriangle size={18} />
+                <IonIcon icon={warningOutline} style={{ fontSize: '19px' }} />
                 <span>DISPATCH EMERGENCY MECHANIC NOW</span>
-                <ChevronRight size={18} />
+                <IonIcon icon={chevronForwardOutline} style={{ fontSize: '19px' }} />
               </button>
 
               <div className="emergency-tollfree-strip">
                 <span>24/7 Roadside Assistance Hotline:</span>
                 <a href="tel:0288880199" className="tollfree-link">
-                  <PhoneCall size={14} /> (02) 8888-0199 / 0917-555-0199
+                  <IonIcon icon={callOutline} style={{ fontSize: '14px' }} /> (02) 8888-0199 / 0917-555-0199
                 </a>
               </div>
             </div>
@@ -613,6 +640,7 @@ export function EmergencyMechanicModal({
 /**
  * VirtualMechanicGPSMap — animated real-time GPS tracking route
  * showing the virtual response van driving along the road towards the customer!
+ * Uses pure SVG geometry and Ionic Icons — NO emojis.
  */
 function VirtualMechanicGPSMap({
   activeDispatch,
@@ -621,26 +649,22 @@ function VirtualMechanicGPSMap({
   activeDispatch: EmergencyDispatchData
   remainingSeconds: number
 }) {
-  // Road travel progress from 15% (starting dispatch) to 95% (arrived)
   const initialTotalSeconds = activeDispatch.etaMinutes * 60
   const elapsed = Math.max(0, initialTotalSeconds - remainingSeconds)
   const baseProgress = Math.min(0.92, Math.max(0.12, elapsed / initialTotalSeconds))
 
-  // Live fluctuating telemetry for realistic alive feel
   const [speed, setSpeed] = useState<number>(46)
   const [distanceKm, setDistanceKm] = useState<number>(Number((1.8 * (1 - baseProgress * 0.85)).toFixed(1)))
   const [currentRoad, setCurrentRoad] = useState<string>('South Link Expressway → Central Interchange')
 
   useEffect(() => {
     const interval = setInterval(() => {
-      // Small realistic speed variance
       setSpeed((prev) => {
         const delta = Math.floor(Math.random() * 7) - 3
         const newSpeed = prev + delta
         return Math.min(58, Math.max(36, newSpeed))
       })
 
-      // Distance calculation based on remaining time
       const dist = Math.max(0.2, Number(((remainingSeconds / (activeDispatch.etaMinutes * 60)) * 2.2).toFixed(1)))
       setDistanceKm(dist)
 
@@ -656,22 +680,16 @@ function VirtualMechanicGPSMap({
     return () => clearInterval(interval)
   }, [remainingSeconds, activeDispatch.etaMinutes])
 
-  // Waypoint road coordinates on SVG (width 600, height 220)
-  // Van starts at left (x: 50, y: 50) and follows S-curve to user (x: 520, y: 160)
   const progressRatio = Math.min(0.95, baseProgress)
-  // Quadratic bezier points: P0=(50, 45), P1=(280, 20), P2=(340, 180), P3=(520, 160)
-  // Approximate path position for smooth SVG interpolation:
   const t = progressRatio
   const p0 = { x: 50, y: 55 }
   const p1 = { x: 260, y: 25 }
   const p2 = { x: 320, y: 185 }
   const p3 = { x: 510, y: 155 }
 
-  // Cubic bezier formula: B(t) = (1-t)^3*P0 + 3*(1-t)^2*t*P1 + 3*(1-t)*t^2*P2 + t^3*P3
   const cx = Math.pow(1 - t, 3) * p0.x + 3 * Math.pow(1 - t, 2) * t * p1.x + 3 * (1 - t) * Math.pow(t, 2) * p2.x + Math.pow(t, 3) * p3.x
   const cy = Math.pow(1 - t, 3) * p0.y + 3 * Math.pow(1 - t, 2) * t * p1.y + 3 * (1 - t) * Math.pow(t, 2) * p2.y + Math.pow(t, 3) * p3.y
 
-  // Calculate tangent angle for van rotation
   const dt = 0.01
   const tNext = Math.min(1, t + dt)
   const cxNext = Math.pow(1 - tNext, 3) * p0.x + 3 * Math.pow(1 - tNext, 2) * tNext * p1.x + 3 * (1 - tNext) * Math.pow(tNext, 2) * p2.x + Math.pow(tNext, 3) * p3.x
@@ -683,15 +701,19 @@ function VirtualMechanicGPSMap({
       {/* Live Map Header */}
       <div className="gps-map-header">
         <div className="gps-map-title">
-          <Route size={16} className="route-icon" />
+          <IonIcon icon={navigateOutline} style={{ fontSize: '15px', color: '#3b82f6' }} />
           <strong>LIVE VIRTUAL MECHANIC ROUTE</strong>
           <span className="live-telemetry-badge">
             <span className="live-radar-dot" /> LIVE SATELLITE
           </span>
         </div>
         <div className="gps-telemetry-strip">
-          <span><Gauge size={13} /> {speed} km/h</span>
-          <span><MapPin size={13} /> {distanceKm} km away</span>
+          <span>
+            <IonIcon icon={speedometerOutline} style={{ fontSize: '13px' }} /> {speed} km/h
+          </span>
+          <span>
+            <IonIcon icon={locationOutline} style={{ fontSize: '13px' }} /> {distanceKm} km away
+          </span>
         </div>
       </div>
 
@@ -703,14 +725,6 @@ function VirtualMechanicGPSMap({
           preserveAspectRatio="xMidYMid meet"
         >
           <defs>
-            <linearGradient id="roadGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#e2e8f0" />
-              <stop offset="100%" stopColor="#cbd5e1" />
-            </linearGradient>
-            <linearGradient id="activeTrailGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#3b82f6" />
-              <stop offset="100%" stopColor="#22c55e" />
-            </linearGradient>
             <filter id="glow">
               <feGaussianBlur stdDeviation="3" result="coloredBlur" />
               <feMerge>
@@ -779,14 +793,12 @@ function VirtualMechanicGPSMap({
 
           {/* Customer Vehicle Destination Pin */}
           <g transform="translate(510, 155)">
-            {/* Concentric radar pulse circles */}
             <circle r="22" fill="none" stroke="rgba(239, 68, 68, 0.4)" strokeWidth="1.5" className="dest-pulse-ring" />
             <circle r="14" fill="none" stroke="rgba(239, 68, 68, 0.7)" strokeWidth="2" className="dest-pulse-ring-inner" />
             <circle r="8" fill="#ef4444" />
             <circle r="3" fill="#ffffff" />
-            {/* Label */}
             <rect x="-42" y="-36" width="84" height="18" rx="4" fill="#0f172a" />
-            <text x="0" y="-24" fontSize="8.5" fontWeight="800" fill="#ffffff" textAnchor="middle">YOUR CAR 📍</text>
+            <text x="0" y="-24" fontSize="8.5" fontWeight="800" fill="#ffffff" textAnchor="middle">YOUR VEHICLE</text>
           </g>
 
           {/* Moving Virtual Mechanic Van */}
@@ -794,24 +806,18 @@ function VirtualMechanicGPSMap({
             transform={`translate(${cx}, ${cy})`}
             className="moving-mechanic-group"
           >
-            {/* Dynamic radar wave around van */}
             <circle r="16" fill="rgba(34, 197, 94, 0.25)" className="van-radar-pulse" />
 
-            {/* Van body rotating along road */}
             <g transform={`rotate(${angleDeg})`}>
-              {/* Van Chassis */}
               <rect x="-14" y="-8" width="28" height="16" rx="4" fill="#0f172a" stroke="#ffffff" strokeWidth="1.5" />
               <rect x="-11" y="-6" width="10" height="12" rx="2" fill="#3b82f6" />
-              {/* Windshield */}
               <rect x="7" y="-5" width="4" height="10" rx="1" fill="#93c5fd" />
-              {/* Flashing Emergency Beacon Light */}
               <circle cx="0" cy="0" r="3" fill="#ef4444" className="van-strobe-light" />
             </g>
 
-            {/* Float Tag above Van */}
-            <rect x="-48" y="-32" width="96" height="18" rx="4" fill="#16a34a" />
+            <rect x="-46" y="-32" width="92" height="18" rx="4" fill="#16a34a" />
             <text x="0" y="-20" fontSize="8.5" fontWeight="800" fill="#ffffff" textAnchor="middle">
-              🚐 UNIT #04 ({speed} km/h)
+              UNIT #04 ({speed} km/h)
             </text>
           </g>
         </svg>
@@ -819,11 +825,11 @@ function VirtualMechanicGPSMap({
         {/* Live GPS Telemetry Overlay */}
         <div className="gps-live-road-footer">
           <div className="road-name-chip">
-            <Compass size={12} />
+            <IonIcon icon={compassOutline} style={{ fontSize: '13px', color: '#0284c7' }} />
             <span>{currentRoad}</span>
           </div>
           <div className="eta-live-chip">
-            <Clock size={12} />
+            <IonIcon icon={timeOutline} style={{ fontSize: '13px', color: '#b45309' }} />
             <strong>ETA: {Math.max(1, Math.ceil(remainingSeconds / 60))} MINS</strong>
           </div>
         </div>

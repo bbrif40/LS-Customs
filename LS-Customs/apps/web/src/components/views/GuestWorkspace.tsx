@@ -3,7 +3,9 @@
  * Same layout as the signed-in workspace but gates actions behind sign-in.
  */
 import { useState } from 'react'
-import { Phone, CircleHelp, ChevronRight, Menu, CarFront, Wrench, ClipboardList, AlertTriangle } from 'lucide-react'
+import { Phone, CircleHelp, ChevronRight, Menu, CarFront, Wrench, ClipboardList } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { sparkles, warningOutline } from 'ionicons/icons'
 import { navItems } from '../../data/navigation'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { Rentals } from './Rentals'
@@ -34,7 +36,9 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
     <div className="app-frame guest-workspace">
       <aside className="sidebar">
         <div className="brand-mark">
-          <span className="brand-spark">✳</span>
+          <span className="brand-spark">
+            <IonIcon icon={sparkles} />
+          </span>
           <div className="brand-copy">
             <span className="brand-name">LS Customs</span>
             <span className="brand-tagline">AUTOMOTIVE & FLEET</span>
@@ -84,7 +88,7 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
               <span className="beacon-core" />
             </div>
             <span className="emergency-icon">
-              <AlertTriangle size={17} className="emergency-icon-pulse" />
+              <IonIcon icon={warningOutline} className="emergency-icon-pulse" style={{ fontSize: '18px' }} />
             </span>
             <div className="emergency-text-col">
               <div className="emergency-title-row">

@@ -3,7 +3,9 @@
  * live fleet dispatch status indicator, and dynamic emergency mechanic button.
  */
 import { useState } from 'react'
-import { CircleHelp, ChevronRight, AlertTriangle, Radio, Sparkles } from 'lucide-react'
+import { CircleHelp, ChevronRight } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { sparkles, warningOutline, radioOutline } from 'ionicons/icons'
 import { navItems } from '../../data/navigation'
 import type { View } from '../../types'
 import { navigateTo } from '../../utils/navigation'
@@ -56,7 +58,9 @@ export function Sidebar({
       <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
         {/* Brand Mark with glowing spark micro-interaction */}
         <div className="brand-mark" onClick={() => onView('home')} role="button" tabIndex={0}>
-          <span className="brand-spark">✳</span>
+          <span className="brand-spark">
+            <IonIcon icon={sparkles} />
+          </span>
           <div className="brand-copy">
             <span className="brand-name">LS Customs</span>
             <span className="brand-tagline">AUTOMOTIVE & FLEET</span>
@@ -112,9 +116,9 @@ export function Sidebar({
 
             <span className="emergency-icon">
               {activeDispatch ? (
-                <Radio size={17} className="emergency-icon-spin" />
+                <IonIcon icon={radioOutline} className="emergency-icon-spin" style={{ fontSize: '18px' }} />
               ) : (
-                <AlertTriangle size={17} className="emergency-icon-pulse" />
+                <IonIcon icon={warningOutline} className="emergency-icon-pulse" style={{ fontSize: '18px' }} />
               )}
             </span>
 
