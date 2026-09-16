@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run build --workspace=apps/web",
+  "installCommand": "npm install --prefix LS-Customs/apps/web",
+  "buildCommand": "npm run build --prefix LS-Customs/apps/web",
   "outputDirectory": "LS-Customs/apps/web/dist",
   "rewrites": [
     {

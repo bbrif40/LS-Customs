@@ -1,6 +1,8 @@
 {
-  "dependencies": {
-    "@stripe/react-stripe-js": "^6.10.0",
-    "@stripe/stripe-js": "^9.16.0"
+  "name": "ls-customs-root",
+  "private": true,
+  "scripts": {
+    "build": "npm run build --prefix LS-Customs/apps/web",
+    "web:build": "npm run build --prefix LS-Customs/apps/web"
   }
 }
