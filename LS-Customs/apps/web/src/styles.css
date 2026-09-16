@@ -2253,3 +2253,405 @@ html { scroll-behavior: smooth; }
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   LIGHT MODE: EMERGENCY ROADSIDE MODAL & VIRTUAL GPS TRACKER
+   ══════════════════════════════════════════════════════════════════ */
+.emergency-modal-dialog.light-mode {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 25px 80px rgba(15, 23, 42, 0.22), 0 0 40px rgba(212, 156, 62, 0.12) !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-modal-header {
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-header-title h2 {
+  color: #0f172a !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-pulse-icon {
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+  color: #dc2626 !important;
+  box-shadow: 0 0 12px rgba(220, 38, 38, 0.15) !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-sound-toggle,
+.emergency-modal-dialog.light-mode .emergency-modal-close {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-sound-toggle:hover,
+.emergency-modal-dialog.light-mode .emergency-modal-close:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* GPS Strip (Light Mode) */
+.emergency-modal-dialog.light-mode .emergency-gps-strip {
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+}
+
+.emergency-modal-dialog.light-mode .gps-indicator-group strong {
+  color: #166534 !important;
+}
+
+.emergency-modal-dialog.light-mode .gps-indicator-group p {
+  color: #334155 !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-gps-recenter-btn {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+  color: #15803d !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-gps-recenter-btn:hover {
+  background: #bbf7d0 !important;
+}
+
+/* Section Titles (Light Mode) */
+.emergency-modal-dialog.light-mode .emergency-section-title {
+  color: #475569 !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-section-title span {
+  background: #d49c3e !important;
+  color: #ffffff !important;
+}
+
+/* Scenario Cards (Light Mode) */
+.emergency-modal-dialog.light-mode .scenario-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+}
+
+.emergency-modal-dialog.light-mode .scenario-card:hover {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+.emergency-modal-dialog.light-mode .scenario-card.is-selected {
+  background: #fffdf5 !important;
+  border: 2px solid #d49c3e !important;
+  box-shadow: 0 4px 20px rgba(212, 156, 62, 0.18) !important;
+}
+
+.emergency-modal-dialog.light-mode .scenario-info h4 {
+  color: #0f172a !important;
+}
+
+.emergency-modal-dialog.light-mode .scenario-info p {
+  color: #64748b !important;
+}
+
+.emergency-modal-dialog.light-mode .scenario-eta {
+  color: #15803d !important;
+  font-weight: 700 !important;
+}
+
+.emergency-modal-dialog.light-mode .scenario-price {
+  color: #0f172a !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+}
+
+.emergency-modal-dialog.light-mode .scenario-check-badge {
+  background: #d49c3e !important;
+  color: #ffffff !important;
+}
+
+/* Vehicle input (Light Mode) */
+.emergency-modal-dialog.light-mode .vehicle-input-wrapper input {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.emergency-modal-dialog.light-mode .vehicle-input-wrapper input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.emergency-modal-dialog.light-mode .vehicle-input-wrapper input:focus {
+  border-color: #d49c3e !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(212, 156, 62, 0.18) !important;
+}
+
+/* Pricing Footer (Light Mode) */
+.emergency-modal-dialog.light-mode .emergency-submit-footer {
+  border-top: 1px solid #e2e8f0 !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-pricing-preview span {
+  color: #64748b !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-pricing-preview strong {
+  color: #0f172a !important;
+  font-size: 20px !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-pricing-preview small {
+  color: #64748b !important;
+}
+
+.emergency-modal-dialog.light-mode .tollfree-link {
+  color: #b45309 !important;
+}
+
+/* ── VIRTUAL MECHANIC LIVE GPS MAP TRACKER ───────────────────────── */
+.virtual-gps-tracker-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  margin-bottom: 2px;
+}
+
+.gps-map-header {
+  background: #f8fafc;
+  padding: 11px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gps-map-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.gps-map-title .route-icon {
+  color: #3b82f6;
+}
+
+.live-telemetry-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 9px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid #86efac;
+}
+
+.live-radar-dot {
+  width: 6px;
+  height: 6px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: beaconPing 1.2s infinite;
+}
+
+.gps-telemetry-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.gps-telemetry-strip span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.gps-map-canvas-container {
+  position: relative;
+  width: 100%;
+  background: #fcfdfd;
+  overflow: hidden;
+}
+
+.gps-map-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  min-height: 180px;
+}
+
+/* Road Dashes Animation */
+.animated-road-dashes {
+  animation: roadFlowAnimation 0.8s linear infinite;
+}
+
+@keyframes roadFlowAnimation {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+/* Virtual Van Strobe & Radar */
+.van-radar-pulse {
+  animation: vanRadarPulse 1.8s ease-out infinite;
+}
+
+@keyframes vanRadarPulse {
+  0% { r: 10; opacity: 0.9; }
+  100% { r: 26; opacity: 0; }
+}
+
+.van-strobe-light {
+  animation: vanStrobe 0.22s infinite alternate;
+}
+
+@keyframes vanStrobe {
+  0% { fill: #ef4444; opacity: 1; filter: drop-shadow(0 0 6px #ef4444); }
+  100% { fill: #f59e0b; opacity: 0.5; filter: drop-shadow(0 0 2px #f59e0b); }
+}
+
+.dest-pulse-ring {
+  animation: destPulseRing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.dest-pulse-ring-inner {
+  animation: destPulseRing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite 0.4s;
+}
+
+@keyframes destPulseRing {
+  0% { r: 8; opacity: 0.9; }
+  100% { r: 30; opacity: 0; }
+}
+
+.gps-live-road-footer {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  padding: 9px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+}
+
+.road-name-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #334155;
+  font-weight: 600;
+}
+
+.road-name-chip svg {
+  color: #0284c7;
+}
+
+.eta-live-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #b45309;
+  font-weight: 800;
+}
+
+/* Active Cockpit in Light Mode */
+.emergency-modal-dialog.light-mode .active-dispatch-banner {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+  border: 1px solid #fcd34d !important;
+}
+
+.emergency-modal-dialog.light-mode .dispatch-radar-pulse {
+  background: #fef08a !important;
+  color: #b45309 !important;
+  border-color: #fde047 !important;
+}
+
+.emergency-modal-dialog.light-mode .dispatch-badge-enroute {
+  color: #b45309 !important;
+}
+
+.emergency-modal-dialog.light-mode .active-dispatch-banner h3 {
+  color: #78350f !important;
+}
+
+.emergency-modal-dialog.light-mode .dispatch-reference {
+  color: #92400e !important;
+}
+
+.emergency-modal-dialog.light-mode .dispatch-reference strong {
+  color: #b45309 !important;
+}
+
+.emergency-modal-dialog.light-mode .eta-timer {
+  color: #b45309 !important;
+  text-shadow: none !important;
+}
+
+.emergency-modal-dialog.light-mode .eta-label,
+.emergency-modal-dialog.light-mode .eta-distance {
+  color: #78350f !important;
+}
+
+.emergency-modal-dialog.light-mode .emergency-progress-track .step-dot {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.emergency-modal-dialog.light-mode .step-title {
+  color: #64748b;
+}
+
+.emergency-modal-dialog.light-mode .step-item.active .step-title {
+  color: #0f172a;
+}
+
+.emergency-modal-dialog.light-mode .assigned-mechanic-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04) !important;
+}
+
+.emergency-modal-dialog.light-mode .assigned-mechanic-card h4 {
+  color: #0f172a !important;
+}
+
+.emergency-modal-dialog.light-mode .mechanic-plate-tag {
+  background: #f1f5f9;
+  color: #334155;
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  border: 1px solid #e2e8f0;
+}
+
+.emergency-modal-dialog.light-mode .mechanic-unit-tag {
+  color: #64748b !important;
+}
+
+.emergency-modal-dialog.light-mode .mechanic-detail-chips {
+  color: #334155 !important;
+}
+
+.emergency-modal-dialog.light-mode .roadside-safety-box {
+  background: #fffbeb !important;
+  border: 1px solid #fde68a !important;
+}
+
+.emergency-modal-dialog.light-mode .safety-title {
+  color: #b45309 !important;
+}
+
+.emergency-modal-dialog.light-mode .roadside-safety-box ul {
+  color: #78350f !important;
+}
+
+
