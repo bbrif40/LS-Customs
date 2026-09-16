@@ -6,9 +6,9 @@
 import type { Vehicle } from '../types'
 
 export const vehicles: Vehicle[] = [
-  { name: 'Audi A4 Premium', detail: 'Executive sedan · 5 seats · Automatic', price: '₱4,500', image: 'https://images.unsplash.com/photo-1606664515524-ed2f786666', tag: 'EXECUTIVE', rating: '4.9' },
+  { name: 'Audi A4 Premium', detail: 'Executive sedan · 5 seats · Automatic', price: '₱4,500', image: '/images-cars/Audi-A4.jpg', tag: 'EXECUTIVE', rating: '4.6' },
   { name: 'Mercedes-Benz C-Class', detail: 'Luxury grand tourer · 5 seats · Automatic', price: '₱12,000', image: 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8', tag: 'LUXURY', rating: '4.8' },
-  { name: 'Pfister Neon', detail: 'Premium electric performance · 2 seats', price: '₱410', image: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7', tag: 'ELECTRIC SUV', rating: '5.0' },
+  { name: 'Pfister Neon', detail: 'Premium electric performance · 2 seats', price: '₱4,100', image: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7', tag: 'ELECTRIC SUV', rating: '5.0' },
   { name: 'Gallivanter Baller', detail: 'All-wheel drive SUV · 5 seats · Automatic', price: '₱3,800', image: 'https://images.unsplash.com/photo-1519641471654-76ce0107ad1b', tag: 'PREMIUM SUV', rating: '4.8' },
   { name: 'Enus Deity', detail: 'Executive sedan · 4 seats · Automatic', price: '₱6,200', image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e', tag: 'EXECUTIVE', rating: '4.7' },
   { name: 'Ocelot Pariah', detail: 'High-performance exotic · 2 seats · Automatic', price: '₱8,500', image: 'https://images.unsplash.com/photo-1544829099-b9a0c07fad1a', tag: 'SPORTS', rating: '4.7' },
