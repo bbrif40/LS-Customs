@@ -38,6 +38,7 @@ interface DispatchNotificationResponse {
   recipient_phone?: string | null;
   message?: string;
   reason: string;
+  errors?: string[];
 }
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -467,6 +468,7 @@ Deno.serve(async (req: Request) => {
       recipient_phone: normalizedPhone,
       message: smsMessage,
       reason: isSuccess ? (simulated ? "simulated_success" : "success") : "no_channels_succeeded",
+      errors: errors.length > 0 ? errors : undefined,
     };
 
     return jsonResponse(responsePayload, null, 200);
