@@ -28,10 +28,11 @@ export const CATEGORIES: { id: string; label: string }[] = [
   { id: 'pickup_trucks', label: 'Pick Up Trucks' },
 ]
 
-export const getCategoryLabel = (cat: string) => {
+export const getCategoryLabel = (cat?: string | null) => {
+  if (!cat) return 'Uncategorized'
   const found = CATEGORIES.find((c) => c.id === cat)
   if (found) return found.label
-  return cat.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+  return String(cat).replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
 }
 
 const TRANSMISSIONS = ['Automatic', 'Manual', 'CVT'] as const

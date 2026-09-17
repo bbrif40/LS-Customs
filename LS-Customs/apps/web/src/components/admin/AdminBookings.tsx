@@ -94,6 +94,7 @@ export function AdminBookings() {
   const [violationAmount, setViolationAmount] = useState('')
   const [violationNotes, setViolationNotes] = useState('')
   const [completing, setCompleting] = useState(false)
+  const [assignmentNotice, setAssignmentNotice] = useState<{ text: string; type: 'success' | 'warning' | 'error' } | null>(null)
   const pageSize = 10
 
   // Fetch available mechanics once on mount. Cheap query; the list

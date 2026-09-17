@@ -106,16 +106,18 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
           <div style={{ fontSize: 13, color: '#9ca3af', maxWidth: 420 }}>
             The page crashed before it could render. Reload to try again.
           </div>
-          {import.meta.env.DEV && this.state.error?.message && (
+          {this.state.error?.message && (
             <div
               style={{
-                fontSize: 11,
-                color: '#6b7280',
-                maxWidth: 480,
+                fontSize: 12,
+                color: '#ef4444',
+                maxWidth: 500,
                 fontFamily: 'monospace',
-                padding: 8,
-                border: '1px solid #2d3748',
+                padding: '10px 14px',
+                background: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid #ef444440',
                 borderRadius: 6,
+                wordBreak: 'break-word',
               }}
             >
               {this.state.error.message}

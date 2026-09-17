@@ -5,7 +5,7 @@
  * Panels stay mounted (hidden via CSS) so previously visited views render
  * instantly on revisit — no spinner flash, no re-fetch.
  */
-import { useState } from 'react'
+import { useState, Component, type ReactNode, type ErrorInfo } from 'react'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminOverview } from './AdminOverview'
 import { AdminFleet } from './AdminFleet'
@@ -21,6 +21,34 @@ import type { AdminView } from './AdminSidebar'
 interface AdminLayoutProps {
   userName: string
   onSignOut: () => void
+}
+
+class AdminPaneBoundary extends Component<{ children: ReactNode; paneName: string }, { error: Error | null }> {
+  state = { error: null as Error | null }
+  static getDerivedStateFromError(error: Error) {
+    return { error }
+  }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error(`[AdminLayout] pane error in ${this.props.paneName}:`, error, info)
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 48, textAlign: 'center', color: '#f87171' }}>
+          <h3 style={{ fontSize: 18, marginBottom: 8 }}>Failed to load {this.props.paneName}</h3>
+          <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 16 }}>{this.state.error.message}</p>
+          <button
+            className="admin-add-btn"
+            onClick={() => this.setState({ error: null })}
+            style={{ margin: '0 auto' }}
+          >
+            Retry
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
 }
 
 const ALL_VIEWS: AdminView[] = [
@@ -82,7 +110,9 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
             hidden={currentView !== view}
             aria-hidden={currentView !== view}
           >
-            {renderView(view)}
+            <AdminPaneBoundary paneName={view}>
+              {renderView(view)}
+            </AdminPaneBoundary>
           </div>
         ))}
       </div>
