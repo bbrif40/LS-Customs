@@ -499,44 +499,54 @@ function TicketRow({
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan={8} style={{ background: '#0f1320', padding: 16 }}>
-            <div style={{ display: 'grid', gap: 10, color: 'var(--admin-muted)', fontSize: 13 }}>
-              <div>
-                <strong style={{ color: '#d4d9e6' }}>Description</strong>
-                <p style={{ margin: '6px 0 0', whiteSpace: 'pre-wrap', color: '#c4c9d6', lineHeight: 1.5 }}>
+          <td colSpan={8} style={{ background: '#f8f9fc', padding: 20, borderTop: '2px solid #e2e8f0' }}>
+            <div style={{ display: 'grid', gap: 14, fontSize: 13 }}>
+              {/* Description */}
+              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 16px' }}>
+                <strong style={{ color: '#1e293b', fontSize: 13 }}>Description</strong>
+                <p style={{ margin: '6px 0 0', whiteSpace: 'pre-wrap', color: '#475569', lineHeight: 1.6 }}>
                   {ticket.description}
                 </p>
               </div>
-              <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', fontSize: 12, paddingTop: 8, borderTop: '1px solid #2d3748' }}>
-                <span>👤 <strong style={{ color: '#d4d9e6' }}>{customerName}</strong></span>
+              {/* Customer meta */}
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, padding: '10px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, alignItems: 'center' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#334155' }}>👤 <strong>{customerName}</strong></span>
                 {customerPhone && (
-                  <span>📞 <a href={`tel:${customerPhone}`} style={{ color: '#3b82f6', textDecoration: 'none' }}>{customerPhone}</a></span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#334155' }}>📞 <a href={`tel:${customerPhone}`} style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 600 }}>{customerPhone}</a></span>
                 )}
-                <span>🆔 <code style={{ color: '#e8a838' }}>{ticket.customer_id || ticket.id}</code></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b' }}>🆔 <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4, color: '#0f172a', fontSize: 11 }}>{ticket.customer_id || ticket.id}</code></span>
                 {ticket.resolved_at && (
-                  <span>✅ Resolved: {new Date(ticket.resolved_at).toLocaleString()}</span>
+                  <span style={{ color: '#16a34a' }}>✅ Resolved: {new Date(ticket.resolved_at).toLocaleString()}</span>
                 )}
                 {ticket.closed_at && (
-                  <span>🔒 Closed: {new Date(ticket.closed_at).toLocaleString()}</span>
+                  <span style={{ color: '#64748b' }}>🔒 Closed: {new Date(ticket.closed_at).toLocaleString()}</span>
                 )}
               </div>
+              {/* Conversation thread */}
               <div
-                style={{
-                  paddingTop: 8,
-                  borderTop: '1px solid #2d3748',
-                }}
+                style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, padding: '12px 16px' }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <strong style={{ color: '#d4d9e6' }}>Conversation</strong>
-                  <span style={{ fontSize: 11, color: 'var(--admin-muted)' }}>
-                    Auto-refreshes every 30s
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <strong style={{ color: '#1e293b', fontSize: 13 }}>Conversation</strong>
+                  <span style={{ fontSize: 11, color: '#94a3b8' }}>Auto-refreshes every 30s</span>
                 </div>
                 <TicketThread
                   ticketId={ticket.id}
                   role="admin"
                   onError={(message) => window.alert(message)}
+                  theme={{
+                    surface: '#f8f9fc',
+                    surfaceMuted: '#f1f5f9',
+                    text: '#1e293b',
+                    muted: '#94a3b8',
+                    border: '#e2e8f0',
+                    ownBubble: '#e8a838',
+                    ownText: '#1a1a1a',
+                    otherBubble: '#f1f5f9',
+                    otherText: '#334155',
+                    accent: '#e8a838',
+                  }}
                 />
               </div>
             </div>
