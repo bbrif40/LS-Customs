@@ -205,20 +205,17 @@ export function AdminBookings() {
 
   const handleStatusChange = async (
     booking: VehicleBooking | ServiceBooking,
-    newStatus: BookingStatus
+    nextStatus: BookingStatus,
   ) => {
-    if (!window.confirm(`Change booking ${booking.id.slice(0, 8)}... status to ${statusLabels[newStatus]}?`)) {
-      return
-    }
     try {
       if (activeTab === 'vehicles') {
-        await updateVehicleBookingStatus(booking.id, newStatus)
+        await updateVehicleBookingStatus(booking.id, nextStatus)
       } else {
-        await updateServiceBookingStatus(booking.id, newStatus)
+        await updateServiceBookingStatus(booking.id, nextStatus)
       }
     } catch (err) {
       console.error('[admin] failed to update booking status', err)
-      alert(getAdminErrorMessage(err, 'Failed to update status'))
+      alert(getAdminErrorMessage(err, 'Failed to update booking status'))
     }
   }
 
@@ -230,33 +227,24 @@ export function AdminBookings() {
   }
 
   const closeCompletionModal = () => {
-    if (completing) return
     setCompletionBooking(null)
+    setViolationPaymentRequired(false)
+    setViolationAmount('')
+    setViolationNotes('')
   }
 
-  const completeRental = async () => {
-    if (!completionBooking || violationPaymentRequired) return
-    setCompleting(true)
-    try {
-      if (activeTab === 'vehicles') {
-        await updateVehicleBookingStatus(completionBooking.id, 'completed')
-      } else {
-        await updateServiceBookingStatus(completionBooking.id, 'completed')
-      }
-      setCompletionBooking(null)
-    } catch (err) {
-      console.error('[admin] failed to complete booking', err)
-      alert(getAdminErrorMessage(err, 'Failed to complete booking'))
-    } finally {
-      setCompleting(false)
-    }
-  }
-
-  const recordViolationPayment = async () => {
+  const handleConfirmCompletion = async () => {
     if (!completionBooking) return
-    const amount = Number(violationAmount)
-    if (!Number.isFinite(amount) || amount <= 0) {
-      alert('Enter a valid additional payment amount.')
+
+    if (!violationPaymentRequired) {
+      await handleStatusChange(completionBooking, 'completed')
+      closeCompletionModal()
+      return
+    }
+
+    const amount = parseFloat(violationAmount)
+    if (Number.isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid violation payment amount greater than zero.')
       return
     }
 
@@ -273,7 +261,8 @@ export function AdminBookings() {
         status: 'pending',
       })
       if (paymentError) throw paymentError
-      setCompletionBooking(null)
+      await handleStatusChange(completionBooking, 'completed')
+      closeCompletionModal()
     } catch (err) {
       console.error('[admin] failed to record payment requirement', err)
       alert(getAdminErrorMessage(err, 'Failed to record payment requirement'))
@@ -283,33 +272,149 @@ export function AdminBookings() {
   }
 
   // Single-shot assign: writes mechanic_id and status='assigned' in one
-  // update. The trigger notify_on_status_change sees both fields move
-  // atomically and fires the assignment notification to the customer.
-  // ponytail: this is a direct PostgREST update rather than a custom RPC.
-  // The RLS policy 'mechanic_profiles update admin' + service_role path
-  // makes it land. If a concurrent admin already assigned this booking
-  // the WHERE status='pending' clause short-circuits to 0 rows.
+  // update. Also creates customer notification and immediately dispatches
+  // the SMS notification to the customer with booking and mechanic details.
   const assignMechanic = async (bookingId: string, mechanicId: string) => {
     setAssigning(true)
     try {
-      // Pre-check: was the booking still pending? If not, the WHERE
-      // status='pending' filter would silently no-op.
+      // 1. Pre-check: was the booking still pending?
       const { data: probe, error: probeErr } = await supabase
         .from('service_bookings')
-        .select('status')
+        .select('status, customer_id')
         .eq('id', bookingId)
         .single()
       if (probeErr) throw probeErr
       if (probe.status !== 'pending') {
         throw new Error(`Booking is already ${probe.status}; reload to see the latest.`)
       }
-      const { error } = await supabase
+
+      // 2. Identify target booking & customer details
+      const targetBooking = serviceBookingsWithDetails?.find((b) => b.id === bookingId)
+      const customerRelation = targetBooking?.profiles as unknown as Profile | Profile[] | null | undefined
+      const customerProfile = Array.isArray(customerRelation) ? customerRelation[0] : customerRelation
+
+      let customerName = customerProfile?.full_name || ''
+      let customerPhone = customerProfile?.phone || null
+      const customerId = probe.customer_id || targetBooking?.customer_id
+
+      // Fetch fresh customer details if needed
+      if ((!customerPhone || !customerName) && customerId) {
+        const { data: custRow } = await supabase
+          .from('profiles')
+          .select('full_name, phone')
+          .eq('id', customerId)
+          .maybeSingle()
+        if (custRow) {
+          if (!customerName && custRow.full_name) customerName = custRow.full_name
+          if (!customerPhone && custRow.phone) customerPhone = custRow.phone
+        }
+      }
+      if (!customerName) customerName = 'Customer'
+
+      // 3. Identify selected mechanic details
+      const mechanic = availableMechanics.find((m) => m.id === mechanicId)
+      let mechanicName = mechanic?.full_name || ''
+      let mechanicPhone = mechanic?.phone || null
+
+      if (!mechanicName || !mechanicPhone) {
+        const { data: mechRow } = await supabase
+          .from('mechanic_profiles')
+          .select('profiles(full_name, phone)')
+          .eq('id', mechanicId)
+          .maybeSingle()
+        const mechProfile = (mechRow?.profiles as unknown as { full_name?: string; phone?: string } | null)
+        if (mechProfile?.full_name) mechanicName = mechProfile.full_name
+        if (mechProfile?.phone) mechanicPhone = mechProfile.phone
+      }
+      if (!mechanicName) mechanicName = 'LS Customs Mechanic'
+
+      // 4. Update the service booking to assigned
+      const { error: updateErr } = await supabase
         .from('service_bookings')
         .update({ mechanic_id: mechanicId, status: 'assigned' })
         .eq('id', bookingId)
-      if (error) throw error
+      if (updateErr) throw updateErr
+
+      // 5. Construct friendly SMS message
+      const bookingRef = bookingId.slice(0, 8).toUpperCase()
+      const contactDetail = mechanicPhone ? ` (Contact: ${mechanicPhone})` : ''
+      const smsMessage = `Hi ${customerName}! Your LS Customs mobile mechanic service (Booking #${bookingRef}) has been assigned to ${mechanicName}${contactDetail}. They will arrive at your scheduled time.`
+
+      // 6. Insert in-app & SMS notification row into public.notifications
+      let notifId: string | undefined
+      if (customerId) {
+        const { data: insertedNotif } = await supabase
+          .from('notifications')
+          .insert({
+            user_id: customerId,
+            type: 'booking_status_changed',
+            title: 'Mechanic Assigned',
+            body: smsMessage,
+            channels: ['sms', 'in_app'],
+            metadata: {
+              booking_id: bookingId,
+              booking_type: 'service',
+              status: 'assigned',
+              customer_name: customerName,
+              customer_phone: customerPhone,
+              mechanic_id: mechanicId,
+              mechanic_name: mechanicName,
+              mechanic_phone: mechanicPhone,
+              dispatch_sms: true,
+            },
+            is_read: false,
+          })
+          .select('id')
+          .maybeSingle()
+
+        if (insertedNotif?.id) {
+          notifId = insertedNotif.id
+        }
+      }
+
+      // 7. Directly invoke dispatch-notification Edge Function
+      let smsStatusMsg = ''
+      try {
+        const { data: dispatchResult, error: dispatchErr } = await supabase.functions.invoke('dispatch-notification', {
+          body: {
+            notification_id: notifId,
+            phone: customerPhone,
+            message: smsMessage,
+            user_id: customerId,
+            title: 'Mechanic Assigned',
+            booking_id: bookingId,
+            mechanic_name: mechanicName,
+            mechanic_phone: mechanicPhone,
+          },
+        })
+
+        if (dispatchErr) {
+          console.warn('[admin] SMS dispatch error:', dispatchErr)
+          smsStatusMsg = customerPhone
+            ? ` (SMS dispatch queued for ${customerPhone})`
+            : ` (Customer has no phone number on profile)`
+        } else if (dispatchResult?.recipient_phone) {
+          smsStatusMsg = ` (SMS notification sent to ${dispatchResult.recipient_phone})`
+        } else if (customerPhone) {
+          smsStatusMsg = ` (SMS notification queued for ${customerPhone})`
+        } else {
+          smsStatusMsg = ` (Note: Customer profile has no phone number)`
+        }
+      } catch (invokeErr) {
+        console.warn('[admin] dispatch-notification invocation failed:', invokeErr)
+      }
+
       setAssignOpenFor(null)
+      setAssignmentNotice({
+        type: customerPhone ? 'success' : 'warning',
+        text: `Mechanic ${mechanicName} assigned to booking #${bookingRef}!${smsStatusMsg}`,
+      })
+      setTimeout(() => setAssignmentNotice(null), 7000)
+
       await Promise.all([refetchVehicles(), refetchServices()])
+    } catch (err) {
+      console.error('[admin] failed to assign mechanic', err)
+      alert(getAdminErrorMessage(err, 'Failed to assign mechanic'))
     } finally {
       setAssigning(false)
     }
@@ -371,6 +476,58 @@ export function AdminBookings() {
           Admin: Unrestricted Status Updates
         </span>
       </div>
+
+      {/* ── Assignment & SMS Notification Alert Banner ─────────── */}
+      {assignmentNotice && (
+        <div
+          role="status"
+          style={{
+            padding: '12px 18px',
+            marginBottom: 16,
+            borderRadius: 8,
+            fontSize: 13,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background:
+              assignmentNotice.type === 'success'
+                ? 'rgba(34, 197, 94, 0.15)'
+                : assignmentNotice.type === 'warning'
+                ? 'rgba(245, 158, 11, 0.15)'
+                : 'rgba(239, 68, 68, 0.15)',
+            border: `1px solid ${
+              assignmentNotice.type === 'success'
+                ? '#22c55e'
+                : assignmentNotice.type === 'warning'
+                ? '#f59e0b'
+                : '#ef4444'
+            }`,
+            color:
+              assignmentNotice.type === 'success'
+                ? '#86efac'
+                : assignmentNotice.type === 'warning'
+                ? '#fde047'
+                : '#fca5a5',
+          }}
+        >
+          <span>{assignmentNotice.text}</span>
+          <button
+            onClick={() => setAssignmentNotice(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'inherit',
+              cursor: 'pointer',
+              marginLeft: 12,
+              fontSize: 15,
+              lineHeight: 1,
+            }}
+            aria-label="Dismiss notification"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ── Tab Navigation ───────────────────────────────────── */}
       <div className="admin-filter-row" style={{ marginBottom: 16, borderBottom: '1px solid #2d3748', paddingBottom: 12 }}>

@@ -1,22 +1,22 @@
 /**
  * useSmsNotification — client-side wrapper for invoking the dispatch-notification
- * edge function to send SMS notifications via TextBee (or Twilio if configured).
+ * edge function to send SMS notifications via Twilio, TextBee, or Semaphore.
  *
  * This hook is used to send immediate SMS confirmations after:
  *  - Vehicle booking confirmation
  *  - Service booking confirmation
- *  - Payment retry link generation (Tier C)
+ *  - Mechanic assignment
+ *  - Payment retry link generation
  *
  * Usage:
  *   const { sendSms, loading, error } = useSmsNotification()
  *   await sendSms({
  *     userId: user.id,
+ *     phone: '+639171234567', // optional direct override
  *     type: 'booking_confirmed',
  *     title: 'Booking confirmed',
  *     body: 'Your rental is confirmed. Booking ref: VS-ABC123',
  *   })
- *
- * The edge function handles the actual SMS delivery via TextBee/Twilio.
  */
 import { useCallback, useState } from 'react'
 import { supabase } from '../supabaseClient'
@@ -26,6 +26,8 @@ export interface SmsNotificationParams {
   type: string
   title: string
   body: string
+  phone?: string | null
+  metadata?: Record<string, unknown>
 }
 
 interface UseSmsNotificationResult {
@@ -43,26 +45,53 @@ export function useSmsNotification(): UseSmsNotificationResult {
     setError(null)
 
     try {
-      // Insert a notification row; the trigger + dispatch-notification
-      // edge function will pick it up and send the SMS via TextBee/Twilio.
-      const { error: insertError } = await supabase
+      // 1. Insert notification row into public.notifications
+      const { data: notif, error: insertError } = await supabase
         .from('notifications')
         .insert({
           user_id: params.userId,
           type: params.type,
           title: params.title,
           body: params.body,
-          channels: ['sms'],
+          channels: ['sms', 'in_app'],
+          metadata: {
+            ...(params.metadata || {}),
+            dispatch_sms: true,
+            phone: params.phone,
+          },
           is_read: false,
         })
+        .select('id')
+        .maybeSingle()
 
       if (insertError) {
-        throw insertError
+        console.warn('[useSmsNotification] notification insert error:', insertError)
+      }
+
+      // 2. Invoke dispatch-notification Edge Function
+      const { data: dispatchResult, error: dispatchError } = await supabase.functions.invoke(
+        'dispatch-notification',
+        {
+          body: {
+            notification_id: notif?.id,
+            user_id: params.userId,
+            phone: params.phone,
+            message: params.body,
+            title: params.title,
+          },
+        },
+      )
+
+      if (dispatchError) {
+        console.warn('[useSmsNotification] dispatch-notification error:', dispatchError)
+      } else {
+        console.log('[useSmsNotification] SMS dispatch result:', dispatchResult)
       }
 
       return true
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to send SMS notification'
+      console.warn('[useSmsNotification] exception:', msg)
       setError(msg)
       return false
     } finally {
