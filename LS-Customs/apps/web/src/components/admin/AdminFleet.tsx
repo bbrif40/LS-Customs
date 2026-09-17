@@ -8,9 +8,32 @@ import { Plus, Search, Edit, Trash2, X, Check, Loader2 } from 'lucide-react'
 import { useAdminVehicles, createVehicle, updateVehicle, deactivateVehicle } from '../../hooks/useAdminData'
 import type { Vehicle } from '@ls-customs/shared-types'
 
-type RentalCategory = 'short_term' | 'extended' | 'premium'
+export type RentalCategory =
+  | 'hybrid_ev'
+  | 'hatchbacks'
+  | 'sedans'
+  | 'minivans'
+  | 'suvs'
+  | 'van'
+  | 'pickup_trucks'
+  | string
 
-const CATEGORIES: RentalCategory[] = ['short_term', 'extended', 'premium']
+export const CATEGORIES: { id: string; label: string }[] = [
+  { id: 'hybrid_ev', label: 'Hybrid EV' },
+  { id: 'hatchbacks', label: 'Hatchbacks' },
+  { id: 'sedans', label: 'Sedans' },
+  { id: 'minivans', label: 'Minivans' },
+  { id: 'suvs', label: 'SUVs' },
+  { id: 'van', label: 'Van' },
+  { id: 'pickup_trucks', label: 'Pick Up Trucks' },
+]
+
+export const getCategoryLabel = (cat: string) => {
+  const found = CATEGORIES.find((c) => c.id === cat)
+  if (found) return found.label
+  return cat.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+}
+
 const TRANSMISSIONS = ['Automatic', 'Manual', 'CVT'] as const
 const FUEL_TYPES = ['Gasoline', 'Diesel', 'Electric', 'Hybrid'] as const
 
@@ -37,7 +60,7 @@ interface VehicleFormData {
 }
 
 const initialFormData: VehicleFormData = {
-  category: 'short_term',
+  category: 'hybrid_ev',
   sub_category: '',
   name: '',
   description: '',
@@ -64,6 +87,7 @@ const listText = (value: string[]) => value.join('\n')
 export function AdminFleet() {
   const { data: vehicles, loading, error, refetch } = useAdminVehicles()
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null)
@@ -75,7 +99,11 @@ export function AdminFleet() {
   const filteredVehicles = vehicles?.filter((v) => {
     if (activeFilter === 'active' && !v.is_active) return false
     if (activeFilter === 'inactive' && v.is_active) return false
-    if (searchQuery && !v.name.toLowerCase().includes(searchQuery.toLowerCase())) return false
+    if (selectedCategory !== 'all' && v.category !== selectedCategory) return false
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase()
+      if (!v.name.toLowerCase().includes(q) && !(v.sub_category || '').toLowerCase().includes(q)) return false
+    }
     return true
   }) || []
 
@@ -233,6 +261,30 @@ export function AdminFleet() {
         </div>
       </div>
 
+      {/* ── Category Filter Pills ────────────────────────────── */}
+      <div className="admin-filter-row" style={{ marginTop: 8, gap: 6, flexWrap: 'wrap', borderTop: '1px solid #2d3748', paddingTop: 10 }}>
+        <button
+          className={`admin-filter-btn ${selectedCategory === 'all' ? 'active' : ''}`}
+          onClick={() => setSelectedCategory('all')}
+          style={{ fontSize: 12, padding: '4px 10px' }}
+        >
+          All Categories ({totalVehicles})
+        </button>
+        {CATEGORIES.map((c) => {
+          const count = vehicles?.filter((v) => v.category === c.id).length || 0
+          return (
+            <button
+              key={c.id}
+              className={`admin-filter-btn ${selectedCategory === c.id ? 'active' : ''}`}
+              onClick={() => setSelectedCategory(c.id)}
+              style={{ fontSize: 12, padding: '4px 10px' }}
+            >
+              {c.label} ({count})
+            </button>
+          )
+        })}
+      </div>
+
       {/* ── Vehicle Cards ────────────────────────────────────── */}
       <div className="admin-vehicle-grid">
         {filteredVehicles.length === 0 ? (
@@ -262,7 +314,7 @@ export function AdminFleet() {
               <div className="admin-vehicle-info">
                 <div className="admin-vehicle-name-row">
                   <span className="admin-vehicle-name">{vehicle.name}</span>
-                  <span className="admin-vehicle-plate">{vehicle.category} • {vehicle.sub_category}</span>
+                  <span className="admin-vehicle-plate">{getCategoryLabel(vehicle.category)} • {vehicle.sub_category}</span>
                 </div>
                 <div className="admin-vehicle-type">
                   {vehicle.seats} seats • {vehicle.transmission} • {vehicle.fuel_type}
@@ -326,7 +378,7 @@ export function AdminFleet() {
                       required
                     >
                       {CATEGORIES.map((c) => (
-                        <option key={c} value={c}>{c.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</option>
+                        <option key={c.id} value={c.id}>{c.label}</option>
                       ))}
                     </select>
                   </div>

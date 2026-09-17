@@ -47,7 +47,18 @@ export type AuthMode = 'sign-in' | 'create-account'
 
 export interface Vehicle {
   id: string
-  category: 'short_term' | 'extended' | 'premium'
+  category:
+    | 'hybrid_ev'
+    | 'hatchbacks'
+    | 'sedans'
+    | 'minivans'
+    | 'suvs'
+    | 'van'
+    | 'pickup_trucks'
+    | 'short_term'
+    | 'extended'
+    | 'premium'
+    | string
   name: string
   detail: string
   price: string

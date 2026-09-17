@@ -9,7 +9,18 @@
 export type UserRole = 'customer' | 'mechanic' | 'admin';
 
 /** Top-level rental vehicle category. */
-export type RentalCategory = 'short_term' | 'extended' | 'premium';
+export type RentalCategory =
+  | 'hybrid_ev'
+  | 'hatchbacks'
+  | 'sedans'
+  | 'minivans'
+  | 'suvs'
+  | 'van'
+  | 'pickup_trucks'
+  | 'short_term'
+  | 'extended'
+  | 'premium'
+  | string;
 
 /** Booking status for both vehicle and service bookings. */
 export type BookingStatus =

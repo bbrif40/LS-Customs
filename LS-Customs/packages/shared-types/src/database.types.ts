@@ -77,7 +77,7 @@ export interface Database {
       vehicles: {
         Row: {
           id: string
-          category: 'short_term' | 'extended' | 'premium'
+          category: string
           sub_category: string
           name: string
           description: string | null
@@ -103,7 +103,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          category: 'short_term' | 'extended' | 'premium'
+          category: string
           sub_category: string
           name: string
           description?: string | null
@@ -129,7 +129,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          category?: 'short_term' | 'extended' | 'premium'
+          category?: string
           sub_category?: string
           name?: string
           description?: string | null

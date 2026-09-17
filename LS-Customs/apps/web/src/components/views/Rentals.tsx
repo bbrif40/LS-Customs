@@ -18,13 +18,25 @@ interface RentalsProps {
   onNotify: (message: string) => void
 }
 
-type CategoryFilter = 'all' | 'short_term' | 'extended' | 'premium'
+type CategoryFilter =
+  | 'all'
+  | 'hybrid_ev'
+  | 'hatchbacks'
+  | 'sedans'
+  | 'minivans'
+  | 'suvs'
+  | 'van'
+  | 'pickup_trucks'
 
 const CATEGORY_TABS: { id: CategoryFilter; label: string }[] = [
   { id: 'all', label: 'All vehicles' },
-  { id: 'short_term', label: 'Short-term' },
-  { id: 'extended', label: 'Extended' },
-  { id: 'premium', label: 'Luxury' },
+  { id: 'hybrid_ev', label: 'Hybrid EV' },
+  { id: 'hatchbacks', label: 'Hatchbacks' },
+  { id: 'sedans', label: 'Sedans' },
+  { id: 'minivans', label: 'Minivans' },
+  { id: 'suvs', label: 'SUVs' },
+  { id: 'van', label: 'Van' },
+  { id: 'pickup_trucks', label: 'Pick Up Trucks' },
 ]
 
 export function Rentals({ userId, onNotify }: RentalsProps) {
@@ -59,12 +71,23 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
     const q = searchQuery.trim().toLowerCase()
     return vehicles.filter((v) => {
       if (activeCategory !== 'all') {
-        const t = v.tag.toLowerCase()
-        const alias = activeCategory === 'premium' ? 'luxury' : activeCategory.replace('_', ' ')
-        if (!t.includes(alias)) return false
+        const cat = (v.category || '').toLowerCase()
+        const tag = (v.tag || '').toLowerCase()
+        const target = activeCategory.toLowerCase()
+        const targetSpaced = target.replace('_', ' ')
+        const norm = (s: string) => s.replace(/[\s_-]+/g, '')
+        const matchesCategory =
+          cat === target ||
+          cat === targetSpaced ||
+          norm(cat) === norm(target)
+        const matchesTag =
+          tag.includes(target) ||
+          tag.includes(targetSpaced) ||
+          norm(tag).includes(norm(target))
+        if (!matchesCategory && !matchesTag) return false
       }
       if (q) {
-        const hay = `${v.name} ${v.detail} ${v.tag}`.toLowerCase()
+        const hay = `${v.name} ${v.detail} ${v.tag} ${v.category} ${v.location}`.toLowerCase()
         if (!hay.includes(q)) return false
       }
       return true
