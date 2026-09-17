@@ -96,6 +96,8 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
 
   const toggleOpen = () => {
     setOpen(true)
+    // Only seed the welcome message on the very first open — never on re-open,
+    // so the conversation is preserved when the widget is minimized.
     if (messages.length === 0) {
       setMessages([
         {
@@ -140,8 +142,9 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
     setLoading(true)
 
     try {
-      // Send conversation history so LLM retains context
-      const chatHistory = updatedMessages.map((m) => ({
+      // Send up to the last 14 messages as conversation history so the LLM
+      // retains context for multi-turn conversations (backend uses 12 of these).
+      const chatHistory = updatedMessages.slice(-14).map((m) => ({
         role: m.role,
         content: m.content,
       }))
