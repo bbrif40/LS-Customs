@@ -15,9 +15,9 @@ import type {
   ServiceBooking,
 } from '@ls-customs/shared-types'
 
-// Type aliases for joined data (Supabase returns joined tables as arrays)
-type MechanicWithProfile = MechanicProfile & {
-  profiles: Profile[] | null
+// Type aliases for joined data (Supabase returns joined tables as object or array depending on relation)
+export type MechanicWithProfile = MechanicProfile & {
+  profiles: Profile | Profile[] | null
 }
 
 type VehicleBookingWithCustomer = VehicleBooking & {
@@ -193,7 +193,7 @@ export function useAdminMechanics() {
           rating_count,
           created_at,
           updated_at,
-          profiles!left (
+          profiles!inner (
             id,
             full_name,
             phone,
