@@ -237,7 +237,12 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
               </div>
             </div>
             <div className="chat-header-actions">
-              <button className="chat-action-btn" onClick={() => setTicketFormOpen(true)} title="Create support ticket" aria-label="Create ticket">
+              <button
+                className={`chat-action-btn${ticketFormOpen ? ' active' : ''}`}
+                onClick={() => setTicketFormOpen((prev) => !prev)}
+                title={ticketFormOpen ? "Return to chat" : "Create support ticket"}
+                aria-label={ticketFormOpen ? "Return to chat" : "Create support ticket"}
+              >
                 <TicketPlus size={14} />
               </button>
               <button className="chat-action-btn" onClick={resetChat} title="Reset conversation" aria-label="Reset chat">
@@ -278,6 +283,11 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
                     // Collapse success card into the live thread view.
                     setTicketThreadOpen(true)
                   }}
+                  onDismiss={() => {
+                    setTicketThreadOpen(false)
+                    setTicketResult(null)
+                    setTicketFormOpen(false)
+                  }}
                   onCopy={(text) => {
                     void navigator.clipboard.writeText(text).then(
                       () => onNotify(`Copied ${text}`),
@@ -296,92 +306,94 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
                 />
               )}
             </div>
-          ) : null}
-
-          <div className="chat-messages">
-            {showTicketStatus && ticketId && (
-              <div className="chat-message assistant ticket-status">
-                <div className="chat-bubble ticket-status-bubble">
-                  <div className="ticket-status-header">
-                    <TicketPlus size={16} />
-                    <span className="ticket-status-title">Support Ticket Created</span>
+          ) : (
+            <>
+              <div className="chat-messages">
+                {showTicketStatus && ticketId && (
+                  <div className="chat-message assistant ticket-status">
+                    <div className="chat-bubble ticket-status-bubble">
+                      <div className="ticket-status-header">
+                        <TicketPlus size={16} />
+                        <span className="ticket-status-title">Support Ticket Created</span>
+                      </div>
+                      <div className="ticket-status-id">Ticket ID: <strong>{ticketId.slice(0, 8)}...</strong></div>
+                      <div className="ticket-status-note">An admin will review your request and respond. You can ask me for updates on this ticket.</div>
+                      <button className="ticket-status-close" onClick={() => setShowTicketStatus(false)} aria-label="Dismiss ticket status">
+                        <X size={14} />
+                      </button>
+                    </div>
                   </div>
-                  <div className="ticket-status-id">Ticket ID: <strong>{ticketId.slice(0, 8)}...</strong></div>
-                  <div className="ticket-status-note">An admin will review your request and respond. You can ask me for updates on this ticket.</div>
-                  <button className="ticket-status-close" onClick={() => setShowTicketStatus(false)} aria-label="Dismiss ticket status">
-                    <X size={14} />
-                  </button>
-                </div>
+                )}
+
+                {messages.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={`chat-message ${msg.role === 'user' ? 'user' : 'assistant'}`}
+                  >
+                    <div className="chat-bubble">
+                      <FormattedMessage text={msg.content} />
+                    </div>
+                    <div className="chat-time">
+                      {new Date(msg.timestamp).toLocaleTimeString([], {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </div>
+                  </div>
+                ))}
+
+                {loading && (
+                  <div className="chat-message assistant">
+                    <div className="chat-bubble typing-dots">
+                      <span />
+                      <span />
+                      <span />
+                    </div>
+                  </div>
+                )}
+
+                {messages.length === 1 && !loading && (
+                  <div className="chat-suggestions">
+                    <p className="chat-suggestions-title">Quick actions:</p>
+                    <div className="chat-chips-grid">
+                      {QUICK_SUGGESTIONS.map((suggestion, idx) => (
+                        <button
+                          key={idx}
+                          className="chat-chip"
+                          onClick={() => void sendMessage(suggestion.replace(/^[^\s]+\s/, ''))}
+                        >
+                          {suggestion}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} />
               </div>
-            )}
 
-            {messages.map((msg, i) => (
-              <div
-                key={i}
-                className={`chat-message ${msg.role === 'user' ? 'user' : 'assistant'}`}
-              >
-                <div className="chat-bubble">
-                  <FormattedMessage text={msg.content} />
-                </div>
-                <div className="chat-time">
-                  {new Date(msg.timestamp).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </div>
+              <div className="chat-input-row">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  aria-label="Chat input field"
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask about rentals, bookings, services..."
+                  disabled={loading}
+                />
+                <button
+                  className="chat-send"
+                  onClick={() => void sendMessage()}
+                  disabled={loading || !input.trim()}
+                  aria-label="Send message"
+                >
+                  <Send size={16} />
+                </button>
               </div>
-            ))}
-
-            {loading && (
-              <div className="chat-message assistant">
-                <div className="chat-bubble typing-dots">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-              </div>
-            )}
-
-            {messages.length === 1 && !loading && (
-              <div className="chat-suggestions">
-                <p className="chat-suggestions-title">Quick actions:</p>
-                <div className="chat-chips-grid">
-                  {QUICK_SUGGESTIONS.map((suggestion, idx) => (
-                    <button
-                      key={idx}
-                      className="chat-chip"
-                      onClick={() => void sendMessage(suggestion.replace(/^[^\s]+\s/, ''))}
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className="chat-input-row">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              aria-label="Chat input field"
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about rentals, bookings, services..."
-              disabled={loading}
-            />
-            <button
-              className="chat-send"
-              onClick={() => void sendMessage()}
-              disabled={loading || !input.trim()}
-              aria-label="Send message"
-            >
-              <Send size={16} />
-            </button>
-          </div>
+            </>
+          )}
         </div>
       )}
     </div>
