@@ -248,7 +248,6 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
 
       <div className="profile-layout stagger-children visible">
         <section className="profile-card">
-          <div className="profile-cover" />
           <div className="profile-main">
             <div className="avatar profile-avatar">
               {profile?.avatar_url ? <img src={profile.avatar_url} alt="Profile" /> : initials}
