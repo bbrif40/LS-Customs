@@ -151,15 +151,21 @@ export function AdminBookings() {
   const loading = vehicleLoading || serviceLoading
   const error = vehicleError || serviceError
 
+  const getCustomerName = (booking: VehicleBookingWithDetails | ServiceBookingWithDetails) => {
+    const relation = booking.profiles as unknown as Profile | Profile[] | null | undefined
+    const profile = Array.isArray(relation) ? relation[0] : relation
+    return profile?.full_name || 'Customer'
+  }
+
   const bookings = activeTab === 'vehicles' ? vehicleBookingsWithDetails : serviceBookingsWithDetails
 
   const filteredBookings = bookings?.filter((b) => {
     if (statusFilter !== 'all' && b.status !== statusFilter) return false
     const searchTerm = searchQuery.toLowerCase()
     if (searchTerm) {
-      const customer = b.profiles?.[0]?.full_name
+      const customer = getCustomerName(b)
       const idMatch = b.id.toLowerCase().includes(searchTerm)
-      const nameMatch = customer?.toLowerCase().includes(searchTerm)
+      const nameMatch = customer.toLowerCase().includes(searchTerm)
       if (!idMatch && !nameMatch) return false
     }
     return true
@@ -174,9 +180,13 @@ export function AdminBookings() {
 
   // Service bookings carry the customer's dropped pin. Dynamically filters
   // by the current status filter and highlights the active selected booking.
+  // Completed and cancelled bookings are removed from the active map.
   const activeServiceBookings = (serviceBookingsWithDetails ?? []).filter(
     (booking): booking is ServiceBookingWithDetails & { pin_lat: number; pin_lng: number } =>
-      booking.pin_lat != null && booking.pin_lng != null,
+      booking.pin_lat != null &&
+      booking.pin_lng != null &&
+      booking.status !== 'completed' &&
+      booking.status !== 'cancelled',
   )
 
   const relevantServiceBookings = activeServiceBookings.filter((booking) => {
@@ -185,10 +195,11 @@ export function AdminBookings() {
   })
 
   const selectedBooking = (serviceBookingsWithDetails ?? []).find((b) => b.id === selectedId)
+  const isSelectedBookingOnMap = Boolean(selectedBooking && selectedBooking.status !== 'completed' && selectedBooking.status !== 'cancelled')
 
   const servicePins: MapPin[] = relevantServiceBookings.map((booking) => {
     const isSelected = selectedId === booking.id
-    const customer = booking.profiles?.[0]?.full_name ?? `Booking #${booking.id.slice(0, 8)}`
+    const customer = getCustomerName(booking)
     const serviceName = booking.service_booking_items?.[0]?.mechanic_services?.name ?? 'Service'
     return {
       id: booking.id,
@@ -200,7 +211,7 @@ export function AdminBookings() {
     }
   })
 
-  const mapCenter = (selectedBooking?.pin_lat != null && selectedBooking?.pin_lng != null)
+  const mapCenter = (isSelectedBookingOnMap && selectedBooking?.pin_lat != null && selectedBooking?.pin_lng != null)
     ? { lat: selectedBooking.pin_lat, lng: selectedBooking.pin_lng }
     : undefined
 
@@ -421,12 +432,6 @@ export function AdminBookings() {
     }
   }
 
-  const getCustomerName = (booking: VehicleBookingWithDetails | ServiceBookingWithDetails) => {
-    const relation = booking.profiles as unknown as Profile | Profile[] | null | undefined
-    const profile = Array.isArray(relation) ? relation[0] : relation
-    return profile?.full_name || 'Customer name unavailable'
-  }
-
   const getVehicleName = (booking: VehicleBookingWithDetails) => {
     const relation = booking.vehicles as unknown as Vehicle | Vehicle[] | null | undefined
     const vehicle = Array.isArray(relation) ? relation[0] : relation
@@ -440,8 +445,11 @@ export function AdminBookings() {
   }
 
   const getMechanicName = (booking: ServiceBookingWithDetails) => {
-    const mechanic = booking.mechanic_profiles?.[0]
-    return mechanic?.profiles?.[0]?.full_name || 'Unassigned'
+    const mechanicRelation = booking.mechanic_profiles as unknown as (MechanicProfile & { profiles?: Profile | Profile[] | null }) | (MechanicProfile & { profiles?: Profile | Profile[] | null })[] | null | undefined
+    const mechanic = Array.isArray(mechanicRelation) ? mechanicRelation[0] : mechanicRelation
+    const pRelation = mechanic?.profiles
+    const prof = Array.isArray(pRelation) ? pRelation[0] : pRelation
+    return prof?.full_name || 'Unassigned'
   }
 
   if (loading) {
@@ -600,11 +608,11 @@ export function AdminBookings() {
         <section className="admin-map-panel">
           <h3>Service customer locations</h3>
           <p className="admin-map-panel-sub">
-            {selectedBooking
-              ? `Focused on Booking #${selectedBooking.id.slice(0, 8)} (${selectedBooking.profiles?.[0]?.full_name ?? 'Customer'}) · ${statusLabels[selectedBooking.status] ?? selectedBooking.status}`
+            {isSelectedBookingOnMap && selectedBooking
+              ? `Focused on Booking #${selectedBooking.id.slice(0, 8)} (${getCustomerName(selectedBooking)}) · ${statusLabels[selectedBooking.status] ?? selectedBooking.status}`
               : servicePins.length === 0
-                ? 'No service bookings have a pinned customer location yet.'
-                : `${servicePins.length} pinned service customer${servicePins.length === 1 ? '' : 's'} on the map.`}
+                ? 'No active service bookings with pinned customer locations.'
+                : `${servicePins.length} active service customer${servicePins.length === 1 ? '' : 's'} on the map.`}
           </p>
           <MapView pins={servicePins} center={mapCenter} height={360} />
         </section>
