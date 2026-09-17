@@ -3144,4 +3144,48 @@ html { scroll-behavior: smooth; }
   text-align: center;
 }
 
+/* ── Booking Summary Enhancements ────────────────────────────────── */
+.summary-booking-id {
+  display: inline-flex;
+  align-items: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #0f172a;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  letter-spacing: 0.5px;
+}
+
+.summary-phone-link {
+  display: inline-flex;
+  align-items: center;
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.summary-phone-link:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+.summary-phone-link.mechanic {
+  color: #16a34a;
+}
+
+.summary-phone-link.mechanic:hover {
+  color: #15803d;
+}
+
+.summary-mechanic-badge {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 700;
+  color: #0f172a;
+}
+
 

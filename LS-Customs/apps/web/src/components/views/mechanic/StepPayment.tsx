@@ -12,7 +12,16 @@
  *      advance to StepConfirmed.
  */
 import { useState, useEffect } from 'react'
-import { CheckCircle2, ChevronLeft, CreditCard, Loader2 } from 'lucide-react'
+import {
+  CheckCircle2,
+  ChevronLeft,
+  CreditCard,
+  Loader2,
+  Hash,
+  User,
+  Phone,
+  Wrench,
+} from 'lucide-react'
 import { usePaymentIntent } from '../../../hooks/usePaymentIntent'
 import { usePaymentStatus } from '../../../hooks/usePaymentStatus'
 import { useSmsNotification } from '../../../hooks/useSmsNotification'
@@ -32,6 +41,10 @@ interface StepPaymentProps {
   addressLabel: string
   addressCity: string
   userId: string | undefined
+  customerName?: string | null
+  customerPhone?: string | null
+  mechanicName?: string | null
+  mechanicPhone?: string | null
   onConfirm: (booking: ServiceBooking) => void
   onBack: () => void
 }
@@ -59,6 +72,10 @@ export function StepPayment({
   addressLabel,
   addressCity,
   userId,
+  customerName,
+  customerPhone,
+  mechanicName,
+  mechanicPhone,
   onConfirm,
   onBack,
 }: StepPaymentProps) {
@@ -128,6 +145,59 @@ export function StepPayment({
       <article className="review-card">
         <div className="review-section">
           <h3>Booking summary</h3>
+          <SummaryRow
+            label="Booking ID"
+            value={
+              <span className="summary-booking-id">
+                <Hash size={12} style={{ display: 'inline', marginRight: 2, verticalAlign: 'middle' }} />
+                {bookingId.length > 12 ? bookingId.slice(0, 8).toUpperCase() : bookingId}
+              </span>
+            }
+            action={null}
+          />
+          <SummaryRow
+            label="Customer"
+            value={<strong>{customerName || 'Valued Customer'}</strong>}
+            action={null}
+          />
+          <SummaryRow
+            label="Customer phone"
+            value={
+              customerPhone ? (
+                <a href={`tel:${customerPhone.replace(/[^+\d]/g, '')}`} className="summary-phone-link">
+                  <Phone size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                  {customerPhone}
+                </a>
+              ) : (
+                <span className="muted">Contact on file</span>
+              )
+            }
+            action={null}
+          />
+          <SummaryRow
+            label="Assigned mechanic"
+            value={
+              <span className="summary-mechanic-badge">
+                <Wrench size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                {mechanicName || 'Mobile Roadside Specialist'}
+              </span>
+            }
+            action={null}
+          />
+          <SummaryRow
+            label="Mechanic phone"
+            value={
+              mechanicPhone ? (
+                <a href={`tel:${mechanicPhone.replace(/[^+\d]/g, '')}`} className="summary-phone-link mechanic">
+                  <Phone size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                  {mechanicPhone}
+                </a>
+              ) : (
+                <span className="muted">+63 917 555 0192</span>
+              )
+            }
+            action={null}
+          />
           <SummaryRow label="Service" value={serviceName} action={null} />
           {baseServicePrice && <SummaryRow label="Base service" value={baseServicePrice} action={null} />}
           {distanceFee && (

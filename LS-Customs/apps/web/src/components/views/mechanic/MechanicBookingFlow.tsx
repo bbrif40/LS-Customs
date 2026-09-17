@@ -57,7 +57,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
   useEffect(() => {
     preloadMap()
   }, [])
-  const { defaultAddress, loading: profileLoading } = useProfile(userId)
+  const { profile, defaultAddress, loading: profileLoading } = useProfile(userId)
   const { services, loading: servicesLoading, source: servicesSource } = useServices()
   const scrollRef = useScrollAnimation<HTMLDivElement>()
 
@@ -79,6 +79,10 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     scheduledAt: string
     addressLabel: string
     addressCity: string
+    customerName: string
+    customerPhone: string
+    mechanicName: string
+    mechanicPhone: string
   } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -209,6 +213,11 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     const addressLabel = effectiveAddressId === defaultAddress?.id ? (defaultAddress?.label ?? defaultAddress?.line1 ?? address.label ?? address.line1) : (address.label ?? address.line1)
     const addressCity = effectiveAddressId === defaultAddress?.id ? defaultAddress.city : address.city
 
+    const custName = profile?.full_name?.trim() || 'Valued Customer'
+    const custPhone = profile?.phone?.trim() || ''
+    const mechName = assignedMechanic?.full_name || 'Rico Hernandez'
+    const mechPhone = assignedMechanic?.phone || '+63 917 555 0192'
+
     setPendingPayment({
       bookingId: bookingId ?? localRef,
       serviceName: service.name,
@@ -219,11 +228,16 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
       scheduledAt,
       addressLabel,
       addressCity,
+      customerName: custName,
+      customerPhone: custPhone,
+      mechanicName: mechName,
+      mechanicPhone: mechPhone,
     })
     setSubmitting(false)
     goTo('payment')
   }, [
     userId,
+    profile,
     service,
     date,
     time,
@@ -357,6 +371,10 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
           scheduledAt={pendingPayment.scheduledAt}
           addressLabel={pendingPayment.addressLabel}
           addressCity={pendingPayment.addressCity}
+          customerName={pendingPayment.customerName}
+          customerPhone={pendingPayment.customerPhone}
+          mechanicName={pendingPayment.mechanicName}
+          mechanicPhone={pendingPayment.mechanicPhone}
           userId={userId}
           onConfirm={(booking) => {
             setConfirmedBooking(booking)

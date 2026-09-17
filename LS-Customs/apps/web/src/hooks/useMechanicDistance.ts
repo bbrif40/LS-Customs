@@ -9,6 +9,7 @@ import { supabase } from '../supabaseClient'
 export interface DispatchMechanic {
   id: string
   full_name: string
+  phone?: string | null
   rating_avg: number
   rating_count?: number
   specialties?: string[] | null
@@ -23,6 +24,7 @@ export const DEFAULT_DISPATCH_MECHANICS: DispatchMechanic[] = [
   {
     id: 'b1111111-0000-0000-0000-000000000001',
     full_name: 'Rico Hernandez',
+    phone: '+63 917 555 0192',
     rating_avg: 4.9,
     rating_count: 38,
     specialties: ['routine_fluid_service', 'diagnostic_repair', 'tire_wheel_care'],
@@ -33,6 +35,7 @@ export const DEFAULT_DISPATCH_MECHANICS: DispatchMechanic[] = [
   {
     id: 'b1111111-0000-0000-0000-000000000002',
     full_name: 'Marco dela Cruz',
+    phone: '+63 918 555 0184',
     rating_avg: 4.85,
     rating_count: 24,
     specialties: ['electrical_battery_care', 'lighting_visibility', 'quick_fixes'],
@@ -43,6 +46,7 @@ export const DEFAULT_DISPATCH_MECHANICS: DispatchMechanic[] = [
   {
     id: 'b1111111-0000-0000-0000-000000000003',
     full_name: 'Andre Villanueva',
+    phone: '+63 920 555 0177',
     rating_avg: 4.95,
     rating_count: 52,
     specialties: ['routine_fluid_service', 'tire_wheel_care'],
