@@ -1,10 +1,12 @@
 /**
  * StepReview — last step before submission. Shows the full booking summary
- * with per-section "Edit" links that jump back to the relevant step.
+ * including base service price, assigned driver, distance from mechanic,
+ * distance fee (every 5km is ₱85), and calculated total price.
  */
 import { ChevronLeft } from 'lucide-react'
 import type { Service } from '../../../types'
 import type { ChosenAddress } from './MechanicBookingFlow'
+import type { DispatchMechanic } from '../../../hooks/useMechanicDistance'
 import { SummaryRow } from './SummaryRow'
 import type { Step } from './steps'
 
@@ -13,6 +15,11 @@ interface StepReviewProps {
   date: string | null
   time: string | null
   address: ChosenAddress | null
+  assignedMechanic?: DispatchMechanic | null
+  distanceKm?: number
+  distanceFeePesos?: number
+  formattedDistanceFee?: string
+  totalPricePesos?: number
   submitting: boolean
   submitError: string | null
   onBack: () => void
@@ -27,10 +34,10 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 }
 
-function formatPrice(service: Service | null): string {
+function formatBasePrice(service: Service | null): string {
   if (!service) return '—'
-  if (service.priceCents != null) return `$${(service.priceCents / 100).toFixed(2)}`
-  return service.price
+  if (service.priceCents != null) return `₱${(service.priceCents / 100).toFixed(2)}`
+  return service.price.startsWith('$') ? `₱${service.price.slice(1)}` : service.price
 }
 
 export function StepReview({
@@ -38,6 +45,11 @@ export function StepReview({
   date,
   time,
   address,
+  assignedMechanic,
+  distanceKm = 0,
+  distanceFeePesos = 85,
+  formattedDistanceFee = '₱85.00',
+  totalPricePesos,
   submitting,
   submitError,
   onBack,
@@ -51,6 +63,9 @@ export function StepReview({
 
   const isIncomplete = missing.length > 0
 
+  const basePriceNum = service?.priceCents != null ? service.priceCents / 100 : 0
+  const finalTotal = totalPricePesos ?? (basePriceNum + distanceFeePesos)
+
   return (
     <section className="step-panel">
       <header className="step-panel-head">
@@ -59,14 +74,14 @@ export function StepReview({
         </button>
         <p className="eyebrow">STEP 5 OF 6</p>
         <h2>Review & confirm</h2>
-        <p className="muted">Double-check the details before we book the mechanic.</p>
+        <p className="muted">Double-check the details and total price before booking.</p>
       </header>
 
       <article className="review-card">
         <div className="review-section">
-          <h3>Service</h3>
+          <h3>Service Details</h3>
           <SummaryRow
-            label="Type"
+            label="Service"
             value={service ? service.name : '—'}
             action={
               <button type="button" className="text-button" onClick={() => onJumpTo('service')}>
@@ -81,8 +96,45 @@ export function StepReview({
           />
           <SummaryRow label="Est. duration" value={service ? service.duration : '—'} action={null} />
           <SummaryRow
-            label="Price"
-            value={<strong>{formatPrice(service)}</strong>}
+            label="Base Price"
+            value={<strong>{formatBasePrice(service)}</strong>}
+            action={null}
+          />
+        </div>
+
+        <div className="review-section">
+          <h3>Driver & Distance Calculation</h3>
+          <SummaryRow
+            label="Assigned Driver"
+            value={
+              assignedMechanic
+                ? `${assignedMechanic.full_name} (★ ${assignedMechanic.rating_avg.toFixed(1)})`
+                : 'Closest Active Driver'
+            }
+            action={null}
+          />
+          <SummaryRow
+            label="Est. Distance"
+            value={`${distanceKm > 0 ? distanceKm.toFixed(1) : '3.5'} km from mechanic`}
+            action={null}
+          />
+          <SummaryRow
+            label="Distance Fee"
+            value={
+              <span>
+                <strong>{formattedDistanceFee}</strong>{' '}
+                <small className="muted">(every 5km is ₱85)</small>
+              </span>
+            }
+            action={null}
+          />
+          <SummaryRow
+            label="Total Price"
+            value={
+              <strong className="review-total-highlight">
+                ₱{finalTotal.toFixed(2)}
+              </strong>
+            }
             action={null}
           />
         </div>
@@ -138,7 +190,7 @@ export function StepReview({
             disabled={isIncomplete || submitting}
             onClick={onConfirm}
           >
-            {submitting ? 'Confirming…' : 'Confirm booking'}
+            {submitting ? 'Confirming…' : `Proceed to Payment (₱${finalTotal.toFixed(2)})`}
           </button>
         </div>
       </article>

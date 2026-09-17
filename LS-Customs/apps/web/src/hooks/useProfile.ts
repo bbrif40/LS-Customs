@@ -13,11 +13,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 import type { Profile as DbProfile } from '@ls-customs/shared-types'
 
-interface DefaultAddress {
+export interface DefaultAddress {
   id: string
   line1: string
   city: string
   label: string | null
+  lat?: number | null
+  lng?: number | null
 }
 
 interface UseProfileResult {
@@ -59,7 +61,7 @@ export function useProfile(userId: string | undefined): UseProfileResult {
 
       const { data: addressRow, error: addressError } = await supabase
         .from('addresses')
-        .select('id, line1, city, label')
+        .select('id, line1, city, label, lat, lng')
         .eq('customer_id', userId)
         .eq('is_default', true)
         .maybeSingle()

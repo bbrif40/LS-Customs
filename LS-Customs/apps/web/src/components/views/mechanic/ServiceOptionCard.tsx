@@ -30,6 +30,7 @@ export function ServiceOptionCard({ service, selected, onSelect }: ServiceOption
       </div>
       <div className="service-row-price">
         <strong>{service.price}</strong>
+        <small className="distance-fee-hint">+ ₱85/5km travel fee</small>
         <span className="select-indicator">{selected ? 'Selected' : 'Choose'}</span>
       </div>
     </button>

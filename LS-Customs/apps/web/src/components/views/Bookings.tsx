@@ -5,6 +5,7 @@ import { usePaymentStatus } from '../../hooks/usePaymentStatus'
 import { PaymentForm } from '../common/PaymentForm'
 import { PageHeading } from '../common/PageHeading'
 import { MapView } from '../common/map'
+import { VirtualMechanicTracker } from '../common/VirtualMechanicTracker'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { useCustomerBookings, type CustomerServiceBooking, type CustomerVehicleBooking } from '../../hooks/useCustomerBookings'
 
@@ -20,6 +21,12 @@ interface BookingsProps {
 }
 function statusLabel(status: string) { return status.replace('_', ' ').toUpperCase() }
 function statusClass(status: string) { return ['assigned', 'en_route', 'in_progress', 'confirmed'].includes(status) ? 'green' : status === 'cancelled' ? 'red' : 'amber' }
+
+function extractAddressFromNotes(notes?: string | null): string | null {
+  if (!notes) return null
+  const match = notes.match(/Address:\s*([^|]+)/i)
+  return match && match[1]?.trim() ? match[1].trim() : null
+}
 
 /** Payment status pill — maps payment.status to a colored pill. */
 function paymentStatusLabel(status: string): string {
@@ -231,10 +238,40 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
             </div>
           )}
 
+          {/* Virtual Mechanic En Route Live Simulation */}
+          {isService && details.booking.status === 'en_route' && (
+            <div style={{ marginBottom: 16 }}>
+              <VirtualMechanicTracker
+                status="en_route"
+                mechanicName={mechName ?? 'Assigned Mechanic'}
+                mechanicPhone={mechPhone ?? null}
+                customerAddress={extractAddressFromNotes(details.booking.notes)}
+                customerLocation={
+                  details.booking.pin_lat != null && details.booking.pin_lng != null
+                    ? { lat: details.booking.pin_lat, lng: details.booking.pin_lng }
+                    : null
+                }
+                initialDistanceKm={4.5}
+                etaMinutes={12}
+                unitName="UNIT #04 • LS DISPATCH"
+                isLightMode={true}
+              />
+            </div>
+          )}
+
           {isService ? (
             <>
               <DetailRow icon={Calendar} label="Scheduled" value={new Date(details.booking.scheduled_at).toLocaleString()} />
-              <DetailRow icon={MapPin} label="Service location" value={details.booking.pin_lat != null && details.booking.pin_lng != null ? `${details.booking.pin_lat.toFixed(4)}, ${details.booking.pin_lng.toFixed(4)}` : 'Location to be confirmed'} />
+              <DetailRow
+                icon={MapPin}
+                label="Service location"
+                value={
+                  extractAddressFromNotes(details.booking.notes) ??
+                  (details.booking.pin_lat != null && details.booking.pin_lng != null
+                    ? `${details.booking.pin_lat.toFixed(4)}, ${details.booking.pin_lng.toFixed(4)}`
+                    : 'Location to be confirmed')
+                }
+              />
               {isAssigned && mechName && <DetailRow icon={UserCircle2} label="Mechanic" value={mechName} />}
               {isAssigned && mechPhone && <DetailRow icon={Phone} label="Mechanic phone" value={mechPhone} />}
               {serviceNames && <DetailRow icon={Tag} label="Services" value={serviceNames} />}
@@ -415,7 +452,50 @@ export function Bookings({ userId, onNotify, selectedBookingId, onClearSelection
           }}
         />
       )}
-      {liveBooking && (() => { const mech = liveBooking.mechanic_profiles; const lat = mech?.current_lat ?? liveBooking.pin_lat!; const lng = mech?.current_lng ?? liveBooking.pin_lng!; return <div className="map-modal-backdrop" onClick={() => setLiveBooking(null)}><div className="map-modal" onClick={(event) => event.stopPropagation()}><header><h3>Service location</h3><button onClick={() => setLiveBooking(null)} aria-label="Close map"><X size={18} /></button></header><MapView pins={[{ id: liveBooking.id, lat, lng, title: 'Your service booking' }]} center={{ lat, lng }} zoom={15} height={420} /></div></div> })()}
+      {liveBooking && (() => {
+        const mech = liveBooking.mechanic_profiles
+        const lat = mech?.current_lat ?? liveBooking.pin_lat!
+        const lng = mech?.current_lng ?? liveBooking.pin_lng!
+        const customerAddress = extractAddressFromNotes(liveBooking.notes)
+        const isEnRoute = liveBooking.status === 'en_route'
+        return (
+          <div className="map-modal-backdrop" onClick={() => setLiveBooking(null)}>
+            <div className="map-modal" onClick={(event) => event.stopPropagation()} style={{ maxWidth: isEnRoute ? 640 : 540 }}>
+              <header>
+                <h3>{isEnRoute ? 'Live Virtual Mechanic En Route' : 'Service location'}</h3>
+                <button onClick={() => setLiveBooking(null)} aria-label="Close map"><X size={18} /></button>
+              </header>
+              <div style={{ padding: '12px 16px' }}>
+                {isEnRoute && (
+                  <div style={{ marginBottom: 14 }}>
+                    <VirtualMechanicTracker
+                      status="en_route"
+                      mechanicName={mech?.profiles?.full_name ?? 'Assigned Mechanic'}
+                      mechanicPhone={mech?.profiles?.phone ?? null}
+                      customerAddress={customerAddress}
+                      customerLocation={
+                        liveBooking.pin_lat != null && liveBooking.pin_lng != null
+                          ? { lat: liveBooking.pin_lat, lng: liveBooking.pin_lng }
+                          : null
+                      }
+                      initialDistanceKm={4.5}
+                      etaMinutes={12}
+                      unitName="UNIT #04 • LS DISPATCH"
+                      isLightMode={true}
+                    />
+                  </div>
+                )}
+                <MapView
+                  pins={[{ id: liveBooking.id, lat, lng, title: 'Your service location' }]}
+                  center={{ lat, lng }}
+                  zoom={15}
+                  height={isEnRoute ? 240 : 420}
+                />
+              </div>
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }

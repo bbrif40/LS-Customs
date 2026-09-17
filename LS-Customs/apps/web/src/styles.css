@@ -390,6 +390,158 @@ html, body, #root { min-height: 100%; height: auto !important; overflow-y: auto 
 .address-fields input { border: 1px solid #dce4df; border-radius: 7px; padding: 11px 12px; color: #142026; outline: 0; font-size: 12px; background: #fff; }
 .address-fields input:focus { border-color: #3f785c; box-shadow: 0 0 0 3px rgba(63,120,92,.12); }
 
+/* Live Driver Distance & Travel Fee Card */
+.driver-distance-card {
+  background: linear-gradient(135deg, #f0f7f3 0%, #e6f2eb 100%);
+  border: 1.5px solid #a3cfb8;
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+  box-shadow: 0 4px 14px rgba(63, 120, 92, 0.08);
+}
+.driver-distance-badge-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.driver-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #3f785c;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+.driver-pill .live-dot {
+  width: 6px;
+  height: 6px;
+  background: #a3ffc2;
+  border-radius: 50%;
+  animation: pulse-dot 1.5s infinite;
+}
+@keyframes pulse-dot {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.3); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+.rate-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #2b5641;
+  background: rgba(63, 120, 92, 0.12);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.driver-info-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.driver-avatar-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #254937;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 15px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  flex-shrink: 0;
+}
+.driver-info-meta {
+  flex: 1;
+}
+.driver-info-meta strong {
+  display: block;
+  font-size: 13.5px;
+  color: #142026;
+}
+.driver-info-meta p {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: #556c66;
+}
+.driver-distance-stat {
+  text-align: right;
+  flex-shrink: 0;
+}
+.driver-distance-stat span {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #728087;
+  text-transform: uppercase;
+}
+.driver-distance-stat strong {
+  font-size: 15px;
+  color: #3f785c;
+}
+.distance-fee-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #b2d6c3;
+  flex-wrap: wrap;
+}
+.fee-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.fee-item span {
+  font-size: 10px;
+  color: #637772;
+}
+.fee-item strong {
+  font-size: 13px;
+  color: #142026;
+}
+.fee-item .fee-accent {
+  color: #c2410c;
+}
+.fee-item small {
+  font-size: 9.5px;
+  color: #8fa29c;
+}
+.fee-divider {
+  font-size: 14px;
+  font-weight: 700;
+  color: #728087;
+}
+.fee-item-total {
+  margin-left: auto;
+  text-align: right;
+}
+.fee-item-total .total-highlight {
+  font-size: 17px;
+  color: #1b4332;
+  font-weight: 800;
+}
+.review-total-highlight {
+  font-size: 17px;
+  color: #1b4332;
+  font-weight: 800;
+}
+.distance-fee-hint {
+  display: block;
+  color: #c2410c;
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
 /* Rental detail and payment view */
 .rental-payment-page { max-width: 1320px; }
 .rental-detail-gallery { display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 145px 145px; gap: 10px; margin: 28px 0 27px; }
@@ -2656,6 +2808,340 @@ html { scroll-behavior: smooth; }
 
 .emergency-modal-dialog.light-mode .roadside-safety-box ul {
   color: #78350f !important;
+}
+
+/* ── StepLocation GPS Auto-Detection Header ───────────────────────── */
+.gps-auto-detect-header {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.gps-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.gps-status-pill.locating {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.gps-status-pill.detected {
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.gps-detect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 5px 11px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.gps-detect-btn:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+/* ── Virtual Mechanic Tracker (Dark Theme for Admin & Modals) ─────── */
+.virtual-gps-tracker-card.dark-theme {
+  background: #151d2a;
+  border: 1px solid #2d3748;
+  color: #f1f5f9;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.virtual-gps-tracker-card.dark-theme .gps-map-header {
+  background: #0f172a;
+  border-bottom: 1px solid #2d3748;
+  color: #f8fafc;
+}
+
+.virtual-gps-tracker-card.dark-theme .gps-map-title {
+  color: #f8fafc;
+}
+
+.virtual-gps-tracker-card.dark-theme .gps-telemetry-strip {
+  color: #94a3b8;
+}
+
+.virtual-gps-tracker-card.dark-theme .gps-map-canvas-container {
+  background: #0b1120;
+}
+
+.virtual-gps-tracker-card.dark-theme .gps-live-road-footer {
+  background: #0f172a;
+  border-top: 1px solid #2d3748;
+  color: #cbd5e1;
+}
+
+.virtual-gps-tracker-card.dark-theme .road-name-chip {
+  color: #93c5fd;
+}
+
+.virtual-gps-tracker-card.dark-theme .eta-live-chip {
+  color: #fbbf24;
+}
+
+/* Driver Context Strip */
+.virtual-mechanic-driver-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(15, 23, 42, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.virtual-gps-tracker-card.light-theme .virtual-mechanic-driver-bar {
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.v-mechanic-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.v-mechanic-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.v-mechanic-meta strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.virtual-gps-tracker-card.light-theme .v-mechanic-meta strong {
+  color: #0f172a;
+}
+
+.v-mechanic-meta p {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.virtual-gps-tracker-card.light-theme .v-mechanic-meta p {
+  color: #64748b;
+}
+
+.v-mechanic-dest {
+  margin-top: 3px !important;
+  color: #38bdf8 !important;
+  font-weight: 600;
+}
+
+.virtual-gps-tracker-card.light-theme .v-mechanic-dest {
+  color: #0284c7 !important;
+}
+
+.v-mechanic-call-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  background: #22c55e;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.v-mechanic-call-btn:hover {
+  background: #16a34a;
+}
+
+/* ── Interactive Map Search Bar & Predictive Suggestions ─────────── */
+.map-search-bar-container {
+  position: relative;
+  margin-bottom: 8px;
+  z-index: 1000;
+}
+
+.map-search-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  padding: 0 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.map-search-input-wrap:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.map-search-icon {
+  color: #64748b;
+  flex-shrink: 0;
+  margin-right: 9px;
+}
+
+.map-search-input {
+  width: 100%;
+  height: 40px;
+  border: none !important;
+  outline: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  font-size: 13px !important;
+  color: #0f172a !important;
+  box-shadow: none !important;
+}
+
+.map-search-input::placeholder {
+  color: #94a3b8;
+}
+
+.map-search-spinner {
+  color: #2563eb;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.map-search-clear-btn {
+  background: transparent;
+  border: none;
+  padding: 4px;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  margin-left: 6px;
+  transition: all 0.15s ease;
+}
+
+.map-search-clear-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* Predictive Suggestions Dropdown */
+.map-suggestions-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 1050;
+  padding: 6px 0;
+}
+
+.suggestions-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 2px;
+}
+
+.suggestion-item {
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 9px 14px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.suggestion-item:hover,
+.suggestion-item:focus-visible {
+  background: #f8fafc;
+  outline: none;
+}
+
+.suggestion-icon {
+  color: #2563eb;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.suggestion-icon.popular {
+  color: #eab308;
+}
+
+.suggestion-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-address {
+  display: block;
+  font-size: 11.5px;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.suggestions-empty {
+  padding: 16px 14px;
+  font-size: 12.5px;
+  color: #64748b;
+  text-align: center;
 }
 
 

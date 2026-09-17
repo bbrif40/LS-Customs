@@ -10,9 +10,9 @@
  * no new dependencies.
  */
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react'
-import { X, MapPin, Clock, User, Wrench, Calendar, Hash, Phone } from 'lucide-react'
+import { X, MapPin, Clock, User, Wrench, Calendar, Hash, Phone, Navigation } from 'lucide-react'
 import { MapView, type MapPin as MapPinData } from '../common/map'
-
+import { VirtualMechanicTracker } from '../common/VirtualMechanicTracker'
 
 // Statuses for which the customer streams live GPS. Mirrors the
 // ACTIVE_STATUSES list in useLiveLocationForActiveBooking.
@@ -52,9 +52,10 @@ export interface AdminBookingDetailBooking {
   current_lat?: number | null
   current_lng?: number | null
   location_updated_at?: string | null
+  notes?: string | null
   customer_id: string
   profiles?: { id: string; full_name: string | null; phone: string | null }[] | null
-  mechanic_profiles?: { id: string; profiles?: { id: string; full_name: string | null }[] | null }[] | null
+  mechanic_profiles?: { id: string; profiles?: { id: string; full_name: string | null; phone?: string | null }[] | null }[] | null
   addresses?: { id: string; line1: string; city: string }[] | null
   service_booking_items?: { mechanic_services?: { name: string } | null }[] | null
 }
@@ -100,10 +101,27 @@ function getServiceNames(b: AdminBookingDetailBooking): string {
 function getAddress(b: AdminBookingDetailBooking): string {
   const a = b.addresses?.[0]
   if (a) return `${a.line1}, ${a.city}`
+  if (b.notes) {
+    const match = b.notes.match(/Address:\s*([^|]+)/i)
+    if (match && match[1]?.trim()) {
+      return match[1].trim()
+    }
+  }
   if (b.pin_lat != null && b.pin_lng != null) {
     return `Pin: ${b.pin_lat.toFixed(4)}, ${b.pin_lng.toFixed(4)}`
   }
   return 'No address on file'
+}
+
+function getNotesBreakdown(notes?: string | null) {
+  if (!notes) return null
+  const feeMatch = notes.match(/Distance Fee:\s*(₱?[\d,.]+)/i)
+  const distMatch = notes.match(/\(([\d.]+)\s*km\s*from\s*([^)]+)\)/i)
+  return {
+    fee: feeMatch ? feeMatch[1] : null,
+    dist: distMatch ? distMatch[1] : null,
+    driver: distMatch ? distMatch[2] : null,
+  }
 }
 
 export function AdminBookingDetail(props: AdminBookingDetailProps) {
@@ -317,20 +335,74 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
             </p>
           </section>
 
-          {/* Address */}
+          {/* En Route Virtual Mechanic Live Road Simulation */}
+          {booking.status === 'en_route' && (
+            <section className="admin-booking-detail-section" style={{ padding: '8px 0 16px' }}>
+              <VirtualMechanicTracker
+                status={booking.status}
+                mechanicName={getMechanicName(booking)}
+                mechanicPhone={booking.mechanic_profiles?.[0]?.profiles?.[0]?.phone ?? null}
+                customerAddress={getAddress(booking)}
+                customerLocation={
+                  booking.pin_lat != null && booking.pin_lng != null
+                    ? { lat: booking.pin_lat, lng: booking.pin_lng }
+                    : null
+                }
+                initialDistanceKm={
+                  getNotesBreakdown(booking.notes)?.dist
+                    ? parseFloat(getNotesBreakdown(booking.notes)!.dist!)
+                    : 4.2
+                }
+                etaMinutes={12}
+                unitName="UNIT #04 • LS DISPATCH"
+              />
+            </section>
+          )}
+
+          {/* Customer Location & Address */}
           <section className="admin-booking-detail-section">
             <h4>
               <MapPin size={11} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-              Address
+              Customer Service Location
             </h4>
-            <p>{getAddress(booking)}</p>
+            <p style={{ fontWeight: 600, color: '#f1f5f9' }}>{getAddress(booking)}</p>
+            {booking.pin_lat != null && booking.pin_lng != null && (
+              <p style={{ marginTop: 4, fontSize: 11, color: '#9ca3af', fontFamily: 'monospace' }}>
+                GPS Pin: {booking.pin_lat.toFixed(5)}, {booking.pin_lng.toFixed(5)}
+              </p>
+            )}
+            {(() => {
+              const breakdown = getNotesBreakdown(booking.notes)
+              if (!breakdown?.fee) return null
+              return (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: '8px 12px',
+                    background: 'rgba(59, 130, 246, 0.1)',
+                    border: '1px solid rgba(59, 130, 246, 0.25)',
+                    borderRadius: 6,
+                    fontSize: 11,
+                  }}
+                >
+                  <span style={{ color: '#93c5fd', fontWeight: 600 }}>Distance Travel Fee: </span>
+                  <strong style={{ color: '#60a5fa' }}>{breakdown.fee}</strong>
+                  {breakdown.dist && (
+                    <span style={{ color: '#94a3b8' }}>
+                      {' '}
+                      ({breakdown.dist} km from {breakdown.driver ?? 'driver'})
+                    </span>
+                  )}
+                </div>
+              )
+            })()}
           </section>
 
           {/* Saved pickup map */}
           <section className="admin-booking-detail-section">
             <h4>
               <MapPin size={11} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-              Saved pickup location
+              Saved pickup pin
             </h4>
             <div className="admin-booking-detail-map-wrap">
               {hasSavedPin ? (

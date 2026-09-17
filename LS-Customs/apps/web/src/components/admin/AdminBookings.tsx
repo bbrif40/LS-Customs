@@ -527,12 +527,18 @@ export function AdminBookings() {
                                   minute: '2-digit',
                                 })}
                               </td>
-                              <td style={{ fontSize: 12, color: 'var(--admin-muted)', maxWidth: 200 }}>
-                                {sb.addresses?.[0]
-                                  ? `${sb.addresses[0].line1}, ${sb.addresses[0].city}`
-                                  : sb.pin_lat != null && sb.pin_lng != null
-                                    ? `Pin: ${sb.pin_lat.toFixed(4)}, ${sb.pin_lng.toFixed(4)}`
-                                    : '—'}
+                              <td style={{ fontSize: 12, color: 'var(--admin-muted)', maxWidth: 220 }}>
+                                {(() => {
+                                  if (sb.addresses?.[0]) return `${sb.addresses[0].line1}, ${sb.addresses[0].city}`
+                                  if (sb.notes) {
+                                    const match = sb.notes.match(/Address:\s*([^|]+)/i)
+                                    if (match && match[1]?.trim()) return match[1].trim()
+                                  }
+                                  if (sb.pin_lat != null && sb.pin_lng != null) {
+                                    return `Pin: ${sb.pin_lat.toFixed(4)}, ${sb.pin_lng.toFixed(4)}`
+                                  }
+                                  return '—'
+                                })()}
                               </td>
                             </>
                           )

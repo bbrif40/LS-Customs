@@ -45,7 +45,26 @@ function imageFor(category: string): string | undefined {
   return IMAGE_BY_CATEGORY.find((entry) => entry.keywords.some((keyword) => lower.includes(keyword)))?.image
 }
 
+const CATEGORY_NAMES: Record<string, string> = {
+  routine_fluid_service: 'Routine Fluid Service',
+  tire_wheel_care: 'Tire & Wheel Care',
+  electrical_battery_care: 'Electrical & Battery Care',
+  diagnostic_repair: 'Diagnostic Repair',
+  lighting_visibility: 'Lighting Visibility',
+  quick_fixes: 'Quick Fixes',
+}
+
+const CATEGORY_ORDER: string[] = [
+  'routine_fluid_service',
+  'tire_wheel_care',
+  'electrical_battery_care',
+  'diagnostic_repair',
+  'lighting_visibility',
+  'quick_fixes',
+]
+
 function prettyLabel(raw: string): string {
+  if (CATEGORY_NAMES[raw]) return CATEGORY_NAMES[raw]
   // snake_case → Title Case
   return raw
     .replace(/_/g, ' ')
@@ -60,13 +79,22 @@ export function StepCategory({ services, loading, source, selected, onSelect }: 
     for (const s of services) {
       map.set(s.category, (map.get(s.category) ?? 0) + 1)
     }
-    return Array.from(map.entries()).map(([raw, count]) => ({
+    const items = Array.from(map.entries()).map(([raw, count]) => ({
       raw,
       label: prettyLabel(raw),
       count,
       icon: iconFor(raw),
       image: imageFor(raw),
     }))
+
+    return items.sort((a, b) => {
+      const idxA = CATEGORY_ORDER.indexOf(a.raw)
+      const idxB = CATEGORY_ORDER.indexOf(b.raw)
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB
+      if (idxA !== -1) return -1
+      if (idxB !== -1) return 1
+      return a.label.localeCompare(b.label)
+    })
   }, [services])
 
   return (

@@ -14,7 +14,17 @@ interface StepServiceProps {
   onBack: () => void
 }
 
+const CATEGORY_NAMES: Record<string, string> = {
+  routine_fluid_service: 'Routine Fluid Service',
+  tire_wheel_care: 'Tire & Wheel Care',
+  electrical_battery_care: 'Electrical & Battery Care',
+  diagnostic_repair: 'Diagnostic Repair',
+  lighting_visibility: 'Lighting Visibility',
+  quick_fixes: 'Quick Fixes',
+}
+
 function prettyLabel(raw: string): string {
+  if (CATEGORY_NAMES[raw]) return CATEGORY_NAMES[raw]
   return raw
     .replace(/_/g, ' ')
     .split(' ')

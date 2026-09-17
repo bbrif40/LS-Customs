@@ -2,15 +2,15 @@
  * MechanicBookingFlow — orchestrator for the multi-step mechanic booking flow.
  *
  * Owns the form state, validates per step, and renders the active step.
+ * Dynamically estimates the customer's distance from the assigned driver / mechanic
+ * and calculates the total price by adding the distance travel fee (every 5km is 85 pesos).
  * On confirm, inserts a `service_bookings` row and shows the Confirmed step.
- *
- * Falls back to a generated reference + no insert if the table is missing,
- * mirroring useServices' graceful degradation.
  */
 import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '../../../supabaseClient'
 import { useProfile } from '../../../hooks/useProfile'
 import { useServices } from '../../../hooks/useServices'
+import { useMechanicDistance } from '../../../hooks/useMechanicDistance'
 import { useScrollAnimation } from '../../../hooks/useScrollAnimation'
 import { PageHeading } from '../../common/PageHeading'
 import { BookingStepper } from './BookingStepper'
@@ -44,19 +44,13 @@ interface MechanicBookingFlowProps {
 }
 
 function generateLocalRef(): string {
-  // LSC-XXXX (4 hex chars) — used as a stand-in when the DB is unreachable.
   const tail = Math.floor(Math.random() * 0xffff).toString(16).toUpperCase().padStart(4, '0')
   return `LSC-${tail}`
 }
 
 function buildScheduledAt(date: string, time: string): string {
-  // Combine YYYY-MM-DD + HH:MM into an ISO string at local time.
   const d = new Date(`${date}T${time}:00`)
   return d.toISOString()
-}
-
-function formatPriceCents(cents: number): string {
-  return `$${(cents / 100).toFixed(2)}`
 }
 
 export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: MechanicBookingFlowProps) {
@@ -79,11 +73,34 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     bookingId: string
     serviceName: string
     servicePrice: string
+    baseServicePrice: string
+    distanceFee: string
+    distanceKm: string
     scheduledAt: string
     addressLabel: string
     addressCity: string
   } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // Determine customer coordinates from dropped pin or saved default address
+  const customerLat = address?.pin_lat ?? defaultAddress?.lat ?? 14.5995
+  const customerLng = address?.pin_lng ?? defaultAddress?.lng ?? 120.9842
+
+  // Live distance and travel fee estimation (every 5km is 85 pesos)
+  const {
+    assignedMechanic,
+    distanceKm,
+    distanceFeePesos,
+    distanceFeeCents,
+    formattedDistanceFee,
+    formattedDistance,
+  } = useMechanicDistance(customerLat, customerLng)
+
+  const basePriceCents = service?.priceCents ?? 0
+  const totalPriceCents = basePriceCents + distanceFeeCents
+  const totalPricePesos = totalPriceCents / 100
+  const formattedTotalPrice = `₱${totalPricePesos.toFixed(2)}`
+  const formattedBasePrice = `₱${(basePriceCents / 100).toFixed(2)}`
 
   const goTo = useCallback((target: Step) => {
     setStep(target)
@@ -124,10 +141,6 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     }
     if (!service || !date || !time || !address) return
 
-    // ponytail: a non-UUID `id` would mean useServices returned a service
-    // without a DB row. Since the static fallback was removed, the only
-    // way to land here is the live query failing mid-load. Refuse rather
-    // than send a name string to a `uuid` column.
     const looksLikeUuid = typeof service.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.id)
     if (!looksLikeUuid) {
       // eslint-disable-next-line no-console
@@ -136,10 +149,6 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
       return
     }
 
-    // The DB has a `one_location_only` CHECK: a booking must carry EITHER a
-    // saved `address_id` OR a dropped pin (pin_lat + pin_lng), never neither.
-    // If the user picked a custom address but never dropped a pin, fall back
-    // to their saved default address (if any) before sending to the DB.
     const hasPin = address.pin_lat != null && address.pin_lng != null
     const effectiveAddressId = address.id ?? (address.source === 'custom' && !hasPin ? defaultAddress?.id ?? null : null)
     if (!effectiveAddressId && !hasPin) {
@@ -151,7 +160,6 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     setSubmitError(null)
 
     const scheduledAt = buildScheduledAt(date, time)
-    const totalCents = service.priceCents ?? 0
     const localRef = generateLocalRef()
 
     // Persist the booking and its selected service as one customer flow.
@@ -163,11 +171,12 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
         .from('service_bookings')
         .insert({
           customer_id: userId,
-          address_id: effectiveAddressId,
+          address_id: hasPin ? null : effectiveAddressId,
+          mechanic_id: assignedMechanic?.id ?? null,
           scheduled_at: scheduledAt,
           status: 'pending',
-          total_price: totalCents / 100,
-          notes: null,
+          total_price: totalPricePesos,
+          notes: `Address: ${address.line1}, ${address.city} | Base: ${formattedBasePrice} + Distance Fee: ${formattedDistanceFee} (${distanceKm.toFixed(1)} km from ${assignedMechanic?.full_name ?? 'driver'})`,
           pin_lat: hasPin ? address.pin_lat : null,
           pin_lng: hasPin ? address.pin_lng : null,
         })
@@ -183,14 +192,10 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
         service_booking_id: bookingId,
         mechanic_service_id: service.id,
         quantity: 1,
-        price_at_booking: totalCents / 100,
+        price_at_booking: basePriceCents / 100,
       })
       if (itemError) throw itemError
     } catch (err) {
-      // ponytail: surface the real DB error to the customer; the previous
-      // generic "Booking could not be saved" hid the actual constraint.
-      // PostgREST errors are plain objects ({message, code, hint, details})
-      // not Error instances, so `String(err)` would be "[object Object]".
       const e = err as { message?: string; hint?: string; details?: string } | null
       const raw = e?.message ?? (err instanceof Error ? err.message : String(err))
       const message = /one_location_only/i.test(raw)
@@ -201,21 +206,40 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
       return
     }
 
-    const servicePrice = service.priceCents != null ? formatPriceCents(service.priceCents) : service.price
     const addressLabel = effectiveAddressId === defaultAddress?.id ? (defaultAddress?.label ?? defaultAddress?.line1 ?? address.label ?? address.line1) : (address.label ?? address.line1)
     const addressCity = effectiveAddressId === defaultAddress?.id ? defaultAddress.city : address.city
 
     setPendingPayment({
       bookingId: bookingId ?? localRef,
       serviceName: service.name,
-      servicePrice,
+      servicePrice: formattedTotalPrice,
+      baseServicePrice: formattedBasePrice,
+      distanceFee: formattedDistanceFee,
+      distanceKm: formattedDistance,
       scheduledAt,
       addressLabel,
       addressCity,
     })
     setSubmitting(false)
     goTo('payment')
-  }, [userId, service, date, time, address, defaultAddress, goTo])
+  }, [
+    userId,
+    service,
+    date,
+    time,
+    address,
+    defaultAddress,
+    goTo,
+    onNotify,
+    assignedMechanic,
+    totalPricePesos,
+    basePriceCents,
+    distanceKm,
+    formattedBasePrice,
+    formattedDistanceFee,
+    formattedDistance,
+    formattedTotalPrice,
+  ])
 
   // Once a booking is confirmed we render the Confirmed step regardless
   // of the current step value.
@@ -225,7 +249,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
         <PageHeading
           eyebrow="MOBILE MECHANIC"
           title="Service confirmed"
-          detail="Your booking is in. We'll notify you once a mechanic is assigned."
+          detail="Your booking is in. We'll notify you once your mechanic is dispatched."
         />
         <StepConfirmed
           booking={confirmedBooking}
@@ -241,7 +265,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
       <PageHeading
         eyebrow="MOBILE MECHANIC"
         title="Book a mechanic"
-        detail="Six quick steps. Choose a category, pick a service, set a time, confirm a location, and pay."
+        detail="Choose a category, pick a service, set a schedule, select your location, and review estimated distance pricing."
       />
       <BookingStepper current={step} onJump={goTo} />
 
@@ -295,6 +319,11 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
           onChange={setAddress}
           onBack={goBack}
           onNext={goNext}
+          assignedMechanic={assignedMechanic}
+          distanceKm={distanceKm}
+          distanceFeePesos={distanceFeePesos}
+          formattedDistanceFee={formattedDistanceFee}
+          service={service}
         />
       )}
 
@@ -304,6 +333,11 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
           date={date}
           time={time}
           address={address}
+          assignedMechanic={assignedMechanic}
+          distanceKm={distanceKm}
+          distanceFeePesos={distanceFeePesos}
+          formattedDistanceFee={formattedDistanceFee}
+          totalPricePesos={totalPricePesos}
           submitting={submitting}
           submitError={submitError}
           onBack={goBack}
@@ -317,6 +351,9 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
           bookingId={pendingPayment.bookingId}
           serviceName={pendingPayment.serviceName}
           servicePrice={pendingPayment.servicePrice}
+          baseServicePrice={pendingPayment.baseServicePrice}
+          distanceFee={pendingPayment.distanceFee}
+          distanceKm={pendingPayment.distanceKm}
           scheduledAt={pendingPayment.scheduledAt}
           addressLabel={pendingPayment.addressLabel}
           addressCity={pendingPayment.addressCity}

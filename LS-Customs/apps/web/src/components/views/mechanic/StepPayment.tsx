@@ -25,6 +25,9 @@ interface StepPaymentProps {
   bookingId: string
   serviceName: string
   servicePrice: string
+  baseServicePrice?: string
+  distanceFee?: string
+  distanceKm?: string
   scheduledAt: string
   addressLabel: string
   addressCity: string
@@ -49,6 +52,9 @@ export function StepPayment({
   bookingId,
   serviceName,
   servicePrice,
+  baseServicePrice,
+  distanceFee,
+  distanceKm,
   scheduledAt,
   addressLabel,
   addressCity,
@@ -123,9 +129,17 @@ export function StepPayment({
         <div className="review-section">
           <h3>Booking summary</h3>
           <SummaryRow label="Service" value={serviceName} action={null} />
+          {baseServicePrice && <SummaryRow label="Base service" value={baseServicePrice} action={null} />}
+          {distanceFee && (
+            <SummaryRow
+              label="Distance fee"
+              value={`${distanceFee} (${distanceKm ? `${distanceKm}` : 'every 5km is ₱85'})`}
+              action={null}
+            />
+          )}
           <SummaryRow label="When" value={formatDateTime(scheduledAt)} action={null} />
           <SummaryRow label="Where" value={`${addressLabel}, ${addressCity}`} action={null} />
-          <SummaryRow label="Total" value={<strong>{servicePrice}</strong>} action={null} />
+          <SummaryRow label="Total" value={<strong className="review-total-highlight">{servicePrice}</strong>} action={null} />
         </div>
 
         {intentError && <p className="form-helper review-error">{intentError}</p>}
