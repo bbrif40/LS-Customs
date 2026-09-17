@@ -69,19 +69,6 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* Live Fleet Dispatch Status Indicator */}
-        <div className="sidebar-fleet-status">
-          <div className="fleet-status-radar">
-            <span className="radar-wave" />
-            <span className="radar-dot" />
-          </div>
-          <div className="fleet-status-info">
-            <span className="fleet-label">FLEET RADAR ACTIVE</span>
-            <small className="fleet-sub">12 Mobile Units on Patrol</small>
-          </div>
-          <span className="fleet-badge">24/7</span>
-        </div>
-
         <div className="sidebar-label">MY WORKSPACE</div>
         <nav className="side-nav">
           {navItems.map(({ id, label, icon: Icon }) => (

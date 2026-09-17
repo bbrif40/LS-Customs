@@ -77,9 +77,6 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
           </h1>
           <p className="muted">Your garage is in good hands. What do you need today?</p>
         </div>
-        <button className="avatar-large" onClick={() => onView('profile')}>
-          {initials}
-        </button>
       </section>
 
       <section className={`hero-grid stagger-hero ${isDashboardVisible ? 'visible' : ''}`}>
