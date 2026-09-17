@@ -942,8 +942,14 @@ export interface SupportTicket {
   updated_at: string
 }
 
+export interface TicketCustomerProfile {
+  id: string
+  full_name: string
+  phone: string | null
+}
+
 export type SupportTicketWithCustomer = SupportTicket & {
-  profiles: { id: string; full_name: string; phone: string | null }[] | null
+  profiles: TicketCustomerProfile | TicketCustomerProfile[] | null
 }
 
 interface UseAdminTicketsResult {
@@ -992,7 +998,37 @@ export function useAdminTickets(): UseAdminTicketsResult {
         .order('created_at', { ascending: false })
 
       if (queryError) throw queryError
-      setData(result as unknown as SupportTicketWithCustomer[])
+
+      const ticketsList = (result || []) as unknown as (SupportTicket & {
+        profiles: TicketCustomerProfile | TicketCustomerProfile[] | null
+      })[]
+
+      // Fallback: if any ticket has a customer_id but profiles didn't join, fetch directly from profiles table
+      const missingCustomerIds = Array.from(
+        new Set(
+          ticketsList
+            .filter((t) => t.customer_id && !t.profiles)
+            .map((t) => t.customer_id),
+        ),
+      )
+
+      if (missingCustomerIds.length > 0) {
+        const { data: fetchedProfiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, phone')
+          .in('id', missingCustomerIds)
+
+        if (fetchedProfiles && fetchedProfiles.length > 0) {
+          const profileMap = new Map(fetchedProfiles.map((p) => [p.id, p]))
+          for (const t of ticketsList) {
+            if (t.customer_id && !t.profiles && profileMap.has(t.customer_id)) {
+              t.profiles = profileMap.get(t.customer_id) as TicketCustomerProfile
+            }
+          }
+        }
+      }
+
+      setData(ticketsList as SupportTicketWithCustomer[])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch support tickets')
     } finally {

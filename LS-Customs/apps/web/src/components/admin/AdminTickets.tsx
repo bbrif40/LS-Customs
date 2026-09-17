@@ -57,6 +57,18 @@ const categoryColors: Record<TicketCategory, string> = {
   other: '#8b5cf6',
 }
 
+export function getTicketCustomer(ticket: SupportTicketWithCustomer): {
+  id?: string
+  full_name?: string
+  phone?: string | null
+} | null {
+  if (!ticket.profiles) return null
+  if (Array.isArray(ticket.profiles)) {
+    return ticket.profiles[0] ?? null
+  }
+  return ticket.profiles as unknown as { id?: string; full_name?: string; phone?: string | null }
+}
+
 const ALL_CATEGORIES: TicketCategory[] = ['general', 'rental', 'billing', 'bug', 'mechanic', 'other']
 const ALL_PRIORITIES: TicketPriority[] = ['low', 'medium', 'high', 'critical']
 const ALL_STATUSES: TicketStatus[] = ['open', 'in_progress', 'resolved', 'closed']
@@ -80,7 +92,7 @@ export function AdminTickets() {
       if (categoryFilter !== 'all' && t.category !== categoryFilter) return false
       const q = searchQuery.trim().toLowerCase()
       if (!q) return true
-      const customer = t.profiles?.[0]?.full_name?.toLowerCase() ?? ''
+      const customer = getTicketCustomer(t)?.full_name?.toLowerCase() ?? ''
       return (
         t.id.toLowerCase().includes(q) ||
         t.tracking_number.toLowerCase().includes(q) ||
@@ -285,7 +297,9 @@ export function AdminTickets() {
               </thead>
               <tbody>
                 {paginated.map((ticket) => {
-                  const customerName = ticket.profiles?.[0]?.full_name || 'Unknown'
+                  const customer = getTicketCustomer(ticket)
+                  const customerName = customer?.full_name?.trim() || (ticket.customer_id ? `Customer (${ticket.customer_id.slice(0, 8)})` : 'Guest Customer')
+                  const customerPhone = customer?.phone
                   const isExpanded = expandedId === ticket.id
                   const isCopied = copiedId === ticket.id
                   return (
@@ -293,6 +307,7 @@ export function AdminTickets() {
                       key={ticket.id}
                       ticket={ticket}
                       customerName={customerName}
+                      customerPhone={customerPhone}
                       isExpanded={isExpanded}
                       isCopied={isCopied}
                       busyKey={busyKey}
@@ -342,6 +357,7 @@ export function AdminTickets() {
 interface TicketRowProps {
   ticket: SupportTicketWithCustomer
   customerName: string
+  customerPhone?: string | null
   isExpanded: boolean
   isCopied: boolean
   busyKey: string | null
@@ -357,6 +373,7 @@ interface TicketRowProps {
 function TicketRow({
   ticket,
   customerName,
+  customerPhone,
   isExpanded,
   isCopied,
   busyKey,
@@ -492,10 +509,10 @@ function TicketRow({
               </div>
               <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap', fontSize: 12, paddingTop: 8, borderTop: '1px solid #2d3748' }}>
                 <span>👤 <strong style={{ color: '#d4d9e6' }}>{customerName}</strong></span>
-                {ticket.profiles?.[0]?.phone && (
-                  <span>📞 {ticket.profiles[0].phone}</span>
+                {customerPhone && (
+                  <span>📞 <a href={`tel:${customerPhone}`} style={{ color: '#3b82f6', textDecoration: 'none' }}>{customerPhone}</a></span>
                 )}
-                <span>🆔 <code style={{ color: '#e8a838' }}>{ticket.id}</code></span>
+                <span>🆔 <code style={{ color: '#e8a838' }}>{ticket.customer_id || ticket.id}</code></span>
                 {ticket.resolved_at && (
                   <span>✅ Resolved: {new Date(ticket.resolved_at).toLocaleString()}</span>
                 )}
