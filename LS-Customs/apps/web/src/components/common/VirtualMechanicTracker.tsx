@@ -275,7 +275,7 @@ export function VirtualMechanicTracker({
 
             <rect x="-56" y="-32" width="112" height="18" rx="4" fill="#16a34a" />
             <text x="0" y="-20" fontSize="8" fontWeight="800" fill="#ffffff" textAnchor="middle">
-              {mechanicName.slice(0, 14)} ({speed} km/h)
+              {(mechanicName || 'Mechanic').slice(0, 14)} ({speed} km/h)
             </text>
           </g>
         </svg>

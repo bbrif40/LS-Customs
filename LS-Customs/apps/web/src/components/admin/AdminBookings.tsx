@@ -220,14 +220,17 @@ export function AdminBookings() {
     nextStatus: BookingStatus,
   ) => {
     try {
-      if (activeTab === 'vehicles') {
+      const isVehicle = 'vehicle_id' in booking || activeTab === 'vehicles'
+      if (isVehicle) {
         await updateVehicleBookingStatus(booking.id, nextStatus)
       } else {
         await updateServiceBookingStatus(booking.id, nextStatus)
       }
+      return true
     } catch (err) {
       console.error('[admin] failed to update booking status', err)
       alert(getAdminErrorMessage(err, 'Failed to update booking status'))
+      return false
     }
   }
 
@@ -245,14 +248,26 @@ export function AdminBookings() {
     setViolationNotes('')
   }
 
-  const handleConfirmCompletion = async () => {
+  const completeBooking = async () => {
     if (!completionBooking) return
-
-    if (!violationPaymentRequired) {
-      await handleStatusChange(completionBooking, 'completed')
-      closeCompletionModal()
-      return
+    setCompleting(true)
+    try {
+      const success = await handleStatusChange(completionBooking, 'completed')
+      if (success) {
+        closeCompletionModal()
+      }
+    } catch (err) {
+      console.error('[admin] failed to complete booking', err)
+      alert(getAdminErrorMessage(err, 'Failed to complete booking'))
+    } finally {
+      setCompleting(false)
     }
+  }
+
+  const completeRental = completeBooking
+
+  const recordViolationPayment = async () => {
+    if (!completionBooking) return
 
     const amount = parseFloat(violationAmount)
     if (Number.isNaN(amount) || amount <= 0) {
@@ -262,8 +277,9 @@ export function AdminBookings() {
 
     setCompleting(true)
     try {
+      const isVehicle = 'vehicle_id' in completionBooking || activeTab === 'vehicles'
       const { error: paymentError } = await supabase.from('payments').insert({
-        booking_type: activeTab === 'vehicles' ? 'vehicle' : 'service',
+        booking_type: isVehicle ? 'vehicle' : 'service',
         booking_id: completionBooking.id,
         customer_id: completionBooking.customer_id,
         amount,
@@ -273,7 +289,6 @@ export function AdminBookings() {
         status: 'pending',
       })
       if (paymentError) throw paymentError
-      await handleStatusChange(completionBooking, 'completed')
       closeCompletionModal()
     } catch (err) {
       console.error('[admin] failed to record payment requirement', err)
@@ -880,7 +895,7 @@ export function AdminBookings() {
           <div className="admin-modal completion-modal" onClick={(event) => event.stopPropagation()}>
             <div className="admin-modal-header">
               <div>
-                <h2>Complete rental</h2>
+                <h2>{'vehicle_id' in completionBooking || activeTab === 'vehicles' ? 'Complete rental' : 'Complete service'}</h2>
                 <p className="admin-modal-subtitle">
                   Booking {completionBooking.id.slice(0, 8)}... · {getCustomerName(completionBooking as VehicleBookingWithDetails)}
                 </p>
@@ -892,7 +907,7 @@ export function AdminBookings() {
 
             <div className="admin-modal-body">
               <div className="completion-summary">
-                <strong>{activeTab === 'vehicles'
+                <strong>{('vehicle_id' in completionBooking || activeTab === 'vehicles')
                   ? getVehicleName(completionBooking as VehicleBookingWithDetails)
                   : getServiceDetails(completionBooking as ServiceBookingWithDetails)}</strong>
                 <span>Total booking value: ₱{completionBooking.total_price.toLocaleString()}</span>
@@ -947,8 +962,8 @@ export function AdminBookings() {
                   {completing ? 'Recording...' : 'Record payment required'}
                 </button>
               ) : (
-                <button type="button" className="admin-modal-btn primary" onClick={() => void completeRental()} disabled={completing}>
-                  {completing ? 'Completing...' : 'Complete rental'}
+                <button type="button" className="admin-modal-btn primary" onClick={() => void completeBooking()} disabled={completing}>
+                  {completing ? 'Completing...' : ('vehicle_id' in completionBooking || activeTab === 'vehicles' ? 'Complete rental' : 'Complete service')}
                 </button>
               )}
             </div>
