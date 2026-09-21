@@ -29,11 +29,14 @@ import {
 interface CreatePaymentIntentRequest {
   booking_type: "vehicle" | "service";
   booking_id: string;
+  success_url?: string;
+  cancel_url?: string;
 }
 
 interface CreatePaymentIntentResponse {
   payment_id: string;
   client_secret: string;
+  checkout_url?: string;
   amount: number;
   currency: string;
   provider: string;
@@ -107,11 +110,12 @@ Deno.serve(async (req: Request) => {
     // 1. Fetch the booking; verify ownership and get total_price
     // ------------------------------------------------------------------
     let booking: { total_price: number; customer_id: string } | null = null;
+    let bookingTitle: string | undefined;
 
     if (body.booking_type === "vehicle") {
       const { data, error } = await supabase
         .from("vehicle_bookings")
-        .select("total_price, customer_id")
+        .select("total_price, customer_id, vehicles(name, make, model)")
         .eq("id", body.booking_id)
         .single();
 
@@ -122,10 +126,12 @@ Deno.serve(async (req: Request) => {
         }, 404);
       }
       booking = data;
+      const veh = data.vehicles as { name?: string; make?: string; model?: string } | null;
+      bookingTitle = veh?.name || (veh?.make && veh?.model ? `${veh.make} ${veh.model}` : "Vehicle Rental");
     } else {
       const { data, error } = await supabase
         .from("service_bookings")
-        .select("total_price, customer_id")
+        .select("total_price, customer_id, service_booking_items(mechanic_services(name))")
         .eq("id", body.booking_id)
         .single();
 
@@ -136,6 +142,16 @@ Deno.serve(async (req: Request) => {
         }, 404);
       }
       booking = data;
+      const items = data.service_booking_items as Array<{ mechanic_services?: { name?: string } }> | null;
+      const serviceNames = items?.map((i) => i.mechanic_services?.name).filter(Boolean).join(", ");
+      bookingTitle = serviceNames || "Mobile Mechanic Service";
+    }
+
+    if (!booking) {
+      return jsonResponse(null, {
+        code: "NOT_FOUND",
+        message: "Booking not found",
+      }, 404);
     }
 
     // Verify ownership — per RULES.md §4, RLS is the source of truth,
@@ -147,6 +163,13 @@ Deno.serve(async (req: Request) => {
       };
       return jsonResponse(null, err, 403);
     }
+
+    // Fetch customer profile to prefill PayMongo checkout billing
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("id", user.id)
+      .maybeSingle();
 
     // ------------------------------------------------------------------
     // 2. Check provider configuration
@@ -163,7 +186,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // ------------------------------------------------------------------
-    // 3. Call the payment provider to create a payment intent
+    // 3. Call the payment provider to create a payment intent / checkout session
     // ------------------------------------------------------------------
     const amountNumeric = Number(booking.total_price);
 
@@ -177,7 +200,15 @@ Deno.serve(async (req: Request) => {
         body.booking_id,
         user.id,
         amountNumeric,
-        idempotencyKey,
+        {
+          description: bookingTitle,
+          customerName: profile?.full_name ?? undefined,
+          customerEmail: user.email ?? undefined,
+          customerPhone: profile?.phone ?? undefined,
+          successUrl: body.success_url,
+          cancelUrl: body.cancel_url,
+          idempotencyKey,
+        },
       );
     } catch (providerErr: unknown) {
       const msg = providerErr instanceof Error
@@ -219,11 +250,12 @@ Deno.serve(async (req: Request) => {
     }
 
     // ------------------------------------------------------------------
-    // 5. Return client secret for the frontend SDK to complete payment
+    // 5. Return client secret & checkout URL for the frontend SDK to complete payment
     // ------------------------------------------------------------------
     return jsonResponse({
       payment_id: payment.id,
       client_secret: intent.clientSecret,
+      checkout_url: intent.checkoutUrl ?? intent.clientSecret,
       amount: amountNumeric,
       currency: intent.currency.toUpperCase(),
       provider: intent.provider,

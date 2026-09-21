@@ -84,6 +84,7 @@ export function StepPayment({
   const [intent, setIntent] = useState<{
     payment_id: string
     client_secret: string
+    checkout_url?: string
     provider: string
     amount: number
     currency: string
@@ -237,6 +238,7 @@ export function StepPayment({
             )}
             <PaymentForm
               clientSecret={intent.client_secret}
+              checkoutUrl={intent.checkout_url}
               amount={intent.amount}
               currency={intent.currency}
               provider={intent.provider}

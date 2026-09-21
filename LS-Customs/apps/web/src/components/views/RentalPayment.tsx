@@ -144,6 +144,7 @@ export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, u
               )}
               <PaymentForm
                 clientSecret={payment.client_secret}
+                checkoutUrl={payment.checkout_url}
                 amount={payment.amount}
                 currency={payment.currency}
                 provider={payment.provider}

@@ -18,13 +18,15 @@
 import { useState, useEffect } from 'react'
 import { loadStripe, Stripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import { CreditCard, Loader2 } from 'lucide-react'
+import { CreditCard, Loader2, ExternalLink, ShieldCheck, Smartphone, QrCode, Wallet, RefreshCw } from 'lucide-react'
 
 export type PaymentFormStatus = 'succeeded' | 'failed' | 'processing'
 
 export interface PaymentFormProps {
   /** The client_secret from the create-payment-intent edge function. */
   clientSecret: string
+  /** The checkout_url if PayMongo Checkout Session was created. */
+  checkoutUrl?: string
   /** Display amount (e.g. 7500.00). */
   amount: number
   /** Currency code (e.g. "PHP"). */
@@ -41,6 +43,7 @@ export interface PaymentFormProps {
 
 export function PaymentForm({
   clientSecret,
+  checkoutUrl,
   amount,
   currency,
   provider,
@@ -52,6 +55,7 @@ export function PaymentForm({
     return (
       <PaymongoForm
         clientSecret={clientSecret}
+        checkoutUrl={checkoutUrl}
         amount={amount}
         currency={currency}
         onComplete={onComplete}
@@ -205,6 +209,7 @@ function StripeCardForm({
 
 interface PaymongoFormProps {
   clientSecret: string
+  checkoutUrl?: string
   amount: number
   currency: string
   onComplete: (result: PaymentFormStatus) => void
@@ -215,85 +220,150 @@ interface PaymongoFormProps {
 /**
  * PayMongo Checkout form.
  *
- * Uses the PayMongo Check-out URL (client_key) to redirect the customer to
- * PayMongo's hosted payment page. After the customer completes payment,
- * PayMongo redirects back to the page — the webhook updates the payment
- * status and usePaymentStatus catches the change.
+ * Directs the customer to PayMongo's secure hosted payment page which
+ * supports Philippine payment methods: GCash, Maya, Cards (Visa/Mastercard),
+ * QR Ph, GrabPay, and BillEase.
  */
 function PaymongoForm({
   clientSecret,
+  checkoutUrl: providedCheckoutUrl,
   amount,
   currency,
   onComplete,
   onError,
   disabled,
 }: PaymongoFormProps) {
-  // PayMongo Checkout: redirect the browser to the hosted checkout URL.
-  // The client_key in the intent response is used to initialize PayMongo's
-  // checkout. For a redirect-based flow we open the PayMongo checkout URL.
-  const checkoutUrl = `https://checkout.paymongo.com/${clientSecret}`
+  const [waitingForPayment, setWaitingForPayment] = useState(false)
 
-  const handlePay = () => {
+  // Resolve checkout URL accurately
+  const resolvedUrl = providedCheckoutUrl ||
+    (clientSecret.startsWith('http://') || clientSecret.startsWith('https://')
+      ? clientSecret
+      : `https://checkout.paymongo.com/${clientSecret}`)
+
+  const handlePay = (forceRedirect = false) => {
     if (disabled) return
 
-    // Track the redirect in localStorage so the page can detect the return
-    // and trigger onComplete('processing').
+    setWaitingForPayment(true)
     localStorage.setItem('lsc_paymongo_checkout_start', Date.now().toString())
 
-    // Open PayMongo's hosted checkout in a popup for better UX.
-    // If popup is blocked, fall back to a full redirect.
-    const popup = window.open(
-      checkoutUrl,
-      'paymongo_checkout',
-      'width=520,height=700,scrollbars=yes,resizable=yes',
-    )
-
-    if (!popup) {
-      // Popup blocked — fall back to full-page redirect
-      window.location.href = checkoutUrl
+    if (forceRedirect) {
+      window.location.href = resolvedUrl
       return
     }
 
-    // Poll for popup close (customer completed payment)
+    // Open in popup for desktop users
+    const popup = window.open(
+      resolvedUrl,
+      'paymongo_checkout',
+      'width=540,height=740,scrollbars=yes,resizable=yes',
+    )
+
+    if (!popup) {
+      // If popup was blocked by browser, redirect current tab
+      window.location.href = resolvedUrl
+      return
+    }
+
+    // Poll for popup closure
     const interval = setInterval(() => {
       if (popup.closed) {
         clearInterval(interval)
-        // The webhook will update the payment status. Mark as processing
-        // and let usePaymentStatus catch the real result.
         onComplete('processing')
       }
     }, 1000)
   }
 
-  // On page load after redirect-back, check if we were in a checkout flow.
+  // Detect return when redirected back
   useEffect(() => {
     const start = localStorage.getItem('lsc_paymongo_checkout_start')
     if (start) {
       localStorage.removeItem('lsc_paymongo_checkout_start')
-      // The webhook should have updated the status by now; usePaymentStatus
-      // will catch it. Signal 'processing' to let the parent know we returned.
       onComplete('processing')
     }
   }, [onComplete])
 
   return (
-    <div className="payment-form-paymongo">
-      <div className="payment-amount-summary">
-        <span className="muted">Total amount</span>
-        <strong>{currency} {amount.toFixed(2)}</strong>
+    <div className="payment-form-paymongo" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div className="payment-amount-summary" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
+        <span className="muted">Total to pay</span>
+        <strong style={{ fontSize: '18px', color: '#10b981' }}>₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
       </div>
 
-      <button
-        className="button dark-button payment-submit"
-        onClick={handlePay}
-        disabled={disabled}
-        style={{ width: '100%' }}
-      >
-        {disabled ? 'Loading…' : `Pay with PayMongo — ${currency} ${amount.toFixed(2)}`}
-      </button>
+      <div className="paymongo-methods-banner" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#9ca3af' }}>
+          <ShieldCheck size={14} style={{ color: '#10b981' }} />
+          <span>PayMongo Secure Philippine Channels</span>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(0, 114, 206, 0.15)', color: '#38bdf8', fontWeight: 600, border: '1px solid rgba(56, 189, 248, 0.25)' }}>
+            <Smartphone size={12} /> GCash
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 600, border: '1px solid rgba(52, 211, 153, 0.25)' }}>
+            <Wallet size={12} /> Maya
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(244, 63, 94, 0.15)', color: '#fb7185', fontWeight: 600, border: '1px solid rgba(251, 113, 133, 0.25)' }}>
+            <CreditCard size={12} /> Visa / Mastercard
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(234, 179, 8, 0.15)', color: '#facc15', fontWeight: 600, border: '1px solid rgba(250, 204, 21, 0.25)' }}>
+            <QrCode size={12} /> QR Ph (Any Bank)
+          </span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', fontWeight: 600, border: '1px solid rgba(192, 132, 252, 0.25)' }}>
+            GrabPay / BillEase
+          </span>
+        </div>
+      </div>
 
-      <p className="muted" style={{ fontSize: '12px', textAlign: 'center', marginTop: '8px' }}>
-        You'll be redirected to PayMongo's secure checkout page.
+      {waitingForPayment ? (
+        <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#34d399', fontWeight: 600, marginBottom: '6px' }}>
+            <Loader2 size={16} className="spin" />
+            <span>Awaiting PayMongo Confirmation…</span>
+          </div>
+          <p className="muted" style={{ fontSize: '12px', margin: '0 0 10px 0' }}>
+            Please finish your payment in the checkout window. This page will update automatically once verified.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              className="button text-button"
+              onClick={() => handlePay(false)}
+              style={{ fontSize: '12px', padding: '4px 8px' }}
+            >
+              <ExternalLink size={12} /> Re-open window
+            </button>
+            <button
+              type="button"
+              className="button text-button"
+              onClick={() => handlePay(true)}
+              style={{ fontSize: '12px', padding: '4px 8px' }}
+            >
+              Continue in this tab
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="button dark-button payment-submit"
+          onClick={() => handlePay(false)}
+          disabled={disabled}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
+        >
+          {disabled ? (
+            <>
+              <Loader2 size={16} className="spin" /> Loading…
+            </>
+          ) : (
+            <>
+              <ExternalLink size={16} /> Pay ₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} via PayMongo
+            </>
+          )}
+        </button>
+      )}
+
+      <p className="muted" style={{ fontSize: '12px', textAlign: 'center', margin: 0 }}>
+        Powered by PayMongo Philippines · 256-bit encrypted checkout
       </p>
     </div>
   )

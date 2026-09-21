@@ -118,15 +118,31 @@ Deno.serve(async (req: Request) => {
     // ------------------------------------------------------------------
     // 4. Look up and update the payment record
     // ------------------------------------------------------------------
-    const { data: payment, error: paymentError } = await supabase
+    let { data: payment, error: paymentError } = await supabase
       .from("payments")
       .select("id, booking_type, booking_id, status")
       .eq("provider_reference", providerReference)
-      .single();
+      .maybeSingle();
+
+    // If not found by primary ref and alternate references exist, try them
+    if (!payment && event.alternateReferences?.length) {
+      for (const altRef of event.alternateReferences) {
+        const { data: altPayment } = await supabase
+          .from("payments")
+          .select("id, booking_type, booking_id, status")
+          .eq("provider_reference", altRef)
+          .maybeSingle();
+        if (altPayment) {
+          payment = altPayment;
+          paymentError = null;
+          break;
+        }
+      }
+    }
 
     if (paymentError || !payment) {
       console.error(
-        `No payment record found for provider_reference: ${providerReference}`,
+        `No payment record found for provider_reference: ${providerReference}${event.alternateReferences ? ` (alternates: ${event.alternateReferences.join(", ")})` : ""}`,
       );
       // Ack the webhook even if we don't have a matching payment,
       // to avoid infinite retries from the provider.

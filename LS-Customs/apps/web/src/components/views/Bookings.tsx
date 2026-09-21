@@ -110,7 +110,7 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
   const [ratingError, setRatingError] = useState<string | null>(null)
   const [savingRating, setSavingRating] = useState(false)
   const [retryingPayment, setRetryingPayment] = useState(false)
-  const [retryIntent, setRetryIntent] = useState<{ payment_id: string; client_secret: string; provider: string; amount: number; currency: string } | null>(null)
+  const [retryIntent, setRetryIntent] = useState<{ payment_id: string; client_secret: string; checkout_url?: string; provider: string; amount: number; currency: string } | null>(null)
   const [retryError, setRetryError] = useState<string | null>(null)
   // Track the original payment's status for realtime webhook updates
   const { status: originalPaymentStatus } = usePaymentStatus(shared.payments?.id ?? null)
@@ -222,6 +222,7 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
             <div className="payment-retry-form">
               <PaymentForm
                 clientSecret={retryIntent.client_secret}
+                checkoutUrl={retryIntent.checkout_url}
                 amount={retryIntent.amount}
                 currency={retryIntent.currency}
                 provider={retryIntent.provider}

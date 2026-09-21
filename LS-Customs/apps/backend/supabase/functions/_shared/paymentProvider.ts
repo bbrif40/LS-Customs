@@ -23,15 +23,28 @@ export type PaymentProvider = "stripe" | "paymongo";
 
 export interface CreatePaymentIntentResult {
   providerReference: string;
-  clientSecret: string;      // Normalized API field — "client_secret" for Stripe, "client_key" for PayMongo
+  clientSecret: string;      // Normalized API field — "client_secret" for Stripe, "checkout_url" / "client_key" for PayMongo
+  checkoutUrl?: string;      // Hosted checkout URL (PayMongo Checkout Session)
   amount: number;
   currency: string;
   provider: PaymentProvider;
 }
 
+export interface CreatePaymentIntentOptions {
+  description?: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  idempotencyKey?: string;
+}
+
 export interface NormalizedWebhookEvent {
   type: string;              // e.g. "payment_intent.succeeded", "payment_intent.payment_failed"
-  providerReference: string; // e.g. "pi_123..." or "pi_..." (PayMongo)
+  providerReference: string; // e.g. "pi_123...", "cs_...", or "pay_..."
+  alternateReferences?: string[]; // related identifiers to match database records
+  finalPaymentId?: string;   // specific charge payment id ("pay_...") if present
   provider: PaymentProvider;
 }
 
@@ -115,29 +128,136 @@ export async function createPaymentIntent(
   bookingId: string,
   userId: string,
   amount: number,
-  idempotencyKey?: string,
+  optionsOrIdempotencyKey?: CreatePaymentIntentOptions | string,
 ): Promise<CreatePaymentIntentResult> {
   const config = getProviderConfig();
   const amountInCents = Math.round(amount * 100);
 
+  const options: CreatePaymentIntentOptions = typeof optionsOrIdempotencyKey === "string"
+    ? { idempotencyKey: optionsOrIdempotencyKey }
+    : optionsOrIdempotencyKey ?? {};
+
   if (config.provider === "paymongo") {
-    return createPaymongoPaymentIntent(config, amountInCents, bookingType, bookingId, userId);
+    return createPaymongoCheckoutSession(config, amountInCents, bookingType, bookingId, userId, options);
   }
 
-  return createStripePaymentIntent(config, amountInCents, bookingType, bookingId, userId, idempotencyKey);
+  return createStripePaymentIntent(config, amountInCents, bookingType, bookingId, userId, options.idempotencyKey);
 }
 
 /**
- * Create a Payment Intent via the PayMongo API.
- *
- * PayMongo uses:
- * - Basic auth: `base64(secret_key:)` (secret key as username, empty password)
- * - JSON body with nested `data.attributes` structure
- * - Returns `client_key` (not `client_secret`) in `data.attributes`
- *
- * @see https://docs.paymongo.com/docs/api/api-reference/payment-intents/create-payment-intent
+ * Create a Checkout Session via the PayMongo API (preferred for hosted checkout with GCash, Maya, Cards, QR Ph).
+ * Falls back to raw Payment Intent if the endpoint is not supported by the environment/mock server.
  */
-async function createPaymongoPaymentIntent(
+async function createPaymongoCheckoutSession(
+  config: ProviderConfig,
+  amountInCents: number,
+  bookingType: string,
+  bookingId: string,
+  userId: string,
+  options?: CreatePaymentIntentOptions,
+): Promise<CreatePaymentIntentResult> {
+  const authHeader = "Basic " + btoa(`${config.secretKey}:`);
+
+  const billing: Record<string, string> = {};
+  if (options?.customerName) billing.name = options.customerName;
+  if (options?.customerEmail) billing.email = options.customerEmail;
+  if (options?.customerPhone) billing.phone = options.customerPhone;
+
+  const itemName = options?.description ||
+    (bookingType === "vehicle" ? "Vehicle Rental Reservation" : "Mobile Mechanic Service Booking");
+
+  const checkoutPayload = {
+    data: {
+      attributes: {
+        billing: Object.keys(billing).length > 0 ? billing : undefined,
+        send_email_receipt: false,
+        show_description: true,
+        show_line_items: true,
+        description: `LS Customs: ${itemName} (#${bookingId.slice(0, 8).toUpperCase()})`,
+        line_items: [
+          {
+            name: itemName,
+            amount: amountInCents,
+            currency: "PHP",
+            quantity: 1,
+          },
+        ],
+        payment_method_types: [
+          "card",
+          "gcash",
+          "grabpay",
+          "paymaya",
+          "qrph",
+          "billease",
+          "dob",
+        ],
+        reference_number: bookingId,
+        success_url: options?.successUrl,
+        cancel_url: options?.cancelUrl,
+        metadata: {
+          booking_type: bookingType,
+          booking_id: bookingId,
+          customer_id: userId,
+        },
+      },
+    },
+  };
+
+  try {
+    const response = await fetch(`${config.baseUrl}/v1/checkout_sessions`, {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(checkoutPayload),
+    });
+
+    // If 404 (e.g. against a mock server only handling /v1/payment_intents), fall back to raw payment intent
+    if (response.status === 404) {
+      return createPaymongoRawPaymentIntent(config, amountInCents, bookingType, bookingId, userId);
+    }
+
+    if (!response.ok) {
+      const errBody = await response.json().catch(() => ({}));
+      const errMsg = errBody?.errors?.[0]?.detail
+        ?? errBody?.errors?.[0]?.code
+        ?? response.statusText;
+      throw new Error(`PayMongo API error: ${errMsg}`);
+    }
+
+    const data = await response.json();
+    const attributes = data?.data?.attributes;
+
+    if (!attributes) {
+      throw new Error("PayMongo checkout session response missing attributes");
+    }
+
+    const checkoutUrl = attributes.checkout_url;
+    const clientKey = attributes.client_key ?? checkoutUrl;
+
+    return {
+      providerReference: data.data.id,
+      clientSecret: checkoutUrl || clientKey,
+      checkoutUrl: checkoutUrl,
+      amount: (attributes.line_items?.[0]?.amount ?? amountInCents) / 100,
+      currency: "PHP",
+      provider: "paymongo",
+    };
+  } catch (err: unknown) {
+    // If the call failed because checkout_sessions wasn't reached, try raw payment intent as fallback
+    if (err instanceof Error && err.message.includes("404")) {
+      return createPaymongoRawPaymentIntent(config, amountInCents, bookingType, bookingId, userId);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Fallback / direct Payment Intent creation via PayMongo API.
+ */
+async function createPaymongoRawPaymentIntent(
   config: ProviderConfig,
   amountInCents: number,
   bookingType: string,
@@ -158,7 +278,7 @@ async function createPaymongoPaymentIntent(
         attributes: {
           amount: amountInCents,
           currency: "PHP",
-          payment_method_allowed: ["card", "gcash", "grabpay", "qrph"],
+          payment_method_allowed: ["card", "gcash", "grabpay", "qrph", "paymaya"],
           metadata: {
             booking_type: bookingType,
             booking_id: bookingId,
@@ -187,7 +307,8 @@ async function createPaymongoPaymentIntent(
   return {
     providerReference: data.data.id,
     clientSecret: attributes.client_key,
-    amount: attributes.amount / 100, // Convert back for display
+    checkoutUrl: `https://checkout.paymongo.com/${data.data.id}`,
+    amount: attributes.amount / 100,
     currency: attributes.currency ?? "PHP",
     provider: "paymongo",
   };
@@ -296,9 +417,45 @@ async function createPaymongoRefund(
   amount?: number,
 ): Promise<CreateRefundResult> {
   const authHeader = "Basic " + btoa(`${config.secretKey}:`);
+  let paymentId = providerReference;
+
+  // If providerReference is a checkout session (cs_...) or payment intent (pi_...),
+  // query PayMongo to resolve the underlying payment id (pay_...)
+  if (providerReference.startsWith("cs_")) {
+    try {
+      const sessionRes = await fetch(`${config.baseUrl}/v1/checkout_sessions/${providerReference}`, {
+        headers: { Authorization: authHeader, Accept: "application/json" },
+      });
+      if (sessionRes.ok) {
+        const sessionData = await sessionRes.json();
+        const payments = sessionData?.data?.attributes?.payments;
+        if (payments && payments.length > 0 && payments[0].id) {
+          paymentId = payments[0].id;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not resolve payment_id from checkout session:", e);
+    }
+  } else if (providerReference.startsWith("pi_")) {
+    try {
+      const intentRes = await fetch(`${config.baseUrl}/v1/payment_intents/${providerReference}`, {
+        headers: { Authorization: authHeader, Accept: "application/json" },
+      });
+      if (intentRes.ok) {
+        const intentData = await intentRes.json();
+        const payments = intentData?.data?.attributes?.payments;
+        if (payments && payments.length > 0 && payments[0].id) {
+          paymentId = payments[0].id;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not resolve payment_id from payment intent:", e);
+    }
+  }
 
   const attributes: Record<string, unknown> = {
-    payment_intent_id: providerReference,
+    payment_id: paymentId,
+    reason: "others",
   };
 
   if (amount != null) {
@@ -324,15 +481,15 @@ async function createPaymongoRefund(
   }
 
   const data = await response.json();
+  const refundId = data?.data?.id;
   const attributes_ = data?.data?.attributes;
 
-  if (!attributes_ || !attributes_.id) {
+  if (!refundId) {
     throw new Error("PayMongo refund response missing id");
   }
 
-  const refundId = data.data.id as string;
-  const refundAmount = attributes_.amount ? attributes_.amount / 100 : 0;
-  const refundCurrency = attributes_.currency ?? "PHP";
+  const refundAmount = attributes_?.amount ? attributes_.amount / 100 : (amount ?? 0);
+  const refundCurrency = attributes_?.currency ?? "PHP";
 
   return {
     refundReference: refundId,
@@ -472,6 +629,7 @@ async function verifyPaymongoSignatureParts(
 
   for (const part of parts) {
     const [key, value] = part.trim().split("=");
+    if (!value) continue;
     if (key === "t") {
       timestamp = value;
     } else if (key === "te") {
@@ -549,6 +707,7 @@ async function verifyStripeSignatureParts(
 
   for (const part of sigParts) {
     const [key, value] = part.trim().split("=");
+    if (!value) continue;
     if (key === "t") {
       timestamp = value;
     } else if (key === "v1") {
@@ -614,27 +773,48 @@ export function normalizeWebhookEvent(
       return null;
     }
 
-    // Event type can be at data.type or data.attributes.type (fallback)
-    const eventType = (data.type as string | undefined)
-      ?? (data.attributes as Record<string, unknown> | undefined)?.type as string | undefined;
+    const eventType = (data.attributes as Record<string, unknown> | undefined)?.type as string | undefined
+      ?? (data.type as string | undefined);
 
-    // Payment intent ID can be at:
-    // - data.attributes.payment_intent_id (most common for webhook events)
-    // - data.id (if data IS the payment intent, not an event wrapper)
     const attributes = data.attributes as Record<string, unknown> | undefined;
+    const innerData = attributes?.data as Record<string, unknown> | undefined;
+    const innerAttributes = innerData?.attributes as Record<string, unknown> | undefined;
+
+    // Resolve possible IDs from PayMongo structure
+    // 1. Checkout session ID (e.g. cs_...)
+    const checkoutSessionId = (innerData?.type === "checkout_session" ? innerData.id as string : undefined)
+      ?? (innerAttributes?.checkout_session as Record<string, unknown> | undefined)?.id as string | undefined;
+
+    // 2. Payment intent ID (e.g. pi_...)
     const paymentIntentId = (attributes?.payment_intent_id as string | undefined)
+      ?? (innerAttributes?.payment_intent as Record<string, unknown> | undefined)?.id as string | undefined
+      ?? (innerData?.type === "payment_intent" ? innerData.id as string : undefined);
+
+    // 3. Payment ID (e.g. pay_...)
+    const paymentsArr = innerAttributes?.payments as Array<Record<string, unknown>> | undefined;
+    const paymentId = (innerData?.type === "payment" ? innerData.id as string : undefined)
+      ?? (paymentsArr && paymentsArr.length > 0 ? (paymentsArr[0]?.id as string | undefined) : undefined);
+
+    const primaryRef = checkoutSessionId
+      ?? paymentIntentId
+      ?? paymentId
       ?? (attributes?.id as string | undefined)
       ?? (data.id as string | undefined);
 
-    if (!eventType || !paymentIntentId) {
+    if (!eventType || !primaryRef) {
       return null;
     }
+
+    const alternateReferences = [checkoutSessionId, paymentIntentId, paymentId, attributes?.id as string | undefined]
+      .filter((ref): ref is string => Boolean(ref) && ref !== primaryRef);
 
     const normalizedType = mapPaymongoEventType(eventType);
 
     return {
       type: normalizedType,
-      providerReference: paymentIntentId,
+      providerReference: primaryRef,
+      alternateReferences: alternateReferences.length > 0 ? alternateReferences : undefined,
+      finalPaymentId: paymentId,
       provider: "paymongo",
     };
   }
@@ -658,16 +838,17 @@ export function normalizeWebhookEvent(
 
 /**
  * Map PayMongo event types to the normalized type names used internally.
- *
- * PayMongo webhook event types:
- * - `payment_intent.succeeded` → normalized as `payment_intent.succeeded`
- * - `payment_intent.failed` → normalized as `payment_intent.payment_failed`
- * (Stripe uses `payment_intent.payment_failed`, so we normalize for consistency)
  */
 function mapPaymongoEventType(eventType: string): string {
   const mapping: Record<string, string> = {
+    "checkout_session.payment.paid": "payment_intent.succeeded",
+    "payment.paid": "payment_intent.succeeded",
     "payment_intent.succeeded": "payment_intent.succeeded",
+    "payment.failed": "payment_intent.payment_failed",
     "payment_intent.failed": "payment_intent.payment_failed",
+    "payment_intent.payment_failed": "payment_intent.payment_failed",
+    "payment.refunded": "payment_intent.refunded",
+    "refund.created": "payment_intent.refunded",
     "payment_intent.refunded": "payment_intent.refunded",
     "payment_intent.awaiting_payment_method": "payment_intent.awaiting_payment_method",
     "payment_intent.chargeable": "payment_intent.chargeable",

@@ -52,6 +52,25 @@ function startMockProvider(port) {
       let body = "";
       req.on("data", (chunk) => (body += chunk));
       req.on("end", () => {
+        // Handle POST /v1/checkout_sessions (PayMongo Checkout Session)
+        if (req.method === "POST" && req.url === "/v1/checkout_sessions") {
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({
+            data: {
+              id: "cs_mock_12345",
+              type: "checkout_session",
+              attributes: {
+                checkout_url: "https://checkout.paymongo.com/cs_mock_12345",
+                client_key: "cs_mock_12345_client_key",
+                line_items: [{ amount: 750000, currency: "PHP" }],
+                payment_method_types: ["card", "gcash", "grabpay", "qrph"],
+                status: "active",
+              },
+            },
+          }));
+          return;
+        }
+
         // Handle POST /v1/payment_intents (both Stripe and PayMongo use this path)
         if (req.method === "POST" && req.url === "/v1/payment_intents") {
           if (TEST_PROVIDER === "paymongo") {
@@ -272,7 +291,7 @@ async function run() {
           console.log("  Payment record:", refResult);
 
           // Extract provider_reference from psql output
-          const refMatch = refResult.match(/pi_mock_\d+/);
+          const refMatch = refResult.match(/(?:pi|cs)_mock_\d+/);
           providerRef = refMatch ? refMatch[0] : null;
         } catch (e) {
           console.log("  Could not query payment record:", e.message);

@@ -16,6 +16,7 @@ export type BookingType = 'vehicle' | 'service'
 export interface PaymentIntentResult {
   payment_id: string
   client_secret: string
+  checkout_url?: string
   amount: number
   currency: string
   provider: string
@@ -24,7 +25,11 @@ export interface PaymentIntentResult {
 interface UsePaymentIntentResult {
   creating: boolean
   error: string | null
-  createIntent: (bookingType: BookingType, bookingId: string) => Promise<PaymentIntentResult | null>
+  createIntent: (
+    bookingType: BookingType,
+    bookingId: string,
+    redirectUrls?: { successUrl?: string; cancelUrl?: string },
+  ) => Promise<PaymentIntentResult | null>
 }
 
 export function usePaymentIntent(): UsePaymentIntentResult {
@@ -34,13 +39,23 @@ export function usePaymentIntent(): UsePaymentIntentResult {
   const createIntent = useCallback(async (
     bookingType: BookingType,
     bookingId: string,
+    redirectUrls?: { successUrl?: string; cancelUrl?: string },
   ): Promise<PaymentIntentResult | null> => {
     setCreating(true)
     setError(null)
 
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const defaultSuccess = `${origin}/bookings?payment=success&booking_id=${bookingId}&type=${bookingType}`
+    const defaultCancel = `${origin}/bookings?payment=cancelled&booking_id=${bookingId}&type=${bookingType}`
+
     try {
       const { data, error: invokeError } = await supabase.functions.invoke('create-payment-intent', {
-        body: { booking_type: bookingType, booking_id: bookingId },
+        body: {
+          booking_type: bookingType,
+          booking_id: bookingId,
+          success_url: redirectUrls?.successUrl ?? defaultSuccess,
+          cancel_url: redirectUrls?.cancelUrl ?? defaultCancel,
+        },
         headers: { 'Idempotency-Key': `${bookingType}:${bookingId}` },
       })
 
