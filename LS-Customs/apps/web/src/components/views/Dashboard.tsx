@@ -3,7 +3,7 @@
  * Both featured rentals and trending services come from Supabase.
  */
 import { useEffect, useState } from 'react'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Car, Wrench, CalendarDays } from 'lucide-react'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { useTrendingServices } from '../../hooks/useTrendingServices'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
@@ -78,6 +78,31 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
           <p className="muted">Your garage is in good hands. What do you need today?</p>
         </div>
       </section>
+
+      {/* ── Quick-Action Tiles ─────────────────────────────────── */}
+      <div className="quick-actions-row">
+        <button className="quick-action-tile" onClick={() => onView('rentals')} type="button">
+          <span className="quick-action-icon"><Car size={20} /></span>
+          <div className="quick-action-copy">
+            <strong>Rent a Vehicle</strong>
+            <span>Browse our premium fleet</span>
+          </div>
+        </button>
+        <button className="quick-action-tile" onClick={() => onView('services')} type="button">
+          <span className="quick-action-icon"><Wrench size={20} /></span>
+          <div className="quick-action-copy">
+            <strong>Book a Mechanic</strong>
+            <span>On-demand mobile service</span>
+          </div>
+        </button>
+        <button className="quick-action-tile" onClick={() => onView('bookings')} type="button">
+          <span className="quick-action-icon"><CalendarDays size={20} /></span>
+          <div className="quick-action-copy">
+            <strong>My Bookings</strong>
+            <span>Track your appointments</span>
+          </div>
+        </button>
+      </div>
 
       <section className={`hero-grid stagger-hero ${isDashboardVisible ? 'visible' : ''}`}>
         <article className="hero-card">
@@ -161,7 +186,7 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
               key={service.id}
               title={service.name}
               detail={service.description ?? 'Professional service performed at your location.'}
-              price={`STARTS AT $${service.basePrice.toFixed(0)}`}
+              price={`STARTS AT ₱${service.basePrice.toFixed(0)}`}
               icon={<span aria-hidden="true">{iconForCategory(service.category)}</span>}
             />
           ))

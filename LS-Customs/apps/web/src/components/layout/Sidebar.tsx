@@ -59,7 +59,14 @@ export function Sidebar({
     <>
       <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
         {/* Brand Mark with glowing spark micro-interaction */}
-        <div className="brand-mark" onClick={() => onView('home')} role="button" tabIndex={0}>
+        <div
+          className="brand-mark"
+          onClick={() => onView('home')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView('home') } }}
+          role="button"
+          tabIndex={0}
+          aria-label="LS Customs home"
+        >
           <span className="brand-spark">
             <IonIcon icon={sparkles} />
           </span>
@@ -70,12 +77,13 @@ export function Sidebar({
         </div>
 
         <div className="sidebar-label">MY WORKSPACE</div>
-        <nav className="side-nav">
+        <nav className="side-nav" role="navigation" aria-label="Main navigation">
           {navItems.map(({ id, label, icon: Icon }) => (
             <button
               className={view === id ? 'nav-item active' : 'nav-item'}
               key={id}
               onClick={() => onView(id)}
+              aria-current={view === id ? 'page' : undefined}
             >
               <span className="nav-icon-wrapper">
                 <Icon size={18} strokeWidth={1.8} />

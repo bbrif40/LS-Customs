@@ -64,15 +64,31 @@ export function AdminOverview({ onViewChange }: AdminOverviewProps) {
 
       {/* ── Stats Row ────────────────────────────────────────── */}
       <div className="admin-stats-row">
-        {stats.map((stat) => (
-          <div className="admin-stat-card" key={stat.label}>
+        {stats.map((stat) => {
+          const statView: AdminView | null =
+            stat.icon === 'revenue'   ? 'revenue'
+            : stat.icon === 'rentals'  ? 'bookings'
+            : stat.icon === 'mechanics'? 'bookings'
+            : stat.icon === 'fleet'    ? 'fleet'
+            : null
+          return (
+          <div
+            className="admin-stat-card"
+            key={stat.label}
+            role={statView ? 'button' : undefined}
+            tabIndex={statView ? 0 : undefined}
+            onClick={statView ? () => onViewChange(statView) : undefined}
+            onKeyDown={statView ? (e) => { if (e.key === 'Enter' || e.key === ' ') onViewChange(statView) } : undefined}
+            style={statView ? { cursor: 'pointer' } : undefined}
+            aria-label={statView ? `${stat.label} — click to view` : undefined}
+          >
             <div className="admin-stat-header">
               <span className="admin-stat-label">{stat.label}</span>
               <div className={`admin-stat-icon ${stat.icon}`}>
-                {stat.icon === 'revenue' && '₱'}
-                {stat.icon === 'rentals' && '🚗'}
+                {stat.icon === 'revenue'   && '₱'}
+                {stat.icon === 'rentals'   && '🚗'}
                 {stat.icon === 'mechanics' && '🔧'}
-                {stat.icon === 'fleet' && '📊'}
+                {stat.icon === 'fleet'     && '📊'}
               </div>
             </div>
             <div className="admin-stat-value">{stat.value}</div>
@@ -85,7 +101,8 @@ export function AdminOverview({ onViewChange }: AdminOverviewProps) {
               <span className="admin-stat-sub">{stat.sub}</span>
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
 
       {/* ── Map + Technician Status ──────────────────────────── */}
@@ -230,7 +247,7 @@ export function AdminOverview({ onViewChange }: AdminOverviewProps) {
       {/* ── Manage Schedule CTA ──────────────────────────────── */}
       <button className="admin-manage-schedule" onClick={() => onViewChange('mechanics')}>
         <Calendar size={18} />
-        Manage Schedule
+        View Technicians
       </button>
 
       {/* ── Footer ───────────────────────────────────────────── */}

@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   LogOut,
   TicketPlus,
+  Receipt,
 } from 'lucide-react'
 
 export type AdminView =
@@ -25,6 +26,7 @@ export type AdminView =
   | 'bookings'
   | 'revenue'
   | 'tickets'
+  | 'transactions'
 
 interface AdminSidebarProps {
   currentView: AdminView
@@ -33,17 +35,19 @@ interface AdminSidebarProps {
   userName: string
   openTicketCount?: number
   activeBookingsCount?: number
+  onDispatchEmergency?: () => void
 }
 
 const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'fleet', label: 'Fleet', icon: Car },
-  { id: 'services', label: 'Services', icon: Wrench },
-  { id: 'mechanics', label: 'Mechanics', icon: Users },
-  { id: 'users', label: 'Users', icon: UserCog },
-  { id: 'bookings', label: 'Bookings', icon: FileBarChart },
-  { id: 'tickets', label: 'Ticket Requests', icon: TicketPlus },
-  { id: 'revenue', label: 'Revenue', icon: DollarSign },
+  { id: 'overview',      label: 'Overview',         icon: LayoutDashboard },
+  { id: 'fleet',         label: 'Fleet',             icon: Car },
+  { id: 'services',      label: 'Services',          icon: Wrench },
+  { id: 'mechanics',     label: 'Mechanics',         icon: Users },
+  { id: 'users',         label: 'Users',             icon: UserCog },
+  { id: 'bookings',      label: 'Bookings',          icon: FileBarChart },
+  { id: 'tickets',       label: 'Ticket Requests',   icon: TicketPlus },
+  { id: 'revenue',       label: 'Revenue',           icon: DollarSign },
+  { id: 'transactions',  label: 'Transactions',      icon: Receipt },
 ]
 
 export function AdminSidebar({
@@ -53,6 +57,7 @@ export function AdminSidebar({
   userName,
   openTicketCount = 0,
   activeBookingsCount = 0,
+  onDispatchEmergency,
 }: AdminSidebarProps) {
   return (
     <aside className="admin-sidebar">
@@ -67,12 +72,13 @@ export function AdminSidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="admin-sidebar-nav">
+      <nav className="admin-sidebar-nav" role="navigation" aria-label="Admin navigation">
         {navItems.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             className={`admin-nav-item ${currentView === id ? 'active' : ''}`}
             onClick={() => onViewChange(id)}
+            aria-current={currentView === id ? 'page' : undefined}
           >
             <span className="admin-nav-icon">
               <Icon size={18} />
@@ -93,7 +99,12 @@ export function AdminSidebar({
       </nav>
 
       {/* Dispatch Emergency */}
-      <button className="admin-sidebar-dispatch">
+      <button
+        className="admin-sidebar-dispatch"
+        onClick={onDispatchEmergency}
+        type="button"
+        aria-label="Dispatch emergency mechanic"
+      >
         <AlertTriangle size={16} />
         Dispatch Emergency
       </button>

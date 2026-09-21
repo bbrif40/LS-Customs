@@ -1,7 +1,7 @@
 /**
  * Header — top bar with mobile menu toggle, breadcrumb, notifications, and user chip.
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Bell, Check, ChevronRight, Menu, CarFront, Wrench, TicketPlus, CreditCard, BellRing } from 'lucide-react'
 import { navItems } from '../../data/navigation'
 import type { CustomerNotification, View } from '../../types'
@@ -160,6 +160,15 @@ function NotificationItem({
 export function Header({ view, menuOpen, displayName, initials, avatarUrl, onToggleMenu, onView, onNotify, userId, onSelectBooking }: HeaderProps) {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useCustomerNotifications(userId, 'panel')
   const [open, setOpen] = useState(false)
+
+  // Close notification panel on Escape key
+  useEffect(() => {
+    if (!open) return
+    const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [open])
+
   return (
     <header className="topbar">
       <button className="mobile-menu" onClick={onToggleMenu} aria-label="Open menu">
@@ -171,12 +180,18 @@ export function Header({ view, menuOpen, displayName, initials, avatarUrl, onTog
         <strong>{navItems.find((item) => item.id === view)?.label}</strong>
       </div>
       <div className="top-actions">
-        <button className="icon-button" onClick={() => setOpen((value) => !value)} aria-label="Notifications">
+        <button
+          className="icon-button"
+          onClick={() => setOpen((value) => !value)}
+          aria-label="Notifications"
+          aria-expanded={open}
+          aria-haspopup="dialog"
+        >
           <Bell size={19} />
           {unreadCount > 0 && <i />}
         </button>
         {open && (
-          <div className="notification-panel" role="dialog" aria-label="Notifications">
+          <div className="notification-panel" role="dialog" aria-label="Notifications" aria-live="polite">
             <div className="notification-head">
               <strong>Notifications</strong>
               {unreadCount > 0 && (

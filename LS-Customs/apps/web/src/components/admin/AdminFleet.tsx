@@ -506,6 +506,17 @@ export function AdminFleet() {
                       onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
                       placeholder="https://..."
                     />
+                    {formData.image_url && (
+                      <div style={{ marginTop: 8, borderRadius: 8, overflow: 'hidden', maxHeight: 120, background: '#f1f5f9' }}>
+                        <img
+                          src={formData.image_url}
+                          alt="Preview"
+                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+                          onLoad={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'block' }}
+                          style={{ display: 'none', width: '100%', height: 120, objectFit: 'cover', borderRadius: 8 }}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="admin-form-field">

@@ -4,8 +4,9 @@
  * small, single-purpose child components.
  */
 import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react'
-import { ShieldCheck, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { supabase } from './supabaseClient'
+import { ToastProvider } from './components/common/ToastProvider'
 import { useAuth } from './hooks/useAuth'
 import { useAdminAuth } from './hooks/useAdminAuth'
 import { navItems } from './data/navigation'
@@ -165,6 +166,8 @@ export function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [toast, setToast] = useState('')
   const [confirmSignOut, setConfirmSignOut] = useState(false)
+  // Legacy simple toast used for sign-out and admin flows; most other
+  // notifications now go through ToastProvider/useToast instead.
   // Set by Header when the user clicks a notification tied to a specific
   // booking. Bookings reads this to expand the matching card.
   const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
@@ -310,6 +313,7 @@ export function App() {
   }
 
   return (
+    <ToastProvider>
     <RootErrorBoundary>
       <TicketRealtimeProvider userId={userId ?? null} userRole="customer">
         <div className="app-frame">
@@ -363,7 +367,7 @@ export function App() {
                 booking. Renders nothing; just runs the side effect so the
                 stream survives navigation away from the Mechanic screen. */}
             {userId && <ActiveBookingTracker userId={userId} />}
-            {view === 'bookings' && <Bookings userId={userId} onNotify={notify} selectedBookingId={selectedBookingId} onClearSelection={() => setSelectedBookingId(null)} />}
+            {view === 'bookings' && <Bookings userId={userId} onNotify={notify} onView={setView} selectedBookingId={selectedBookingId} onClearSelection={() => setSelectedBookingId(null)} />}
             {view === 'profile' && (
               <Profile
                 userId={userId}
@@ -392,7 +396,6 @@ export function App() {
 
           {toast && (
             <div className="toast">
-              <ShieldCheck size={17} />{' '}
               {toast}
               <button onClick={() => setToast('')} aria-label="Dismiss">
                 <X size={15} />
@@ -427,5 +430,6 @@ export function App() {
         </div>
       </TicketRealtimeProvider>
     </RootErrorBoundary>
+    </ToastProvider>
   )
 }

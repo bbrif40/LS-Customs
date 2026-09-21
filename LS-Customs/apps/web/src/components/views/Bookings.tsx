@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag, CreditCard } from 'lucide-react'
+import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag, CreditCard, Check, Ban, CalendarX, BookOpen } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import { usePaymentStatus } from '../../hooks/usePaymentStatus'
 import { PaymentForm } from '../common/PaymentForm'
@@ -12,6 +12,7 @@ import { useCustomerBookings, type CustomerServiceBooking, type CustomerVehicleB
 interface BookingsProps {
   userId: string | undefined
   onNotify: (message: string) => void
+  onView?: (view: string) => void
   /** When set, the matching service booking auto-expands its mechanic
    *  detail block. Set by Header.tsx when the user clicks an
    *  assignment notification. */
@@ -79,6 +80,58 @@ function DetailRow({ icon: Icon, label, value }: { icon: typeof Calendar; label:
 }
 
 /** The modal that opens when a customer clicks a booking card. Shared
+/**
+ * BookingTimeline — horizontal step-indicator for booking lifecycle.
+ * Shows completed steps in green, the current step in amber, future steps grey.
+ * Cancelled bookings show a red X on the last step they reached.
+ */
+const VEHICLE_STEPS = ['Pending', 'Confirmed', 'In Progress', 'Completed']
+const VEHICLE_STATUS_IDX: Record<string, number> = {
+  pending: 0, confirmed: 1, in_progress: 2, completed: 3, cancelled: -1,
+}
+const SERVICE_STEPS = ['Pending', 'Assigned', 'En Route', 'In Progress', 'Completed']
+const SERVICE_STATUS_IDX: Record<string, number> = {
+  pending: 0, confirmed: 0, assigned: 1, en_route: 2, in_progress: 3, completed: 4, cancelled: -1,
+}
+
+function BookingTimeline({ status, kind }: { status: string; kind: 'rental' | 'service' }) {
+  const steps = kind === 'service' ? SERVICE_STEPS : VEHICLE_STEPS
+  const statusMap = kind === 'service' ? SERVICE_STATUS_IDX : VEHICLE_STATUS_IDX
+  const isCancelled = status === 'cancelled'
+  const currentIdx = statusMap[status] ?? 0
+
+  // For cancelled, find last reached step before cancellation
+  const cancelledAt = isCancelled
+    ? (kind === 'service' ? 0 : 0) // cancelled bookings just show first step as red
+    : -1
+
+  return (
+    <div className="booking-timeline">
+      <div className="booking-timeline-track">
+        {steps.map((label, idx) => {
+          const isDone    = !isCancelled && idx < currentIdx
+          const isCurrent = !isCancelled && idx === currentIdx
+          const isCancelledStep = isCancelled && idx === cancelledAt
+
+          return (
+            <div
+              key={label}
+              className={`booking-timeline-step${isDone ? ' is-done' : ''}${isCurrent ? ' is-current' : ''}${isCancelledStep ? ' is-cancelled' : ''}`}
+            >
+              <div className="booking-timeline-dot">
+                {isDone && <Check size={11} />}
+                {isCancelledStep && <X size={11} />}
+              </div>
+              <span className="booking-timeline-label">{label}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** The modal that opens when a customer clicks a booking card. Shared
  *  between rentals and service bookings — the fields shown depend on
  *  which kind the user picked. */
 type BookingDetails =
@@ -112,6 +165,9 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
   const [retryingPayment, setRetryingPayment] = useState(false)
   const [retryIntent, setRetryIntent] = useState<{ payment_id: string; client_secret: string; checkout_url?: string; provider: string; amount: number; currency: string } | null>(null)
   const [retryError, setRetryError] = useState<string | null>(null)
+  const [cancelling, setCancelling] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(false)
+  const [cancelError, setCancelError] = useState<string | null>(null)
   // Track the original payment's status for realtime webhook updates
   const { status: originalPaymentStatus } = usePaymentStatus(shared.payments?.id ?? null)
   const { status: retryPaymentInfo } = usePaymentStatus(retryIntent?.payment_id ?? null)
@@ -162,6 +218,26 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
     setSavingRating(false)
   }
 
+  async function cancelBooking() {
+    if (!userId) return
+    setCancelling(true)
+    setCancelError(null)
+    const table = isService ? 'service_bookings' : 'vehicle_bookings'
+    const { error: cancelErr } = await supabase
+      .from(table)
+      .update({ status: 'cancelled' })
+      .eq('id', shared.id)
+      .eq(isService ? 'user_id' : 'user_id', userId)
+    if (cancelErr) {
+      setCancelError(cancelErr.message)
+    } else {
+      onNotify('Booking cancelled successfully.')
+      onClose()
+    }
+    setCancelling(false)
+    setConfirmCancel(false)
+  }
+
   return (
     <div className="map-modal-backdrop" onClick={onClose}>
       <div className="map-modal booking-details-modal" onClick={(event) => event.stopPropagation()}>
@@ -177,6 +253,7 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
             <span className={`status-pill ${statusClass(shared.status)}`}>{statusLabel(shared.status)}</span>
             <span className="muted"><Hash size={11} /> {isService ? `service-${shared.id.slice(0, 8)}` : `booking-${shared.id.slice(0, 8)}`}</span>
           </div>
+          <BookingTimeline status={shared.status} kind={isService ? 'service' : 'rental'} />
 
           {/* Payment section */}
           {shared.payments ? (
@@ -318,6 +395,42 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
             </div>
           )}
         </div>
+        {/* Cancel booking — only shown for pending (not-yet-actioned) bookings */}
+        {shared.status === 'pending' && (
+          <div className="booking-cancel-section">
+            {!confirmCancel ? (
+              <button
+                className="booking-cancel-btn"
+                type="button"
+                onClick={() => setConfirmCancel(true)}
+              >
+                <Ban size={13} /> Cancel booking
+              </button>
+            ) : (
+              <div className="cancel-confirm-row">
+                <p>Are you sure you want to cancel this booking? This cannot be undone.</p>
+                <button
+                  className="booking-cancel-btn"
+                  type="button"
+                  disabled={cancelling}
+                  onClick={() => void cancelBooking()}
+                >
+                  {cancelling ? <Loader2 size={13} className="spin" /> : <Ban size={13} />}
+                  {cancelling ? 'Cancelling…' : 'Yes, cancel'}
+                </button>
+                <button
+                  className="outline-button"
+                  type="button"
+                  style={{ fontSize: 12, padding: '6px 12px' }}
+                  onClick={() => setConfirmCancel(false)}
+                >
+                  Keep booking
+                </button>
+                {cancelError && <p style={{ color: '#dc2626' }}>{cancelError}</p>}
+              </div>
+            )}
+          </div>
+        )}
         <footer>
           {isService && (
             <button
@@ -341,7 +454,7 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
   )
 }
 
-export function Bookings({ userId, onNotify, selectedBookingId, onClearSelection }: BookingsProps) {
+export function Bookings({ userId, onNotify, onView, selectedBookingId, onClearSelection }: BookingsProps) {
   const { vehicleBookings, serviceBookings, loading, error, refetch } = useCustomerBookings(userId)
   const [liveBooking, setLiveBooking] = useState<CustomerServiceBooking | null>(null)
   const [details, setDetails] = useState<BookingDetails | null>(null)
@@ -385,7 +498,17 @@ export function Bookings({ userId, onNotify, selectedBookingId, onClearSelection
           </button>
         ))}
       </div>
-      {loading ? <div className="loading-state"><Loader2 size={20} className="spin" /> Loading your bookings…</div> : error ? <div className="empty-state"><p>{error}</p><button className="button dark-button" onClick={() => void refetch()}>Retry</button></div> : vehicleBookings.length === 0 && serviceBookings.length === 0 ? <div className="empty-state"><p>No bookings yet. Your rental and service bookings will appear here.</p></div> : visibleVehicles.length === 0 && visibleServices.length === 0 ? <div className="empty-state"><p>{tab === 'active' ? 'No active bookings right now. Completed and cancelled bookings live in All history.' : 'No completed or cancelled bookings yet.'}</p></div> : (
+      {loading ? <div className="loading-state"><Loader2 size={20} className="spin" /> Loading your bookings…</div> : error ? <div className="empty-state"><p>{error}</p><button className="button dark-button" onClick={() => void refetch()}>Retry</button></div> : vehicleBookings.length === 0 && serviceBookings.length === 0 ? (
+        <div className="bookings-empty-state">
+          <div className="bookings-empty-icon"><BookOpen size={28} /></div>
+          <h3>No bookings yet</h3>
+          <p>Your rental and service bookings will appear here once you make your first booking.</p>
+          <div className="bookings-empty-actions">
+            <button className="button dark-button" onClick={() => onView?.('rentals')} type="button"><CalendarX size={14} /> Rent a vehicle</button>
+            <button className="outline-button" onClick={() => onView?.('services')} type="button">Book a mechanic</button>
+          </div>
+        </div>
+      ) : visibleVehicles.length === 0 && visibleServices.length === 0 ? <div className="empty-state"><p>{tab === 'active' ? 'No active bookings right now. Completed and cancelled bookings live in All history.' : 'No completed or cancelled bookings yet.'}</p></div> : (
         <div className="booking-grid">
           {visibleVehicles.map((booking) => {
             const isSelected = selectedBookingId === booking.id
