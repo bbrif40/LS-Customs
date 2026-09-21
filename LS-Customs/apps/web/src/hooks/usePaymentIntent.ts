@@ -77,12 +77,22 @@ export function usePaymentIntent(): UsePaymentIntentResult {
         return null
       }
 
-      if (!data?.payment_id) {
-        setError(data?.message ?? 'Payment intent could not be created')
+      // The Edge Function wraps its response in { data, error } per jsonResponse helper.
+      // Unwrap data.data if nested, or fall back to data.
+      const payload = (data as any)?.data?.payment_id ? (data as any).data : ((data as any)?.data ?? data)
+      const wrappedError = (data as any)?.error?.message
+
+      if (wrappedError) {
+        setError(wrappedError)
         return null
       }
 
-      return data as PaymentIntentResult
+      if (!payload?.payment_id) {
+        setError(payload?.message ?? (data as any)?.message ?? 'Payment intent could not be created')
+        return null
+      }
+
+      return payload as PaymentIntentResult
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setError(msg)

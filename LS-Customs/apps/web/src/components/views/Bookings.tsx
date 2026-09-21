@@ -196,10 +196,12 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
                     const { data, error: invokeError } = await supabase.functions.invoke('create-payment-intent', {
                       body: { booking_type: isService ? 'service' : 'vehicle', booking_id: shared.id },
                     })
-                    if (invokeError || !data?.payment_id) {
-                      setRetryError(invokeError?.message ?? data?.message ?? 'Could not create payment intent')
+                    const payload = (data as any)?.data?.payment_id ? (data as any).data : ((data as any)?.data ?? data)
+                    const wrappedError = (data as any)?.error?.message
+                    if (invokeError || wrappedError || !payload?.payment_id) {
+                      setRetryError(invokeError?.message ?? wrappedError ?? payload?.message ?? 'Could not create payment intent')
                     } else {
-                      setRetryIntent(data)
+                      setRetryIntent(payload)
                     }
                     setRetryingPayment(false)
                   }}
