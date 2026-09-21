@@ -314,8 +314,12 @@ interface TicketSuccessProps {
 export function TicketSuccess({ result, onClose, onCopy, onDismiss }: TicketSuccessProps) {
   const [copied, setCopied] = useState(false)
 
+  const formattedTicketId = result.tracking_number.startsWith('ticket-')
+    ? result.tracking_number
+    : `ticket-${(result.id || result.tracking_number).slice(0, 8).toLowerCase()}`
+
   const handleCopy = () => {
-    onCopy(result.tracking_number)
+    onCopy(formattedTicketId)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -357,7 +361,7 @@ export function TicketSuccess({ result, onClose, onCopy, onDismiss }: TicketSucc
         <div className="ticket-success-tracking-box">
           <span className="ticket-success-label">Ticket Tracking Number</span>
           <div className="ticket-tracking-pill">
-            <span className="ticket-tracking-code">{result.tracking_number}</span>
+            <span className="ticket-tracking-code">{formattedTicketId}</span>
             <button
               type="button"
               className={`ticket-copy-btn${copied ? ' copied' : ''}`}

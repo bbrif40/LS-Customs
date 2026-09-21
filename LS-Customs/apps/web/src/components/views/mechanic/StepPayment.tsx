@@ -26,6 +26,7 @@ import { usePaymentIntent } from '../../../hooks/usePaymentIntent'
 import { usePaymentStatus } from '../../../hooks/usePaymentStatus'
 import { useSmsNotification } from '../../../hooks/useSmsNotification'
 import { PaymentForm } from '../../common/PaymentForm'
+import { PaymentMethodBadges } from '../../common/PaymentMethodBadges'
 import { SummaryRow } from './SummaryRow'
 import type { ServiceBooking } from '../../../types'
 
@@ -103,7 +104,7 @@ export function StepPayment({
           userId,
           type: 'service_payment_confirmed',
           title: 'Service payment confirmed',
-          body: `Your mobile mechanic service (${serviceName}) is confirmed for ${new Date(scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. Our team will be in touch shortly.`,
+          body: `Your mobile mechanic service (${serviceName}, service-${bookingId.slice(0, 8)}) is confirmed for ${new Date(scheduledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}. Our team will be in touch shortly.`,
         })
       }
       onConfirm({
@@ -151,7 +152,7 @@ export function StepPayment({
             value={
               <span className="summary-booking-id">
                 <Hash size={12} style={{ display: 'inline', marginRight: 2, verticalAlign: 'middle' }} />
-                {bookingId.length > 12 ? bookingId.slice(0, 8).toUpperCase() : bookingId}
+                service-{bookingId.length > 8 ? bookingId.slice(0, 8) : bookingId}
               </span>
             }
             action={null}
@@ -248,15 +249,7 @@ export function StepPayment({
           </div>
         ) : (
           <div className="step-actions" style={{ flexDirection: 'column', gap: '12px' }}>
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '10px 12px', width: '100%' }}>
-              <p style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 6px 0' }}>Available Payment Methods</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                <span style={{ fontSize: '11px', padding: '3px 7px', borderRadius: '4px', background: 'rgba(0,114,206,0.15)', color: '#38bdf8', fontWeight: 600, border: '1px solid rgba(56,189,248,0.25)' }}>GCash</span>
-                <span style={{ fontSize: '11px', padding: '3px 7px', borderRadius: '4px', background: 'rgba(16,185,129,0.15)', color: '#34d399', fontWeight: 600, border: '1px solid rgba(52,211,153,0.25)' }}>Maya</span>
-                <span style={{ fontSize: '11px', padding: '3px 7px', borderRadius: '4px', background: 'rgba(244,63,94,0.15)', color: '#fb7185', fontWeight: 600, border: '1px solid rgba(251,113,133,0.25)' }}>Visa / Mastercard</span>
-                <span style={{ fontSize: '11px', padding: '3px 7px', borderRadius: '4px', background: 'rgba(234,179,8,0.15)', color: '#facc15', fontWeight: 600, border: '1px solid rgba(250,204,21,0.25)' }}>QR Ph</span>
-              </div>
-            </div>
+            <PaymentMethodBadges />
             <button
               className="button dark-button"
               onClick={() => void handleInitiatePayment()}

@@ -304,7 +304,10 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
                   onError={(message) => onNotify(message)}
                   onSubmitted={(result) => {
                     setTicketResult(result)
-                    onNotify(`Ticket ${result.tracking_number} submitted`)
+                    const formatted = result.tracking_number.startsWith('ticket-')
+                      ? result.tracking_number
+                      : `ticket-${(result.id || result.tracking_number).slice(0, 8).toLowerCase()}`
+                    onNotify(`Ticket ${formatted} submitted`)
                   }}
                 />
               )}
@@ -424,7 +427,7 @@ function ThreadOverlay({
       <div className="ticket-form-header">
         <div className="ticket-form-title">
           <TicketPlus size={16} />
-          <span>Ticket {trackingNumber}</span>
+          <span>{trackingNumber.startsWith('ticket-') ? trackingNumber : `ticket-${trackingNumber.slice(0, 8).toLowerCase()}`}</span>
         </div>
         <button
           type="button"

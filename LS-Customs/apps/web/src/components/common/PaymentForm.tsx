@@ -19,6 +19,7 @@ import { useState, useEffect } from 'react'
 import { loadStripe, Stripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { CreditCard, Loader2, ExternalLink, ShieldCheck, Smartphone, QrCode, Wallet, RefreshCw } from 'lucide-react'
+import { PaymentMethodBadges } from './PaymentMethodBadges'
 
 export type PaymentFormStatus = 'succeeded' | 'failed' | 'processing'
 
@@ -290,29 +291,7 @@ function PaymongoForm({
         <strong style={{ fontSize: '18px', color: '#10b981' }}>₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
       </div>
 
-      <div className="paymongo-methods-banner" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', padding: '12px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#9ca3af' }}>
-          <ShieldCheck size={14} style={{ color: '#10b981' }} />
-          <span>PayMongo Secure Philippine Channels</span>
-        </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(0, 114, 206, 0.15)', color: '#38bdf8', fontWeight: 600, border: '1px solid rgba(56, 189, 248, 0.25)' }}>
-            <Smartphone size={12} /> GCash
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 600, border: '1px solid rgba(52, 211, 153, 0.25)' }}>
-            <Wallet size={12} /> Maya
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(244, 63, 94, 0.15)', color: '#fb7185', fontWeight: 600, border: '1px solid rgba(251, 113, 133, 0.25)' }}>
-            <CreditCard size={12} /> Visa / Mastercard
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(234, 179, 8, 0.15)', color: '#facc15', fontWeight: 600, border: '1px solid rgba(250, 204, 21, 0.25)' }}>
-            <QrCode size={12} /> QR Ph (Any Bank)
-          </span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', fontWeight: 600, border: '1px solid rgba(192, 132, 252, 0.25)' }}>
-            BillEase / Online Bank
-          </span>
-        </div>
-      </div>
+      <PaymentMethodBadges compact title="PayMongo Secure Channels" />
 
       {waitingForPayment ? (
         <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>

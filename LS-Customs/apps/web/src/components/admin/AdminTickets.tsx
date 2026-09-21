@@ -48,6 +48,10 @@ const categoryLabels: Record<TicketCategory, string> = {
   other: 'Other',
 }
 
+function formatTicketCode(tracking: string): string {
+  return tracking.startsWith('ticket-') ? tracking : `ticket-${tracking.toLowerCase()}`
+}
+
 const categoryColors: Record<TicketCategory, string> = {
   rental: '#3b82f6',
   billing: '#22c55e',
@@ -137,13 +141,14 @@ export function AdminTickets() {
   }
 
   const handleCopyTracking = async (ticket: SupportTicketWithCustomer) => {
+    const code = formatTicketCode(ticket.tracking_number)
     try {
-      await navigator.clipboard.writeText(ticket.tracking_number)
+      await navigator.clipboard.writeText(code)
       setCopiedId(ticket.id)
       window.setTimeout(() => setCopiedId((curr) => (curr === ticket.id ? null : curr)), 1500)
     } catch {
       // Fallback: select the text in a temp input
-      window.prompt('Copy this tracking number:', ticket.tracking_number)
+      window.prompt('Copy this tracking number:', code)
     }
   }
 
@@ -420,7 +425,7 @@ function TicketRow({
             }}
           >
             {isCopied ? <Check size={11} /> : <Copy size={11} />}
-            {ticket.tracking_number}
+            {formatTicketCode(ticket.tracking_number)}
           </button>
         </td>
         <td style={{ fontWeight: 500 }}>{customerName}</td>

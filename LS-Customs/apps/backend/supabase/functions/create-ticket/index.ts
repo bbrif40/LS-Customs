@@ -46,22 +46,18 @@ function badRequest(message: string, status = 400) {
  */
 function trackingSuffix(customerId: string, ts: number, description: string): string {
   const seed = `${customerId}|${ts}|${description}`
-  // FNV-1a 32-bit, base36 → upper 4 chars
+  // FNV-1a 32-bit hash -> hex
   let h = 0x811c9dc5
   for (let i = 0; i < seed.length; i++) {
     h ^= seed.charCodeAt(i)
     h = Math.imul(h, 0x01000193)
   }
   const hex = (h >>> 0).toString(16).padStart(8, "0")
-  return hex.slice(0, 4).toUpperCase()
+  return hex.slice(0, 6).toLowerCase()
 }
 
 function buildTrackingNumber(customerId: string, ts: number, description: string): string {
-  const d = new Date(ts)
-  const yyyy = d.getUTCFullYear()
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0")
-  const dd = String(d.getUTCDate()).padStart(2, "0")
-  return `TKT-${yyyy}${mm}${dd}-${trackingSuffix(customerId, ts, description)}`
+  return `ticket-${trackingSuffix(customerId, ts, description)}`
 }
 
 Deno.serve(async (req) => {

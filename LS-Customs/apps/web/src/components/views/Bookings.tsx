@@ -175,7 +175,7 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
         <div className="booking-details-body">
           <div className="booking-details-status">
             <span className={`status-pill ${statusClass(shared.status)}`}>{statusLabel(shared.status)}</span>
-            <span className="muted"><Hash size={11} /> {shared.id.slice(0, 8)}</span>
+            <span className="muted"><Hash size={11} /> {isService ? `service-${shared.id.slice(0, 8)}` : `booking-${shared.id.slice(0, 8)}`}</span>
           </div>
 
           {/* Payment section */}
@@ -397,7 +397,7 @@ export function Bookings({ userId, onNotify, selectedBookingId, onClearSelection
               >
                 <div className="booking-card-head"><div><span className={`status-pill ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span>{booking.payments && <span className={`status-pill ${paymentStatusClass(booking.payments.status)}`}>{paymentStatusLabel(booking.payments.status)}</span>}<p>Rental · {booking.start_date} to {booking.end_date}</p></div><CarFront size={22} /></div>
                 <h3>{booking.vehicles?.name ?? 'Vehicle rental'}</h3><p className="muted">{booking.pickup_location ?? 'Pickup location to be confirmed'}</p>
-                <div className="booking-actions"><strong>₱{Number(booking.total_price).toLocaleString()}</strong><span className="muted">Booking {booking.id.slice(0, 8)}</span></div>
+                <div className="booking-actions"><strong>₱{Number(booking.total_price).toLocaleString()}</strong><span className="muted">booking-{booking.id.slice(0, 8)}</span></div>
               </button>
             )
           })}
@@ -432,10 +432,7 @@ export function Bookings({ userId, onNotify, selectedBookingId, onClearSelection
                 )}
                 <div className="booking-actions">
                   <strong>₱{Number(booking.total_price).toLocaleString()}</strong>
-                  {/* The "View map" button used to live here. Now that the
-                      whole card is clickable, the map lives inside the
-                      details modal so the click target stays the card. */}
-                  {location && <span className="muted">Tap card for details</span>}
+                  <span className="muted">service-{booking.id.slice(0, 8)}</span>
                 </div>
               </button>
             )

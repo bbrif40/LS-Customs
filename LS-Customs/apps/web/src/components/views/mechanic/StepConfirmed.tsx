@@ -43,7 +43,7 @@ export function StepConfirmed({ booking, onBookAnother, onBackToHome }: StepConf
 
       <div className="confirmation-ref">
         <span className="confirmation-ref-label">BOOKING REFERENCE</span>
-        <code className="confirmation-ref-value">{booking.id}</code>
+        <code className="confirmation-ref-value">service-{booking.id.length > 8 ? booking.id.slice(0, 8) : booking.id}</code>
       </div>
 
       <div className="confirmation-summary">
