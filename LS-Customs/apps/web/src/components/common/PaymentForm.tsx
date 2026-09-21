@@ -309,7 +309,7 @@ function PaymongoForm({
             <QrCode size={12} /> QR Ph (Any Bank)
           </span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', padding: '4px 8px', borderRadius: '4px', background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', fontWeight: 600, border: '1px solid rgba(192, 132, 252, 0.25)' }}>
-            GrabPay / BillEase
+            BillEase / Online Bank
           </span>
         </div>
       </div>

@@ -60,7 +60,20 @@ export function usePaymentIntent(): UsePaymentIntentResult {
       })
 
       if (invokeError) {
-        setError(invokeError.message)
+        let detailedMsg = invokeError.message
+        try {
+          if ('context' in invokeError && typeof (invokeError as any).context?.json === 'function') {
+            const body = await (invokeError as any).context.json()
+            if (body?.error?.message) {
+              detailedMsg = body.error.message
+            } else if (body?.message) {
+              detailedMsg = body.message
+            }
+          }
+        } catch {
+          // ignore
+        }
+        setError(detailedMsg)
         return null
       }
 

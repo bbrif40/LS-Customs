@@ -84,27 +84,19 @@ Deno.serve(async (req: Request) => {
     }
 
     // ------------------------------------------------------------------
-    // Authenticate caller — verify JWT via GoTrue directly
+    // Authenticate caller — verify JWT via Supabase Auth
     // ------------------------------------------------------------------
     const jwt = extractJwt(req);
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
-      method: "GET",
-      headers: {
-        "apikey": anonKey,
-        "Authorization": `Bearer ${jwt}`,
-      },
-    });
-    if (!userRes.ok) {
+    const supabase = createServiceClient();
+    const { data: userData, error: userError } = await supabase.auth.getUser(jwt);
+    if (userError || !userData?.user) {
+      console.error("Auth error in create-payment-intent:", userError?.message);
       return jsonResponse(null, {
         code: "UNAUTHENTICATED",
-        message: "Missing or invalid JWT",
+        message: userError?.message ?? "Missing or invalid JWT",
       }, 401);
     }
-    const user = await userRes.json();
-
-    const supabase = createServiceClient();
+    const user = userData.user;
 
     // ------------------------------------------------------------------
     // 1. Fetch the booking; verify ownership and get total_price
@@ -115,36 +107,46 @@ Deno.serve(async (req: Request) => {
     if (body.booking_type === "vehicle") {
       const { data, error } = await supabase
         .from("vehicle_bookings")
-        .select("total_price, customer_id, vehicles(name, make, model)")
+        .select("total_price, customer_id, vehicles(name)")
         .eq("id", body.booking_id)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
+        console.error("Error fetching vehicle booking:", error?.message, body.booking_id);
         return jsonResponse(null, {
           code: "NOT_FOUND",
-          message: `Vehicle booking ${body.booking_id} not found`,
+          message: `Vehicle booking ${body.booking_id} not found: ${error?.message ?? "no data"}`,
         }, 404);
       }
       booking = data;
-      const veh = data.vehicles as { name?: string; make?: string; model?: string } | null;
-      bookingTitle = veh?.name || (veh?.make && veh?.model ? `${veh.make} ${veh.model}` : "Vehicle Rental");
+      const veh = data.vehicles as { name?: string } | null;
+      bookingTitle = veh?.name || "Vehicle Rental";
     } else {
       const { data, error } = await supabase
         .from("service_bookings")
-        .select("total_price, customer_id, service_booking_items(mechanic_services(name))")
+        .select("total_price, customer_id")
         .eq("id", body.booking_id)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
+        console.error("Error fetching service booking:", error?.message, body.booking_id);
         return jsonResponse(null, {
           code: "NOT_FOUND",
-          message: `Service booking ${body.booking_id} not found`,
+          message: `Service booking ${body.booking_id} not found: ${error?.message ?? "no data"}`,
         }, 404);
       }
       booking = data;
-      const items = data.service_booking_items as Array<{ mechanic_services?: { name?: string } }> | null;
-      const serviceNames = items?.map((i) => i.mechanic_services?.name).filter(Boolean).join(", ");
-      bookingTitle = serviceNames || "Mobile Mechanic Service";
+
+      try {
+        const { data: items } = await supabase
+          .from("service_booking_items")
+          .select("mechanic_services(name)")
+          .eq("service_booking_id", body.booking_id);
+        const serviceNames = (items as any[])?.map((i) => i.mechanic_services?.name).filter(Boolean).join(", ");
+        bookingTitle = serviceNames || "Mobile Mechanic Service";
+      } catch {
+        bookingTitle = "Mobile Mechanic Service";
+      }
     }
 
     if (!booking) {

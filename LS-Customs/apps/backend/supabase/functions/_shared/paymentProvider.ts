@@ -185,7 +185,6 @@ async function createPaymongoCheckoutSession(
         payment_method_types: [
           "card",
           "gcash",
-          "grabpay",
           "paymaya",
           "qrph",
           "billease",
@@ -278,7 +277,7 @@ async function createPaymongoRawPaymentIntent(
         attributes: {
           amount: amountInCents,
           currency: "PHP",
-          payment_method_allowed: ["card", "gcash", "grabpay", "qrph", "paymaya"],
+          payment_method_allowed: ["card", "gcash", "paymaya", "qrph"],
           metadata: {
             booking_type: bookingType,
             booking_id: bookingId,
