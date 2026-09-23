@@ -127,23 +127,35 @@ export function useAdminRevenueData(
         .map((p) => p.booking_id)
 
       const vehicleRefs = new Map<string, string>()
+      const vehicleNames = new Map<string, string>()
       const bookingStatusMap = new Map<string, string>()
 
       if (vehicleBookingIds.length > 0) {
-        const { data: vbRows, error: vbError } = await supabase
+        type VehicleRow = { id: string; status?: string; vehicles: { name: string } | null }
+        let vbRows: VehicleRow[] | null = null
+
+        const { data: joinedVb, error: vbError } = await supabase
           .from('vehicle_bookings')
-          .select('id, status, vehicles!inner(plate)')
+          .select('id, status, vehicles(name)')
           .in('id', vehicleBookingIds)
 
-        if (!vbError && vbRows) {
-          type VehicleRow = { id: string; status?: string; vehicles: { plate: string } | null }
-          for (const row of (vbRows ?? []) as unknown as VehicleRow[]) {
-            if (row.vehicles?.plate) {
-              vehicleRefs.set(row.id, `VS-${row.vehicles.plate}`)
-            }
-            if (row.status) {
-              bookingStatusMap.set(`vehicle:${row.id}`, row.status)
-            }
+        if (!vbError && joinedVb) {
+          vbRows = joinedVb as unknown as VehicleRow[]
+        } else {
+          const { data: fallbackVb } = await supabase
+            .from('vehicle_bookings')
+            .select('id, status')
+            .in('id', vehicleBookingIds)
+          vbRows = (fallbackVb ?? []) as unknown as VehicleRow[]
+        }
+
+        for (const row of vbRows ?? []) {
+          vehicleRefs.set(row.id, `VR-${row.id.slice(0, 8).toUpperCase()}`)
+          if (row.vehicles?.name) {
+            vehicleNames.set(row.id, row.vehicles.name)
+          }
+          if (row.status) {
+            bookingStatusMap.set(`vehicle:${row.id}`, row.status)
           }
         }
       }
@@ -159,6 +171,87 @@ export function useAdminRevenueData(
             if (row.status) {
               bookingStatusMap.set(`service:${row.id}`, row.status)
             }
+          }
+        }
+      }
+
+      // Also incorporate completed vehicle bookings in this period that don't have a payments row
+      const existingVehicleBookingIds = new Set(vehicleBookingIds)
+      const { data: standaloneVb } = await supabase
+        .from('vehicle_bookings')
+        .select('id, status, customer_id, total_price, created_at, vehicles(name)')
+        .eq('status', 'completed')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+
+      if (standaloneVb) {
+        for (const vb of (standaloneVb as unknown as { id: string; status: string; customer_id: string; total_price: number; created_at: string; vehicles: { name: string } | null }[])) {
+          if (!existingVehicleBookingIds.has(vb.id)) {
+            existingVehicleBookingIds.add(vb.id)
+            if (vb.vehicles?.name) {
+              vehicleNames.set(vb.id, vb.vehicles.name)
+            }
+            bookingStatusMap.set(`vehicle:${vb.id}`, 'completed')
+            typedPayments.push({
+              id: `vb-${vb.id}`,
+              booking_type: 'vehicle',
+              booking_id: vb.id,
+              customer_id: vb.customer_id,
+              amount: Number(vb.total_price),
+              currency: 'PHP',
+              provider: 'completed_rental',
+              provider_reference: null,
+              status: 'succeeded',
+              created_at: vb.created_at,
+              updated_at: vb.created_at,
+            })
+          }
+        }
+      }
+
+      // Also incorporate completed service bookings in this period that don't have a payments row
+      const existingServiceBookingIds = new Set(serviceBookingIds)
+      const { data: standaloneSb } = await supabase
+        .from('service_bookings')
+        .select('id, status, customer_id, total_price, created_at')
+        .eq('status', 'completed')
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+
+      if (standaloneSb) {
+        for (const sb of (standaloneSb as unknown as { id: string; status: string; customer_id: string; total_price: number; created_at: string }[])) {
+          if (!existingServiceBookingIds.has(sb.id)) {
+            existingServiceBookingIds.add(sb.id)
+            bookingStatusMap.set(`service:${sb.id}`, 'completed')
+            typedPayments.push({
+              id: `sb-${sb.id}`,
+              booking_type: 'service',
+              booking_id: sb.id,
+              customer_id: sb.customer_id,
+              amount: Number(sb.total_price),
+              currency: 'PHP',
+              provider: 'completed_service',
+              provider_reference: null,
+              status: 'succeeded',
+              created_at: sb.created_at,
+              updated_at: sb.created_at,
+            })
+          }
+        }
+      }
+
+      // Ensure any newly added customer IDs from standalone bookings are fetched
+      const missingCustomerIds = Array.from(
+        new Set(typedPayments.map((p) => p.customer_id).filter((id) => id && !customersById.has(id)))
+      )
+      if (missingCustomerIds.length > 0) {
+        const { data: newProfiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', missingCustomerIds)
+        if (newProfiles) {
+          for (const p of newProfiles as { id: string; full_name: string | null }[]) {
+            customersById.set(p.id, p.full_name ?? 'Unknown Customer')
           }
         }
       }
@@ -241,15 +334,18 @@ export function useAdminRevenueData(
 
       // ── 7. Build transaction list for the table ─────────────────
       const txList: RevenueTransaction[] = typedPayments.map((p) => {
-        const customer = customersById.get(p.customer_id) ?? p.customer_id.slice(0, 8)
+        const customer = customersById.get(p.customer_id) ?? (p.customer_id ? p.customer_id.slice(0, 8) : 'Customer')
         const ref = p.booking_type === 'vehicle'
           ? (vehicleRefs.get(p.booking_id) ?? `#${p.booking_id.slice(0, 8)}`)
           : `#${p.booking_id.slice(0, 8)}`
         const succeeded = isPaymentSucceeded(p)
 
-        if (succeeded && p.status !== 'succeeded') {
+        if (succeeded && p.status !== 'succeeded' && !p.id.startsWith('vb-')) {
           void supabase.from('payments').update({ status: 'succeeded' }).eq('id', p.id)
         }
+
+        const vName = vehicleNames.get(p.booking_id)
+        const vehicleLabel = vName ? `${vName} Rental` : 'Premium Sedan Rental'
 
         return {
           date: new Date(p.created_at).toLocaleDateString('en-US', {
@@ -258,7 +354,7 @@ export function useAdminRevenueData(
             year: 'numeric',
           }),
           customer,
-          serviceType: p.booking_type === 'vehicle' ? 'Premium Sedan Rental' : 'Mobile Mechanic Service',
+          serviceType: p.booking_type === 'vehicle' ? vehicleLabel : 'Mobile Mechanic Service',
           serviceIcon: p.booking_type === 'vehicle' ? '🚗' : '🔧',
           amount: `${Number(p.amount).toLocaleString()}.00`,
           status: succeeded ? 'completed' : p.status as 'completed' | 'refunded' | 'pending',

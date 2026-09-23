@@ -86,15 +86,17 @@ export function useAdminPayments(): UseAdminPaymentsResult {
       const serviceRefs = new Map<string, string>()
 
       if (vehicleIds.length > 0) {
-        type VehicleRow = { id: string; vehicles: { plate: string } | null }
+        type VehicleRow = { id: string; vehicles: { name: string } | null }
         const { data: vehicles, error: vErr } = await supabase
           .from('vehicle_bookings')
-          .select('id, vehicles!inner(plate)')
+          .select('id, vehicles(name)')
           .in('id', vehicleIds)
         if (!vErr && vehicles) {
           for (const v of (vehicles as unknown as VehicleRow[])) {
-            if (v.vehicles?.plate) {
-              vehicleRefs.set(v.id, v.vehicles.plate)
+            if (v.vehicles?.name) {
+              vehicleRefs.set(v.id, v.vehicles.name)
+            } else {
+              vehicleRefs.set(v.id, `VR-${v.id.slice(0, 8).toUpperCase()}`)
             }
           }
         }
