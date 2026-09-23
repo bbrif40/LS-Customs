@@ -38,7 +38,11 @@ export function PublicLayout({ publicView, children }: PublicLayoutProps) {
             navigateTo('/')
           }}
         >
-          <span className="brand-spark">✳</span>
+          <img
+            src="/logo.png"
+            alt="LS Customs"
+            style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }}
+          />
           <span>LS Customs</span>
         </a>
         <nav className="public-nav">
@@ -64,7 +68,11 @@ export function PublicLayout({ publicView, children }: PublicLayoutProps) {
 
       <footer className="public-footer">
         <div className="footer-brand">
-          <span className="brand-spark">✳</span>
+          <img
+            src="/logo.png"
+            alt="LS Customs"
+            style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }}
+          />
           <strong>LS Customs</strong>
         </div>
         <div className="footer-links">

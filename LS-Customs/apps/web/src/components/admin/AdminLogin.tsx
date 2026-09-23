@@ -42,7 +42,13 @@ export function AdminLogin({ onAuthenticated, onNavigateHome }: AdminLoginProps)
       {/* ── Left: Branding Hero ─────────────────────────────── */}
       <div className="admin-login-hero">
         <div className="admin-login-brand" style={{ cursor: 'pointer' }} onClick={onNavigateHome}>
-          <div className="admin-login-brand-icon">LS</div>
+          <div className="admin-login-brand-icon" style={{ background: 'transparent', padding: 0 }}>
+            <img
+              src="/logo.png"
+              alt="LS Customs"
+              style={{ width: 44, height: 44, objectFit: 'contain', flexShrink: 0 }}
+            />
+          </div>
           <div>
             <h1>LS Customs</h1>
             <span>Command Center</span>

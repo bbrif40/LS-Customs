@@ -12,7 +12,11 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
   return (
     <footer className="workspace-footer">
       <div className="workspace-footer-brand">
-        <span className="brand-spark">✳</span>
+        <img
+          src="/logo.png"
+          alt="LS Customs"
+          style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }}
+        />
         <strong>LS Customs</strong>
         <small>Professional automotive solutions.</small>
       </div>

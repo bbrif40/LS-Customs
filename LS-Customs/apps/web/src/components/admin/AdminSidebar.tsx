@@ -14,6 +14,7 @@ import {
   LogOut,
   TicketPlus,
   Palette,
+  ShieldCheck,
 } from 'lucide-react'
 
 export type AdminView =
@@ -26,6 +27,7 @@ export type AdminView =
   | 'revenue'
   | 'tickets'
   | 'ui-editor'
+  | 'audit-logs'
 
 interface AdminSidebarProps {
   currentView: AdminView
@@ -46,6 +48,7 @@ const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[]
   { id: 'tickets',       label: 'Ticket Requests',   icon: TicketPlus },
   { id: 'revenue',       label: 'Revenue',           icon: DollarSign },
   { id: 'ui-editor',     label: 'Customer UI',       icon: Palette },
+  { id: 'audit-logs',    label: 'Audit Logs',        icon: ShieldCheck },
 ]
 
 export function AdminSidebar({
@@ -60,7 +63,13 @@ export function AdminSidebar({
     <aside className="admin-sidebar">
       {/* Brand */}
       <div className="admin-sidebar-brand" onClick={() => onViewChange('overview')}>
-        <div className="admin-sidebar-brand-icon">LS</div>
+        <div className="admin-sidebar-brand-icon" style={{ background: 'transparent', padding: 0 }}>
+          <img
+            src="/logo.png"
+            alt="LS Customs"
+            style={{ width: 38, height: 38, objectFit: 'contain', flexShrink: 0 }}
+          />
+        </div>
         <div>
           <h2>LS Customs</h2>
           <span className="admin-sidebar-subtitle">Admin Panel</span>

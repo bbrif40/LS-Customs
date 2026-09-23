@@ -13,6 +13,7 @@ import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from '
 import { X, MapPin, Clock, User, Wrench, Calendar, Hash, Phone, Navigation } from 'lucide-react'
 import { MapView, type MapPin as MapPinData } from '../common/map'
 import { VirtualMechanicTracker } from '../common/VirtualMechanicTracker'
+import { RecordAuditTrail } from './RecordAuditTrail'
 
 // Statuses for which the customer streams live GPS. Mirrors the
 // ACTIVE_STATUSES list in useLiveLocationForActiveBooking.
@@ -461,6 +462,14 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
               })()}
             </p>
           </section>
+
+          {/* Audit & Access Trail */}
+          <RecordAuditTrail
+            recordType="service_booking"
+            recordId={booking.id}
+            recordTitle={booking.bookingReference || booking.serviceName}
+            autoLogView={true}
+          />
         </div>
       </aside>
     </>

@@ -14,6 +14,7 @@ import {
   type ServiceBookingLogEntry,
 } from '../../hooks/useAdminData'
 import type { Profile } from '@ls-customs/shared-types'
+import { RecordAuditTrail } from './RecordAuditTrail'
 
 interface UserLogbookModalProps {
   user: Profile
@@ -191,6 +192,16 @@ export function UserLogbookModal({ user, onClose }: UserLogbookModalProps) {
               </button>
             )}
           </LogbookColumn>
+        </div>
+
+        {/* Audit Trail for this user */}
+        <div style={{ padding: '0 0 6px' }}>
+          <RecordAuditTrail
+            recordType="user"
+            recordId={user.id}
+            recordTitle={user.full_name || 'User Logbook'}
+            autoLogView={true}
+          />
         </div>
 
         <div className="admin-modal-footer">

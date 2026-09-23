@@ -45,9 +45,12 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
       )}
       <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
         <div className="brand-mark">
-          <span className="brand-spark">
-            <IonIcon icon={sparkles} />
-          </span>
+          <img
+            src="/logo.png"
+            alt="LS Customs"
+            className="brand-logo-img"
+            style={{ width: 34, height: 34, objectFit: 'contain', flexShrink: 0 }}
+          />
           <div className="brand-copy">
             <span className="brand-name">LS Customs</span>
             <span className="brand-tagline">AUTOMOTIVE & FLEET</span>
