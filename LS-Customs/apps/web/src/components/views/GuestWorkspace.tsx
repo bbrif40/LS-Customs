@@ -22,9 +22,11 @@ interface GuestWorkspaceProps {
 
 export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceProps) {
   const [guestView, setGuestView] = useState<View>('home')
+  const [menuOpen, setMenuOpen] = useState(false)
   const scrollRef = useScrollAnimation()
 
   const navigateGuest = (view: View) => {
+    setMenuOpen(false)
     if (view === 'rentals' || view === 'services') {
       setGuestView(view)
       return
@@ -34,7 +36,14 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
 
   return (
     <div className="app-frame guest-workspace">
-      <aside className="sidebar">
+      {menuOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
         <div className="brand-mark">
           <span className="brand-spark">
             <IonIcon icon={sparkles} />
@@ -98,7 +107,7 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
 
       <main className="main-content">
         <header className="topbar">
-          <button className="mobile-menu" aria-label="Open menu">
+          <button className="mobile-menu" aria-label="Open menu" onClick={() => setMenuOpen((o) => !o)}>
             <Menu size={21} />
           </button>
           <div className="breadcrumb">

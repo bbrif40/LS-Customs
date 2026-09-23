@@ -1,0 +1,17 @@
+{
+  "short_name": "LS Customs",
+  "name": "LS Customs Automotive & Fleet",
+  "description": "Vehicle rentals, mobile mechanic dispatch, and automotive services.",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#112029",
+  "theme_color": "#112029",
+  "display": "standalone",
+  "orientation": "portrait"
+}

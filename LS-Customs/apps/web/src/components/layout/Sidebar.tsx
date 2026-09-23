@@ -57,6 +57,13 @@ export function Sidebar({
 
   return (
     <>
+      {menuOpen && (
+        <div
+          className="sidebar-backdrop"
+          onClick={() => onView(view)}
+          aria-hidden="true"
+        />
+      )}
       <aside className={`sidebar ${menuOpen ? 'is-open' : ''}`}>
         {/* Brand Mark with glowing spark micro-interaction */}
         <div

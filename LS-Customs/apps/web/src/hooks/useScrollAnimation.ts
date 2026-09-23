@@ -38,18 +38,32 @@ export function useScrollAnimation<T extends HTMLElement>(
     const element = ref.current
     if (!element) return
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true)
-          observer.unobserve(element)
-        }
-      },
-      { threshold, rootMargin }
-    )
+    // Fallback: guarantee visibility after 120ms so content is never stuck hidden on mobile or inside scroll containers
+    const fallbackTimer = window.setTimeout(() => {
+      setIsVisible(true)
+    }, 120)
 
-    observer.observe(element)
-    return () => observer.disconnect()
+    try {
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true)
+            window.clearTimeout(fallbackTimer)
+            observer.unobserve(element)
+          }
+        },
+        { threshold, rootMargin }
+      )
+
+      observer.observe(element)
+      return () => {
+        window.clearTimeout(fallbackTimer)
+        observer.disconnect()
+      }
+    } catch {
+      setIsVisible(true)
+      return () => window.clearTimeout(fallbackTimer)
+    }
   }, [threshold, rootMargin])
 
   const baseClass = stagger ? 'stagger-children' : 'animate-on-scroll'
