@@ -4,10 +4,11 @@
  * Matches the "Admin - Revenue Reports" Figma screen.
  */
 import { useState } from 'react'
-import { Download, Calendar, ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react'
+import { Download, Calendar, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { carOutline, constructOutline, barChartOutline } from 'ionicons/icons'
 import { useAdminRevenueData } from '../../hooks/useAdminRevenueData'
+import { AdminStatSkeleton, AdminChartSkeleton, AdminTableSkeleton } from '../common/Skeleton'
 
 type TxFilter = 'all' | 'rentals' | 'mechanics'
 
@@ -187,10 +188,11 @@ export function AdminRevenue() {
       {/* ── Stats ────────────────────────────────────────────── */}
       <div className="admin-stats-row three">
         {loading ? (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--admin-muted)' }}>
-            <Loader2 size={24} className="spin" style={{ margin: '0 auto 8px' }} />
-            Loading revenue data…
-          </div>
+          <>
+            <AdminStatSkeleton />
+            <AdminStatSkeleton />
+            <AdminStatSkeleton />
+          </>
         ) : error ? (
           <div style={{ color: '#ef4444', padding: 16, background: 'rgba(239, 68, 68, 0.1)', borderRadius: 8 }}>
             {error}
@@ -234,9 +236,7 @@ export function AdminRevenue() {
         </div>
         <div className="admin-chart-container" style={{ position: 'relative' }}>
           {loading ? (
-            <div style={{ padding: 24, textAlign: 'center', color: 'var(--admin-muted)', height: chartH }}>
-              Loading chart data…
-            </div>
+            <AdminChartSkeleton />
           ) : chartData.labels.length === 0 ? (
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--admin-muted)', height: chartH }}>
               No revenue data for this period.
@@ -422,10 +422,7 @@ export function AdminRevenue() {
           </div>
         </div>
         {loading ? (
-          <div style={{ padding: 24, textAlign: 'center', color: 'var(--admin-muted)' }}>
-            <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
-            Loading transactions…
-          </div>
+          <AdminTableSkeleton rows={6} cols={5} />
         ) : (
           <>
             <table className="admin-table">

@@ -4,7 +4,8 @@
  */
 import { useState, useMemo, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronRight, Search, Loader2, CalendarDays, Fuel, MapPin, Settings2, SlidersHorizontal, Star, Users, X } from 'lucide-react'
+import { ChevronRight, Search, CalendarDays, Fuel, MapPin, Settings2, SlidersHorizontal, Star, Users, X } from 'lucide-react'
+import { VehicleCardSkeleton } from '../common/Skeleton'
 import { supabase } from '../../supabaseClient'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { useVehicleAvailability } from '../../hooks/useVehicleAvailability'
@@ -172,17 +173,10 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
 
       {bookingError && <p className="form-helper review-error">{bookingError}</p>}
       {loading ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '64px 0',
-            color: 'var(--muted, #6b7280)',
-            gap: 10,
-          }}
-        >
-          <Loader2 size={20} className="spin" /> Loading fleet…
+        <div className="rentals-grid" aria-hidden="true" style={{ marginTop: 24 }}>
+          {Array.from({ length: 6 }).map((_, i) => (
+            <VehicleCardSkeleton key={i} />
+          ))}
         </div>
       ) : error ? (
         <div

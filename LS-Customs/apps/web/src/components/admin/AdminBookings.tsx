@@ -15,6 +15,7 @@ import { supabase } from '../../supabaseClient'
 import { MapView, type MapPin } from '../common/map'
 import { AdminBookingDetail } from './AdminBookingDetail'
 import { AdminTransactions } from './AdminTransactions'
+import { AdminTableSkeleton } from '../common/Skeleton'
 import type { VehicleBooking, ServiceBooking, Profile, Vehicle, Address, MechanicProfile, MechanicService } from '@ls-customs/shared-types'
 
 interface AvailableMechanic {
@@ -502,9 +503,19 @@ export function AdminBookings() {
 
   if (loading) {
     return (
-      <div className="admin-main" style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
-        <Loader2 size={32} className="spin" style={{ color: '#e8a838' }} />
-        <p style={{ marginTop: 12, color: 'var(--admin-muted)' }}>Loading bookings...</p>
+      <div className="admin-main">
+        <div className="admin-fleet-header">
+          <div>
+            <h1>Bookings Overview</h1>
+            <p>All vehicle rentals and mechanic service bookings.</p>
+          </div>
+          <span className="admin-status-badge active" style={{ fontSize: 12 }}>
+            Loading bookings…
+          </span>
+        </div>
+        <div className="admin-card" style={{ marginTop: 20 }}>
+          <AdminTableSkeleton rows={8} cols={6} />
+        </div>
       </div>
     )
   }

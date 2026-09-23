@@ -10,6 +10,7 @@ import { VirtualMechanicTracker } from '../common/VirtualMechanicTracker'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { useCustomerBookings, type CustomerServiceBooking, type CustomerVehicleBooking } from '../../hooks/useCustomerBookings'
 import { BookingCalendar } from '../bookings/BookingCalendar'
+import { BookingGridSkeleton, CalendarSkeleton } from '../common/Skeleton'
 
 interface BookingsProps {
   userId: string | undefined
@@ -552,14 +553,20 @@ export function Bookings({ userId, onNotify, onView, selectedBookingId, onClearS
         ))}
       </div>
       {tab === 'calendar' ? (
-        <BookingCalendar
-          vehicleBookings={vehicleBookings}
-          serviceBookings={serviceBookings}
-          bookingType={bookingType}
-          onSelectBooking={(d) => setDetails(d)}
-          onView={onView}
-        />
-      ) : loading ? <div className="loading-state"><Loader2 size={20} className="spin" /> Loading your bookings…</div> : error ? <div className="empty-state"><p>{error}</p><button className="button dark-button" onClick={() => void refetch()}>Retry</button></div> : vehicleBookings.length === 0 && serviceBookings.length === 0 ? (
+        loading ? (
+          <CalendarSkeleton />
+        ) : (
+          <BookingCalendar
+            vehicleBookings={vehicleBookings}
+            serviceBookings={serviceBookings}
+            bookingType={bookingType}
+            onSelectBooking={(d) => setDetails(d)}
+            onView={onView}
+          />
+        )
+      ) : loading ? (
+        <BookingGridSkeleton count={4} />
+      ) : error ? <div className="empty-state"><p>{error}</p><button className="button dark-button" onClick={() => void refetch()}>Retry</button></div> : vehicleBookings.length === 0 && serviceBookings.length === 0 ? (
         <div className="bookings-empty-state">
           <div className="bookings-empty-icon"><BookOpen size={28} /></div>
           <h3>No bookings yet</h3>

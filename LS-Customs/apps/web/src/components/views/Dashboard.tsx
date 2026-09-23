@@ -12,6 +12,7 @@ import { useCustomerSiteSettings } from '../../hooks/useCustomerSiteSettings'
 import { VehicleCard } from '../common/VehicleCard'
 import { ServiceMini } from '../common/ServiceMini'
 import { LocationCard } from '../common/LocationCard'
+import { Skeleton, VehicleCardSkeleton } from '../common/Skeleton'
 import type { View } from '../../types'
 
 function iconForCategory(raw: string): string {
@@ -201,7 +202,10 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
         </button>
       </section>
       {featuredLoading ? (
-        <p className="muted" style={{ padding: '24px 0' }}>Loading featured vehicles…</p>
+        <div className="vehicle-grid" aria-hidden="true" style={{ padding: '8px 0 20px' }}>
+          <VehicleCardSkeleton />
+          <VehicleCardSkeleton />
+        </div>
       ) : featured.filter((vehicle) => isFavorite(vehicle.id)).length === 0 ? (
         <p className="muted favorite-empty" style={{ padding: '24px 0' }}>Tap the heart on a vehicle to keep it here.</p>
       ) : (
@@ -229,7 +233,24 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
       </section>
       <div className={`service-highlight-grid stagger-children ${isDashboardVisible ? 'visible' : ''}`}>
         {trendingLoading ? (
-          <p className="muted" style={{ padding: '24px 0' }}>Loading services…</p>
+          <>
+            <div className="service-row" style={{ padding: 17, display: 'flex', alignItems: 'center', gap: 16 }} aria-hidden="true">
+              <Skeleton height={46} width={46} rounded={10} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Skeleton height={16} width="60%" rounded={4} />
+                <Skeleton height={12} width="85%" rounded={4} />
+              </div>
+              <Skeleton height={20} width={90} rounded={6} />
+            </div>
+            <div className="service-row" style={{ padding: 17, display: 'flex', alignItems: 'center', gap: 16 }} aria-hidden="true">
+              <Skeleton height={46} width={46} rounded={10} />
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Skeleton height={16} width="60%" rounded={4} />
+                <Skeleton height={12} width="85%" rounded={4} />
+              </div>
+              <Skeleton height={20} width={90} rounded={6} />
+            </div>
+          </>
         ) : trending.length === 0 ? (
           <p className="muted" style={{ padding: '24px 0' }}>No active services in the catalog yet.</p>
         ) : (

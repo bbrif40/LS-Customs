@@ -3551,11 +3551,19 @@ html { scroll-behavior: smooth; }
   background-size: 800px 100%;
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }
+.skeleton-shimmer.dark {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 25%, rgba(255, 255, 255, 0.12) 50%, rgba(255, 255, 255, 0.05) 75%);
+  background-size: 800px 100%;
+}
 .skeleton-card {
   border: 1px solid #edf1ec;
   border-radius: 12px;
   overflow: hidden;
   background: #fff;
+}
+.skeleton-card.dark {
+  background: var(--admin-card-bg, #1a1f2e);
+  border-color: var(--admin-border, #2d3748);
 }
 
 /* ─────────────────────────────────────────────────────────────────
