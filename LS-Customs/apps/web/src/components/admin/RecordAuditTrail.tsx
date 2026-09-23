@@ -40,15 +40,15 @@ function formatRelativeTime(dateString?: string): string {
 function getActionIcon(action: AuditActionType | string) {
   switch (action) {
     case 'view':
-      return <Eye size={13} style={{ color: '#60a5fa' }} />
+      return <Eye size={12} style={{ color: '#3b82f6' }} />
     case 'status_change':
-      return <Activity size={13} style={{ color: '#fbbf24' }} />
+      return <Activity size={12} style={{ color: '#f59e0b' }} />
     case 'assign':
-      return <UserCheck size={13} style={{ color: '#34d399' }} />
+      return <UserCheck size={12} style={{ color: '#10b981' }} />
     case 'update':
-      return <Edit3 size={13} style={{ color: '#a78bfa' }} />
+      return <Edit3 size={12} style={{ color: '#8b5cf6' }} />
     default:
-      return <Activity size={13} style={{ color: '#9ca3af' }} />
+      return <Activity size={12} style={{ color: '#9ca3af' }} />
   }
 }
 
@@ -91,7 +91,6 @@ export function RecordAuditTrail({
     autoLogView,
   })
 
-  // Summary counts
   const viewCount = auditTrail.filter((a) => a.action_type === 'view').length
   const actionCount = auditTrail.filter((a) => a.action_type !== 'view').length
   const uniqueInspectors = Array.from(
@@ -101,14 +100,14 @@ export function RecordAuditTrail({
   return (
     <div
       style={{
-        marginTop: 18,
-        borderRadius: 10,
-        border: '1px solid #1f2f37',
-        background: '#0d181e',
+        marginTop: 14,
+        borderRadius: 8,
+        border: '1px solid var(--admin-border)',
+        background: 'var(--admin-card)',
         overflow: 'hidden',
       }}
     >
-      {/* Header bar / accordion toggle */}
+      {/* Accordion Header */}
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
@@ -117,38 +116,41 @@ export function RecordAuditTrail({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '10px 14px',
-          background: 'none',
+          padding: '9px 14px',
+          background: 'var(--admin-hover)',
           border: 'none',
           cursor: 'pointer',
-          color: '#e2e8f0',
+          color: 'var(--admin-ink)',
           fontSize: 12,
           fontWeight: 600,
           textAlign: 'left',
+          gap: 8,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <ShieldAlert size={15} style={{ color: '#e5b842' }} />
-          <span>Audit & Access Trail</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+          <ShieldAlert size={13} style={{ color: '#d4a017', flexShrink: 0 }} />
+          <span style={{ color: 'var(--admin-ink)', fontSize: 12, fontWeight: 600 }}>
+            Audit &amp; Access Trail
+          </span>
           <span
             style={{
               fontSize: 10,
-              padding: '2px 7px',
-              borderRadius: 12,
-              background: '#19303d',
-              color: '#94a3b8',
-              fontWeight: 500,
+              padding: '1px 7px',
+              borderRadius: 10,
+              background: 'var(--admin-border)',
+              color: 'var(--admin-muted)',
+              fontWeight: 600,
             }}
           >
             {auditTrail.length} {auditTrail.length === 1 ? 'event' : 'events'}
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#94a3b8' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--admin-muted)', flexShrink: 0 }}>
           <span style={{ fontSize: 11 }}>
             {viewCount} views · {actionCount} actions
           </span>
-          {isOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+          {isOpen ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
         </div>
       </button>
 
@@ -156,36 +158,38 @@ export function RecordAuditTrail({
       {isOpen && (
         <div
           style={{
-            borderTop: '1px solid #1f2f37',
+            borderTop: '1px solid var(--admin-border)',
             padding: '12px 14px',
-            maxHeight: 280,
+            maxHeight: 260,
             overflowY: 'auto',
+            background: '#fff',
           }}
         >
-          {/* Quick Inspector Summary */}
+          {/* Admins involved */}
           {uniqueInspectors.length > 0 && (
             <div
               style={{
                 marginBottom: 10,
                 fontSize: 11,
-                color: '#94a3b8',
+                color: 'var(--admin-muted)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
                 flexWrap: 'wrap',
               }}
             >
-              <span style={{ color: '#64748b' }}>Admins involved:</span>
+              <span>Admins involved:</span>
               {uniqueInspectors.map((name, i) => (
                 <span
                   key={i}
                   style={{
-                    background: '#162730',
-                    color: '#e2e8f0',
+                    background: 'var(--admin-hover)',
+                    color: 'var(--admin-ink)',
                     padding: '2px 8px',
                     borderRadius: 4,
                     fontSize: 11,
-                    border: '1px solid #233c4a',
+                    fontWeight: 600,
+                    border: '1px solid var(--admin-border)',
                   }}
                 >
                   {name}
@@ -194,17 +198,17 @@ export function RecordAuditTrail({
             </div>
           )}
 
-          {/* Timeline List */}
+          {/* Timeline */}
           {loading && auditTrail.length === 0 ? (
-            <div style={{ padding: '12px 0', textAlign: 'center', color: '#64748b', fontSize: 11 }}>
+            <div style={{ padding: '10px 0', textAlign: 'center', color: 'var(--admin-muted)', fontSize: 11 }}>
               Loading audit logs...
             </div>
           ) : auditTrail.length === 0 ? (
-            <div style={{ padding: '12px 0', textAlign: 'center', color: '#64748b', fontSize: 11 }}>
+            <div style={{ padding: '10px 0', textAlign: 'center', color: 'var(--admin-muted)', fontSize: 11 }}>
               No audit activities recorded yet.
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {auditTrail.map((entry) => (
                 <div
                   key={entry.id || `${entry.created_at}-${entry.action_type}`}
@@ -212,18 +216,20 @@ export function RecordAuditTrail({
                     display: 'flex',
                     alignItems: 'flex-start',
                     gap: 10,
-                    padding: '8px 10px',
-                    background: '#122028',
+                    padding: '7px 10px',
+                    background: 'var(--admin-hover)',
                     borderRadius: 6,
-                    border: '1px solid #1c323f',
+                    border: '1px solid var(--admin-border)',
                   }}
                 >
+                  {/* Icon circle */}
                   <div
                     style={{
                       width: 22,
                       height: 22,
                       borderRadius: '50%',
-                      background: '#1c2f3b',
+                      background: '#fff',
+                      border: '1px solid var(--admin-border)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -234,28 +240,32 @@ export function RecordAuditTrail({
                     {getActionIcon(entry.action_type)}
                   </div>
 
+                  {/* Text */}
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div
                       style={{
-                        color: '#f1f5f9',
-                        fontSize: 11.5,
+                        color: 'var(--admin-ink)',
+                        fontSize: 12,
                         fontWeight: 500,
-                        lineHeight: 1.35,
+                        lineHeight: 1.4,
                       }}
                     >
                       {getActionDescription(entry)}
                     </div>
                     {entry.admin_email && entry.admin_email !== entry.admin_name && (
-                      <div style={{ fontSize: 10, color: '#64748b' }}>{entry.admin_email}</div>
+                      <div style={{ fontSize: 10.5, color: 'var(--admin-muted)', marginTop: 1 }}>
+                        {entry.admin_email}
+                      </div>
                     )}
                   </div>
 
+                  {/* Timestamp */}
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
-                      color: '#64748b',
+                      color: 'var(--admin-muted)',
                       fontSize: 10.5,
                       flexShrink: 0,
                       whiteSpace: 'nowrap',
