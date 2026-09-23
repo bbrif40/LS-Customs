@@ -28,7 +28,9 @@ export interface BookingCalendarProps {
     booking: any
     onViewMap?: () => void
   }) => void
-  onView?: (view: any) => void
+  onView?: (view: any, options?: { date?: string }) => void
+  onBookService?: (date: string) => void
+  onRentCar?: (date: string) => void
 }
 
 interface CalendarEvent {
@@ -73,6 +75,8 @@ export function BookingCalendar({
   bookingType,
   onSelectBooking,
   onView,
+  onBookService,
+  onRentCar,
 }: BookingCalendarProps) {
   const today = useMemo(() => new Date(), [])
   const todayKey = useMemo(() => formatDateKey(today), [today])
@@ -80,6 +84,25 @@ export function BookingCalendar({
   // Current viewed month and year
   const [currentDate, setCurrentDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedDateKey, setSelectedDateKey] = useState<string>(todayKey)
+
+  // Is selected date in the past
+  const isSelectedDatePast = selectedDateKey < todayKey
+
+  const handleBookService = (dateKey: string) => {
+    if (onBookService) {
+      onBookService(dateKey)
+    } else if (onView) {
+      onView('services', { date: dateKey })
+    }
+  }
+
+  const handleRentCar = (dateKey: string) => {
+    if (onRentCar) {
+      onRentCar(dateKey)
+    } else if (onView) {
+      onView('rentals', { date: dateKey })
+    }
+  }
 
   // Map all bookings to date-keyed events
   const eventsByDate = useMemo(() => {
@@ -588,8 +611,8 @@ export function BookingCalendar({
                     width: 44,
                     height: 44,
                     borderRadius: '50%',
-                    background: '#f1f5f9',
-                    color: '#94a3b8',
+                    background: isSelectedDatePast ? '#f1f5f9' : '#e1eee4',
+                    color: isSelectedDatePast ? '#94a3b8' : '#35684f',
                     display: 'grid',
                     placeItems: 'center',
                     margin: '0 auto 10px',
@@ -601,26 +624,30 @@ export function BookingCalendar({
                   Day is Free
                 </strong>
                 <p style={{ fontSize: 11, color: 'var(--muted, #64748b)', margin: 0 }}>
-                  There are no scheduled, active, or previous bookings for this date.
+                  {isSelectedDatePast
+                    ? 'Day is free..... There were no scheduled, active, or previous bookings for this date.'
+                    : 'There are no scheduled bookings for this date. Book a service or rent a vehicle:'}
                 </p>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-                  <button
-                    type="button"
-                    className="outline-button"
-                    onClick={() => onView?.('rentals')}
-                    style={{ fontSize: 11, padding: '6px 12px' }}
-                  >
-                    Rent a car
-                  </button>
-                  <button
-                    type="button"
-                    className="outline-button"
-                    onClick={() => onView?.('services')}
-                    style={{ fontSize: 11, padding: '6px 12px' }}
-                  >
-                    Book service
-                  </button>
-                </div>
+                {!isSelectedDatePast && (
+                  <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+                    <button
+                      type="button"
+                      className="button dark-button"
+                      onClick={() => handleBookService(selectedDateKey)}
+                      style={{ fontSize: 11, padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                    >
+                      <Wrench size={13} /> Book service
+                    </button>
+                    <button
+                      type="button"
+                      className="outline-button"
+                      onClick={() => handleRentCar(selectedDateKey)}
+                      style={{ fontSize: 11, padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                    >
+                      <CarFront size={13} /> Rent a car
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               selectedDayEvents.map((ev) => (
@@ -734,6 +761,58 @@ export function BookingCalendar({
                   </div>
                 </div>
               ))
+            )}
+            {selectedDayEvents.length > 0 && !isSelectedDatePast && (
+              <div
+                style={{
+                  marginTop: 4,
+                  padding: '12px 14px',
+                  background: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 12,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--muted, #64748b)' }}>
+                  Schedule another booking for this date:
+                </span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    className="button dark-button"
+                    onClick={() => handleBookService(selectedDateKey)}
+                    style={{
+                      fontSize: 11,
+                      padding: '7px 12px',
+                      flex: 1,
+                      display: 'inline-flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: 5,
+                    }}
+                  >
+                    <Wrench size={13} /> Book Service
+                  </button>
+                  <button
+                    type="button"
+                    className="outline-button"
+                    onClick={() => handleRentCar(selectedDateKey)}
+                    style={{
+                      fontSize: 11,
+                      padding: '7px 12px',
+                      flex: 1,
+                      display: 'inline-flex',
+                      justifyContent: 'center',
+                      alignItems: 'center',
+                      gap: 5,
+                    }}
+                  >
+                    <CarFront size={13} /> Rent Vehicle
+                  </button>
+                </div>
+              </div>
             )}
           </div>
         </div>

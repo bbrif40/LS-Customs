@@ -41,6 +41,7 @@ interface MechanicBookingFlowProps {
   userId: string | undefined
   onNotify: (message: string) => void
   onBackToHome?: () => void
+  initialDate?: string | null
 }
 
 function generateLocalRef(): string {
@@ -53,7 +54,7 @@ function buildScheduledAt(date: string, time: string): string {
   return d.toISOString()
 }
 
-export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: MechanicBookingFlowProps) {
+export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDate }: MechanicBookingFlowProps) {
   useEffect(() => {
     preloadMap()
   }, [])
@@ -64,8 +65,14 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
   const [step, setStep] = useState<Step>('category')
   const [category, setCategory] = useState<string | null>(null)
   const [service, setService] = useState<Service | null>(null)
-  const [date, setDate] = useState<string | null>(null) // YYYY-MM-DD
+  const [date, setDate] = useState<string | null>(initialDate ?? null) // YYYY-MM-DD
   const [time, setTime] = useState<string | null>(null) // HH:MM
+
+  useEffect(() => {
+    if (initialDate) {
+      setDate(initialDate)
+    }
+  }, [initialDate])
   const [address, setAddress] = useState<ChosenAddress | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [confirmedBooking, setConfirmedBooking] = useState<ServiceBooking | null>(null)

@@ -93,7 +93,16 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
   const dates = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-    return Array.from({ length: 13 }, (_, i) => {
+    let totalForwardDays = 60
+    if (date) {
+      const [y, m, d] = date.split('-').map(Number)
+      const selected = new Date(y, m - 1, d)
+      const diff = Math.ceil((selected.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      if (diff + 14 > totalForwardDays) {
+        totalForwardDays = diff + 14
+      }
+    }
+    return Array.from({ length: totalForwardDays + 3 }, (_, i) => {
       const d = new Date(today)
       const offset = i - 3
       d.setDate(today.getDate() + offset)
@@ -101,26 +110,30 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
         iso: toDateString(d),
         ...shortLabel(d),
         isToday: offset === 0,
-        isAvailable: offset >= 0 && offset < 7,
+        isAvailable: offset >= 0,
       }
     })
-  }, [])
+  }, [date])
 
   const canProceed = date !== null && time !== null
   const firstAvailableIndex = dates.findIndex((item) => item.isAvailable)
   const lastAvailableIndex = dates.reduce((lastIndex, item, index) => item.isAvailable ? index : lastIndex, -1)
   const activeDateIndex = date
-    ? Math.max(firstAvailableIndex, dates.findIndex((item) => item.iso === date))
+    ? Math.max(0, dates.findIndex((item) => item.iso === date))
     : firstAvailableIndex
   const selectedDate = date ? fullDateLabel(date) : 'Select a date'
-  const selectedAppointment = date && time ? `${selectedDate} at ${formatTime(time, timeFormat)}` : 'Choose your appointment time'
+  const selectedAppointment = date && time
+    ? `${selectedDate} at ${formatTime(time, timeFormat)}`
+    : date
+    ? `${selectedDate} · Select your preferred time`
+    : 'Choose your appointment date & time'
 
   useEffect(() => {
     window.localStorage.setItem(TIME_FORMAT_STORAGE_KEY, timeFormat)
   }, [timeFormat])
 
   function selectDate(nextDate: string, nextIndex: number) {
-    if (!dates[nextIndex].isAvailable) return
+    if (!dates[nextIndex]?.isAvailable) return
     setCarouselDirection(nextIndex >= activeDateIndex ? 'next' : 'previous')
     onChange(nextDate, time)
   }
@@ -145,6 +158,61 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
         </p>
       </header>
 
+      {date && (
+        <div
+          style={{
+            margin: '0 0 16px',
+            padding: '12px 16px',
+            background: '#edf7f0',
+            border: '1px solid #bbf7d0',
+            borderRadius: 12,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: '#35684f',
+                color: '#ffffff',
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Check size={16} />
+            </div>
+            <div>
+              <strong style={{ fontSize: 13, color: '#14532d', display: 'block' }}>
+                Date set: {selectedDate}
+              </strong>
+              <span style={{ fontSize: 12, color: '#166534' }}>
+                {time
+                  ? `Time selected: ${formatTime(time, timeFormat)}`
+                  : 'Your date is already set from the calendar. Please select your time slot below.'}
+              </span>
+            </div>
+          </div>
+          <span
+            style={{
+              fontSize: 11,
+              color: '#2b6b47',
+              fontWeight: 600,
+              background: '#dcfce7',
+              padding: '4px 10px',
+              borderRadius: 20,
+            }}
+          >
+            Calendar Date
+          </span>
+        </div>
+      )}
+
       <div className="schedule-picker">
         <div className="schedule-selection-bar" role="status">
           <CalendarDays size={16} aria-hidden="true" />
@@ -157,9 +225,9 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
             <div className="schedule-section-heading">
               <div>
                 <p className="eyebrow">DATE</p>
-                <h3>{dates[0].date.split(' ')[0]} {dates[0].iso.slice(0, 4)}</h3>
+                <h3>{dates[Math.max(0, activeDateIndex)]?.date?.split(' ')[0] ?? dates[0].date.split(' ')[0]} {dates[Math.max(0, activeDateIndex)]?.iso?.slice(0, 4) ?? dates[0].iso.slice(0, 4)}</h3>
               </div>
-              <span className="schedule-month-note">Next 7 days</span>
+              <span className="schedule-month-note">Select Date</span>
             </div>
             <div className={`date-carousel is-${carouselDirection}`}>
               <button

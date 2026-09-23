@@ -15,13 +15,15 @@ import { BookingGridSkeleton, CalendarSkeleton } from '../common/Skeleton'
 interface BookingsProps {
   userId: string | undefined
   onNotify: (message: string) => void
-  onView?: (view: any) => void
+  onView?: (view: any, options?: { date?: string }) => void
   /** When set, the matching service booking auto-expands its mechanic
    *  detail block. Set by Header.tsx when the user clicks an
    *  assignment notification. */
   selectedBookingId?: string | null
   /** Cleared by the Bookings view after the user dismisses the deep link. */
   onClearSelection?: () => void
+  onBookServiceWithDate?: (date: string) => void
+  onRentCarWithDate?: (date: string) => void
 }
 function statusLabel(status: string) { return status.replace('_', ' ').toUpperCase() }
 function statusClass(status: string) { return ['assigned', 'en_route', 'in_progress', 'confirmed'].includes(status) ? 'green' : status === 'cancelled' ? 'red' : 'amber' }
@@ -464,7 +466,15 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
   )
 }
 
-export function Bookings({ userId, onNotify, onView, selectedBookingId, onClearSelection }: BookingsProps) {
+export function Bookings({
+  userId,
+  onNotify,
+  onView,
+  selectedBookingId,
+  onClearSelection,
+  onBookServiceWithDate,
+  onRentCarWithDate,
+}: BookingsProps) {
   const { vehicleBookings, serviceBookings, loading, error, refetch } = useCustomerBookings(userId)
   const [liveBooking, setLiveBooking] = useState<CustomerServiceBooking | null>(null)
   const [details, setDetails] = useState<BookingDetails | null>(null)
@@ -562,6 +572,20 @@ export function Bookings({ userId, onNotify, onView, selectedBookingId, onClearS
             bookingType={bookingType}
             onSelectBooking={(d) => setDetails(d)}
             onView={onView}
+            onBookService={(date) => {
+              if (onBookServiceWithDate) {
+                onBookServiceWithDate(date)
+              } else if (onView) {
+                onView('services', { date })
+              }
+            }}
+            onRentCar={(date) => {
+              if (onRentCarWithDate) {
+                onRentCarWithDate(date)
+              } else if (onView) {
+                onView('rentals', { date })
+              }
+            }}
           />
         )
       ) : loading ? (

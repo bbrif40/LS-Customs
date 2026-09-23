@@ -175,6 +175,7 @@ export function App() {
   const activeBookingsCount = useCustomerActiveBookingsCount(userId)
   const [emergencyModalOpen, setEmergencyModalOpen] = useState(false)
   const [activeEmergencyDispatch, setActiveEmergencyDispatch] = useState<EmergencyDispatchData | null>(null)
+  const [preselectedBookingDate, setPreselectedBookingDate] = useState<string | null>(null)
 
   // Listen to browser forward/back buttons
   useEffect(() => {
@@ -355,19 +356,52 @@ export function App() {
                 onNotify={notify}
               />
             )}
-            {view === 'rentals' && <Rentals userId={userId} onNotify={notify} />}
+            {view === 'rentals' && (
+              <Rentals
+                userId={userId}
+                onNotify={notify}
+                initialStartDate={preselectedBookingDate ?? undefined}
+              />
+            )}
             {view === 'services' && (
               <MechanicBookingFlow
                 userId={userId}
                 onNotify={notify}
-                onBackToHome={() => setView('home')}
+                initialDate={preselectedBookingDate}
+                onBackToHome={() => {
+                  setPreselectedBookingDate(null)
+                  setView('home')
+                }}
               />
             )}
             {/* Live-location streamer for the customer's active mechanic
                 booking. Renders nothing; just runs the side effect so the
                 stream survives navigation away from the Mechanic screen. */}
             {userId && <ActiveBookingTracker userId={userId} />}
-            {view === 'bookings' && <Bookings userId={userId} onNotify={notify} onView={setView} selectedBookingId={selectedBookingId} onClearSelection={() => setSelectedBookingId(null)} />}
+            {view === 'bookings' && (
+              <Bookings
+                userId={userId}
+                onNotify={notify}
+                onView={(v, options) => {
+                  if (options?.date) {
+                    setPreselectedBookingDate(options.date)
+                  } else if (v !== 'services' && v !== 'rentals') {
+                    setPreselectedBookingDate(null)
+                  }
+                  setView(v)
+                }}
+                onBookServiceWithDate={(date) => {
+                  setPreselectedBookingDate(date)
+                  setView('services')
+                }}
+                onRentCarWithDate={(date) => {
+                  setPreselectedBookingDate(date)
+                  setView('rentals')
+                }}
+                selectedBookingId={selectedBookingId}
+                onClearSelection={() => setSelectedBookingId(null)}
+              />
+            )}
             {view === 'profile' && (
               <Profile
                 userId={userId}

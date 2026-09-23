@@ -18,6 +18,8 @@ import { RentalPayment } from './RentalPayment'
 interface RentalsProps {
   userId?: string
   onNotify: (message: string) => void
+  initialStartDate?: string
+  initialEndDate?: string
 }
 
 type CategoryFilter =
@@ -41,12 +43,35 @@ const CATEGORY_TABS: { id: CategoryFilter; label: string }[] = [
   { id: 'pickup_trucks', label: 'Pick Up Trucks' },
 ]
 
-export function Rentals({ userId, onNotify }: RentalsProps) {
+export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: RentalsProps) {
   const { vehicles, loading, error, refetch } = useCustomerVehicles()
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [startDate, setStartDate] = useState(initialStartDate || '')
+  const [endDate, setEndDate] = useState(() => {
+    if (initialEndDate) return initialEndDate
+    if (initialStartDate) {
+      const d = new Date(initialStartDate + 'T00:00:00')
+      d.setDate(d.getDate() + 1)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      return `${y}-${m}-${day}`
+    }
+    return ''
+  })
+
+  useEffect(() => {
+    if (initialStartDate) {
+      setStartDate(initialStartDate)
+      const d = new Date(initialStartDate + 'T00:00:00')
+      d.setDate(d.getDate() + 1)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      setEndDate(initialEndDate || `${y}-${m}-${day}`)
+    }
+  }, [initialStartDate, initialEndDate])
   const [selectedVehicle, setSelectedVehicle] = useState<typeof vehicles[number] | null>(null)
   const [previewVehicle, setPreviewVehicle] = useState<typeof vehicles[number] | null>(null)
   const [bookingId, setBookingId] = useState<string | null>(null)
