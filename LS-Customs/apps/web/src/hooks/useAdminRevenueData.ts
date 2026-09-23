@@ -436,7 +436,7 @@ export function useAdminRevenueData(
 
       setStats(computedStats)
       setChartData({
-        labels: uniqueLabels,
+        labels: chartLabels,
         rentals: rentalsData,
         mechanics: mechanicsData,
       })
