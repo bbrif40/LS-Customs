@@ -5,6 +5,8 @@
  */
 import { useEffect, useState } from 'react'
 import { Search, Filter, Truck, Wrench, X, Loader2, ChevronLeft, ChevronRight, AlertTriangle, CreditCard } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { closeOutline, star } from 'ionicons/icons'
 import {
   useAdminVehicleBookings,
   useAdminServiceBookings,
@@ -574,12 +576,12 @@ export function AdminBookings() {
               color: 'inherit',
               cursor: 'pointer',
               marginLeft: 12,
-              fontSize: 15,
-              lineHeight: 1,
+              display: 'inline-flex',
+              alignItems: 'center',
             }}
             aria-label="Dismiss notification"
           >
-            ✕
+            <IonIcon icon={closeOutline} style={{ fontSize: 16 }} />
           </button>
         </div>
       )}
@@ -845,8 +847,16 @@ export function AdminBookings() {
                                         onClick={() => void assignMechanic(booking.id, m.id)}
                                       >
                                         <strong style={{ display: 'block' }}>{m.full_name}</strong>
-                                        <span style={{ color: 'var(--admin-muted, #9ca3af)' }}>
-                                          {m.years_experience != null ? `${m.years_experience} yrs` : 'New'} · {m.rating_avg != null ? `★ ${m.rating_avg.toFixed(1)}` : 'unrated'}
+                                        <span style={{ color: 'var(--admin-muted, #9ca3af)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                          {m.years_experience != null ? `${m.years_experience} yrs` : 'New'} ·{' '}
+                                          {m.rating_avg != null ? (
+                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+                                              <IonIcon icon={star} style={{ color: '#e8a838', fontSize: 11 }} />
+                                              {m.rating_avg.toFixed(1)}
+                                            </span>
+                                          ) : (
+                                            'unrated'
+                                          )}
                                         </span>
                                       </button>
                                     ))}

@@ -13,6 +13,8 @@
  */
 import { useState } from 'react'
 import { Search, User, Shield, Wrench, Loader2, Flag, AlertTriangle, X } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { peopleOutline, shieldCheckmarkOutline, constructOutline, personOutline, callOutline, locationOutline } from 'ionicons/icons'
 import {
   useAdminUsers,
   useAdminUserAddresses,
@@ -160,10 +162,10 @@ export function AdminUsers() {
             <div className="admin-stat-header">
               <span className="admin-stat-label">{stat.label}</span>
               <div className={`admin-stat-icon ${stat.icon}`}>
-                {stat.icon === 'total' && '👥'}
-                {stat.icon === 'admin' && '🛡️'}
-                {stat.icon === 'mechanic' && '🔧'}
-                {stat.icon === 'customer' && '👤'}
+                {stat.icon === 'total' && <IonIcon icon={peopleOutline} style={{ fontSize: 20 }} />}
+                {stat.icon === 'admin' && <IonIcon icon={shieldCheckmarkOutline} style={{ fontSize: 20 }} />}
+                {stat.icon === 'mechanic' && <IonIcon icon={constructOutline} style={{ fontSize: 20 }} />}
+                {stat.icon === 'customer' && <IonIcon icon={personOutline} style={{ fontSize: 20 }} />}
               </div>
             </div>
             <div className="admin-stat-value">{stat.value}</div>
@@ -248,13 +250,17 @@ export function AdminUsers() {
                       <td>
                         <div style={{ fontSize: 13 }}>
                           {user.phone ? (
-                            <div>📞 {user.phone}</div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                              <IonIcon icon={callOutline} style={{ fontSize: 13, color: 'var(--admin-muted)' }} />
+                              {user.phone}
+                            </div>
                           ) : (
                             <div style={{ color: 'var(--admin-muted)' }}>—</div>
                           )}
                           {addr ? (
-                            <div style={{ color: 'var(--admin-muted)', marginTop: 2 }}>
-                              📍 {addr.line1}{addr.city ? `, ${addr.city}` : ''}
+                            <div style={{ color: 'var(--admin-muted)', marginTop: 2, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <IonIcon icon={locationOutline} style={{ fontSize: 13 }} />
+                              {addr.line1}{addr.city ? `, ${addr.city}` : ''}
                             </div>
                           ) : (
                             <div style={{ color: 'var(--admin-muted)', marginTop: 2, fontStyle: 'italic' }}>

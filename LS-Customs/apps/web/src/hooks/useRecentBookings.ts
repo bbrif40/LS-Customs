@@ -87,7 +87,7 @@ export function useRecentBookings(limit: number = 5): UseRecentBookingsResult {
           customer,
           status: isTerminal ? (typed.status === 'completed' ? 'completed' : 'pending') : 'active',
           price: `₱${Number(typed.total_price).toLocaleString()}`,
-          icon: '🚗',
+          icon: 'rental',
         }
       })
 
@@ -130,12 +130,12 @@ export function useRecentBookings(limit: number = 5): UseRecentBookingsResult {
 
         const isTerminal = typed.status === 'completed' || typed.status === 'cancelled'
         return {
-          serviceType: `🔧 ${serviceName}`,
+          serviceType: serviceName,
           serviceId: `LSC-${b.id.slice(0, 8).toUpperCase()}`,
           customer: vehicleProfiles.get(typed.customer_id) ?? typed.customer_id.slice(0, 8),
           status: isTerminal ? (typed.status === 'completed' ? 'completed' : 'pending') : 'active',
           price: `₱${Number(typed.total_price).toLocaleString()}`,
-          icon: '🔧',
+          icon: 'service',
         }
       })
 

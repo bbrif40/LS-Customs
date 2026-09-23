@@ -21,6 +21,8 @@ import {
   Cog,
   ShieldAlert,
 } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { constructOutline, checkmarkCircleOutline, warningOutline } from 'ionicons/icons'
 import { useAdminMechanics, type MechanicWithProfile } from '../../hooks/useAdminData'
 import type { Profile } from '@ls-customs/shared-types'
 
@@ -204,9 +206,9 @@ export function AdminMechanics() {
             <div className="admin-stat-header">
               <span className="admin-stat-label">{stat.label}</span>
               <div className={`admin-stat-icon ${stat.icon}`}>
-                {stat.icon === 'total' && '🔧'}
-                {stat.icon === 'active' && '✅'}
-                {stat.icon === 'inactive' && '⚠'}
+                {stat.icon === 'total' && <IonIcon icon={constructOutline} style={{ fontSize: 20 }} />}
+                {stat.icon === 'active' && <IonIcon icon={checkmarkCircleOutline} style={{ fontSize: 20 }} />}
+                {stat.icon === 'inactive' && <IonIcon icon={warningOutline} style={{ fontSize: 20 }} />}
               </div>
             </div>
             <div className="admin-stat-value">{stat.value}</div>

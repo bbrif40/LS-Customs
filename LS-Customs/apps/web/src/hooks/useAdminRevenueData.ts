@@ -355,7 +355,7 @@ export function useAdminRevenueData(
           }),
           customer,
           serviceType: p.booking_type === 'vehicle' ? vehicleLabel : 'Mobile Mechanic Service',
-          serviceIcon: p.booking_type === 'vehicle' ? '🚗' : '🔧',
+          serviceIcon: p.booking_type === 'vehicle' ? 'vehicle' : 'service',
           amount: `${Number(p.amount).toLocaleString()}.00`,
           status: succeeded ? 'completed' : p.status as 'completed' | 'refunded' | 'pending',
           provider: p.provider,

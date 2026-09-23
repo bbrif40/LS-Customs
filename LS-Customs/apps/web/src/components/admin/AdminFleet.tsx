@@ -5,6 +5,8 @@
  */
 import { useState, useEffect } from 'react'
 import { Plus, Search, Edit, Trash2, X, Check, Loader2 } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { carSportOutline, checkmarkCircleOutline, warningOutline } from 'ionicons/icons'
 import { useAdminVehicles, createVehicle, updateVehicle, deactivateVehicle } from '../../hooks/useAdminData'
 import type { Vehicle } from '@ls-customs/shared-types'
 
@@ -230,9 +232,9 @@ export function AdminFleet() {
             <div className="admin-stat-header">
               <span className="admin-stat-label">{stat.label}</span>
               <div className={`admin-stat-icon ${stat.icon}`}>
-                {stat.icon === 'total' && '🚙'}
-                {stat.icon === 'active' && '✅'}
-                {stat.icon === 'inactive' && '⚠'}
+                {stat.icon === 'total' && <IonIcon icon={carSportOutline} style={{ fontSize: 20 }} />}
+                {stat.icon === 'active' && <IonIcon icon={checkmarkCircleOutline} style={{ fontSize: 20 }} />}
+                {stat.icon === 'inactive' && <IonIcon icon={warningOutline} style={{ fontSize: 20 }} />}
               </div>
             </div>
             <div className="admin-stat-value">{stat.value}</div>
@@ -300,8 +302,8 @@ export function AdminFleet() {
                 {vehicle.image_url ? (
                   <img src={vehicle.image_url} alt={vehicle.name} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px 8px 0 0' }} />
                 ) : (
-                  <div className="admin-vehicle-image-bg" style={{ background: '#1a1f2e', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48 }}>
-                    🚗
+                  <div className="admin-vehicle-image-bg" style={{ background: '#1a1f2e', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <IonIcon icon={carSportOutline} style={{ fontSize: 44, color: 'var(--admin-muted, #9ca3af)' }} />
                   </div>
                 )}
                 {!vehicle.is_active && (

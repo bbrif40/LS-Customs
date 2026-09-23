@@ -16,6 +16,8 @@
  */
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Trash2, CreditCard } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { carOutline, constructOutline } from 'ionicons/icons'
 import { useAdminPayments } from '../../hooks/useAdminPayments'
 
 const statusColors: Record<string, string> = {
@@ -150,8 +152,14 @@ export function AdminTransactions() {
                   <td style={{ fontWeight: 500 }}>
                     {payment.customer_name ?? '—'}
                   </td>
-                  <td style={{ fontSize: 13, textTransform: 'capitalize' }}>
-                    {payment.booking_type === 'vehicle' ? '🚗 Rental' : '🔧 Service'}
+                  <td style={{ fontSize: 13 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      <IonIcon
+                        icon={payment.booking_type === 'vehicle' ? carOutline : constructOutline}
+                        style={{ fontSize: 15, color: payment.booking_type === 'vehicle' ? '#e8a838' : '#3b82f6' }}
+                      />
+                      {payment.booking_type === 'vehicle' ? 'Rental' : 'Service'}
+                    </span>
                   </td>
                   <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
                     {payment.booking_ref ?? `#${payment.booking_id.slice(0, 8)}`}

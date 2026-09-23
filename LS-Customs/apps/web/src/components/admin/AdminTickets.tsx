@@ -9,6 +9,8 @@
  */
 import { useMemo, useState } from 'react'
 import { Search, TicketPlus, Loader2, ChevronLeft, ChevronRight, RefreshCw, Copy, Check } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { personOutline, callOutline, fingerPrintOutline, checkmarkCircleOutline, lockClosedOutline } from 'ionicons/icons'
 import {
   useAdminTickets,
   type SupportTicketWithCustomer,
@@ -515,16 +517,28 @@ function TicketRow({
               </div>
               {/* Customer meta */}
               <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 12, padding: '10px 16px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10, alignItems: 'center' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#334155' }}>👤 <strong>{customerName}</strong></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#334155' }}>
+                  <IonIcon icon={personOutline} style={{ fontSize: 14 }} /> <strong>{customerName}</strong>
+                </span>
                 {customerPhone && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#334155' }}>📞 <a href={`tel:${customerPhone}`} style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 600 }}>{customerPhone}</a></span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#334155' }}>
+                    <IonIcon icon={callOutline} style={{ fontSize: 14 }} />
+                    <a href={`tel:${customerPhone}`} style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 600 }}>{customerPhone}</a>
+                  </span>
                 )}
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b' }}>🆔 <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4, color: '#0f172a', fontSize: 11 }}>{ticket.customer_id || ticket.id}</code></span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b' }}>
+                  <IonIcon icon={fingerPrintOutline} style={{ fontSize: 14 }} />
+                  <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4, color: '#0f172a', fontSize: 11 }}>{ticket.customer_id || ticket.id}</code>
+                </span>
                 {ticket.resolved_at && (
-                  <span style={{ color: '#16a34a' }}>✅ Resolved: {new Date(ticket.resolved_at).toLocaleString()}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#16a34a' }}>
+                    <IonIcon icon={checkmarkCircleOutline} style={{ fontSize: 14 }} /> Resolved: {new Date(ticket.resolved_at).toLocaleString()}
+                  </span>
                 )}
                 {ticket.closed_at && (
-                  <span style={{ color: '#64748b' }}>🔒 Closed: {new Date(ticket.closed_at).toLocaleString()}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#64748b' }}>
+                    <IonIcon icon={lockClosedOutline} style={{ fontSize: 14 }} /> Closed: {new Date(ticket.closed_at).toLocaleString()}
+                  </span>
                 )}
               </div>
               {/* Conversation thread */}

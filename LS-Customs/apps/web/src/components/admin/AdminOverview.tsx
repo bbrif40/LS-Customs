@@ -4,6 +4,8 @@
  * Matches the "Admin Command Center" Figma screen exactly.
  */
 import { ChevronRight, Calendar, Star, MapPin as MapPinIcon, Loader2 } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { carOutline, constructOutline, statsChartOutline } from 'ionicons/icons'
 import { useAdminOverviewStats } from '../../hooks/useAdminOverviewStats'
 import { useLiveTechnicians } from '../../hooks/useLiveTechnicians'
 import { useRecentBookings } from '../../hooks/useRecentBookings'
@@ -85,10 +87,10 @@ export function AdminOverview({ onViewChange }: AdminOverviewProps) {
             <div className="admin-stat-header">
               <span className="admin-stat-label">{stat.label}</span>
               <div className={`admin-stat-icon ${stat.icon}`}>
-                {stat.icon === 'revenue'   && '₱'}
-                {stat.icon === 'rentals'   && '🚗'}
-                {stat.icon === 'mechanics' && '🔧'}
-                {stat.icon === 'fleet'     && '📊'}
+                {stat.icon === 'revenue'   && <span style={{ fontWeight: 700 }}>₱</span>}
+                {stat.icon === 'rentals'   && <IonIcon icon={carOutline} style={{ fontSize: 20 }} />}
+                {stat.icon === 'mechanics' && <IonIcon icon={constructOutline} style={{ fontSize: 20 }} />}
+                {stat.icon === 'fleet'     && <IonIcon icon={statsChartOutline} style={{ fontSize: 20 }} />}
               </div>
             </div>
             <div className="admin-stat-value">{stat.value}</div>
@@ -215,7 +217,12 @@ export function AdminOverview({ onViewChange }: AdminOverviewProps) {
                 <tr key={`${booking.serviceId}-${i}`}>
                   <td>
                     <div className="admin-table-service">
-                      <div className="admin-table-service-icon">{booking.icon}</div>
+                      <div className="admin-table-service-icon">
+                        <IonIcon
+                          icon={booking.icon === 'rental' || booking.serviceType.toLowerCase().includes('rental') ? carOutline : constructOutline}
+                          style={{ fontSize: 18 }}
+                        />
+                      </div>
                       <div>
                         <div className="admin-table-service-name">{booking.serviceType}</div>
                         <div className="admin-table-service-id">{booking.serviceId}</div>

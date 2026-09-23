@@ -5,6 +5,8 @@
  */
 import { useState } from 'react'
 import { Filter, Plus, MapPin, Clock, Loader2, RefreshCw } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { searchOutline } from 'ionicons/icons'
 import { useTechnicianSchedule } from '../../hooks/useTechnicianSchedule'
 
 const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']
@@ -31,7 +33,9 @@ export function AdminTechnicians() {
         </div>
         <div className="admin-topbar-right">
           <div className="admin-search-bar">
-            <span className="admin-search-icon">🔍</span>
+            <span className="admin-search-icon" style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <IonIcon icon={searchOutline} style={{ fontSize: 16 }} />
+            </span>
             <input type="text" placeholder="Search technician or job..." />
           </div>
           <button

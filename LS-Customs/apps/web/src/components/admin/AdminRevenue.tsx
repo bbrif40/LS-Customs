@@ -5,6 +5,8 @@
  */
 import { useState } from 'react'
 import { Download, Calendar, ChevronLeft, ChevronRight, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
+import { IonIcon } from '@ionic/react'
+import { carOutline, constructOutline, barChartOutline } from 'ionicons/icons'
 import { useAdminRevenueData } from '../../hooks/useAdminRevenueData'
 
 type TxFilter = 'all' | 'rentals' | 'mechanics'
@@ -29,9 +31,12 @@ export function AdminRevenue() {
     { id: 'mechanics', label: 'Mechanics Only' },
   ]
 
+  const isRentalTx = (tx: (typeof transactions)[0]) =>
+    tx.serviceIcon === 'vehicle' || tx.serviceIcon === '🚗' || tx.serviceType.toLowerCase().includes('rental')
+
   const filteredTx = transactions.filter((tx) => {
-    if (txFilter === 'rentals') return tx.serviceIcon === '🚗'
-    if (txFilter === 'mechanics') return tx.serviceIcon === '🔧'
+    if (txFilter === 'rentals') return isRentalTx(tx)
+    if (txFilter === 'mechanics') return !isRentalTx(tx)
     return true
   })
 
@@ -172,9 +177,9 @@ export function AdminRevenue() {
               <div className="admin-stat-header">
                 <span className="admin-stat-label">{stat.label}</span>
                 <div className={`admin-stat-icon ${stat.icon}`}>
-                  {stat.icon === 'revenue' && '₱'}
-                  {stat.icon === 'avg' && '📊'}
-                  {stat.icon === 'subs' && '🔧'}
+                  {stat.icon === 'revenue' && <span style={{ fontWeight: 700 }}>₱</span>}
+                  {stat.icon === 'avg' && <IonIcon icon={barChartOutline} style={{ fontSize: 20 }} />}
+                  {stat.icon === 'subs' && <IonIcon icon={constructOutline} style={{ fontSize: 20 }} />}
                 </div>
               </div>
               <div className="admin-stat-value">{stat.value}</div>
@@ -322,7 +327,12 @@ export function AdminRevenue() {
                     <td style={{ fontWeight: 600 }}>{tx.customer}</td>
                     <td>
                       <div className="admin-table-service">
-                        <div className="admin-table-service-icon">{tx.serviceIcon}</div>
+                        <div className="admin-table-service-icon">
+                          <IonIcon
+                            icon={isRentalTx(tx) ? carOutline : constructOutline}
+                            style={{ fontSize: 18 }}
+                          />
+                        </div>
                         <span>{tx.serviceType}</span>
                       </div>
                     </td>
