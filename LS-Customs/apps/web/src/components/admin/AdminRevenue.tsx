@@ -4,7 +4,7 @@
  * Matches the "Admin - Revenue Reports" Figma screen.
  */
 import { useState } from 'react'
-import { Download, Calendar, ChevronLeft, ChevronRight, AlertTriangle, Loader2, RefreshCw } from 'lucide-react'
+import { Download, Calendar, ChevronLeft, ChevronRight, Loader2, RefreshCw } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { carOutline, constructOutline, barChartOutline } from 'ionicons/icons'
 import { useAdminRevenueData } from '../../hooks/useAdminRevenueData'
@@ -41,48 +41,72 @@ export function AdminRevenue() {
   })
 
   // ── Chart calculation ──────────────────────────────────────────
-  const chartW = 700
-  const chartH = 200
-  const padX = 50
-  const padY = 30
-  const padTop = 10
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null)
+  const chartW = 760
+  const chartH = 220
+  const padLeft = 70
+  const padRight = 30
+  const padTop = 20
+  const padBottom = 30
 
-  const allValues = [...(chartData.rentals.length ? chartData.rentals : [0]), ...(chartData.mechanics.length ? chartData.mechanics : [0])]
-  const maxVal = allValues.length > 0
-    ? Math.max(...allValues) * 1.15
-    : 1
+  const formatCompactPHP = (val: number) => {
+    if (val >= 1_000_000) return `₱${(val / 1_000_000).toFixed(1)}M`
+    if (val >= 1_000) return `₱${(val / 1_000).toFixed(0)}K`
+    return `₱${Math.round(val).toLocaleString()}`
+  }
+
+  const allValues = [
+    ...(chartData.rentals.length ? chartData.rentals : [0]),
+    ...(chartData.mechanics.length ? chartData.mechanics : [0])
+  ]
+  const rawMax = Math.max(...allValues, 1000)
+  // Round up to clean multiple
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawMax))) || 1000
+  const roundUnit = magnitude >= 100_000 ? 50_000 : magnitude >= 10_000 ? 10_000 : 1_000
+  const maxVal = Math.max(Math.ceil((rawMax * 1.15) / roundUnit) * roundUnit, 1000)
+
   const labelCount = chartData.labels.length || 1
-  const stepX = (chartW - padX) / (labelCount - 1)
+  const stepX = labelCount > 1 ? (chartW - padLeft - padRight) / (labelCount - 1) : 0
 
   const toPoint = (val: number, idx: number) => ({
-    x: padX + idx * stepX,
-    y: padTop + (chartH - padY - padTop) * (1 - val / maxVal),
+    x: padLeft + idx * stepX,
+    y: padTop + (chartH - padBottom - padTop) * (1 - Math.min(val, maxVal) / maxVal),
   })
 
-  const buildPath = (data: number[]) =>
-    data
-      .map((v, i) => {
-        const { x, y } = toPoint(v, i)
-        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
-      })
-      .join(' ')
+  const buildSmoothPath = (data: number[]) => {
+    if (!data.length) return ''
+    if (data.length === 1) {
+      const p = toPoint(data[0], 0)
+      return `M ${p.x - 5} ${p.y} L ${p.x + 5} ${p.y}`
+    }
+    const points = data.map((v, i) => toPoint(v, i))
+    let path = `M ${points[0].x} ${points[0].y}`
+    for (let i = 0; i < points.length - 1; i++) {
+      const curr = points[i]
+      const next = points[i + 1]
+      const cpX = (curr.x + next.x) / 2
+      path += ` C ${cpX} ${curr.y}, ${cpX} ${next.y}, ${next.x} ${next.y}`
+    }
+    return path
+  }
 
-  const rentalsPath = buildPath(chartData.rentals)
-  const mechanicsPath = buildPath(chartData.mechanics)
+  const rentalsPath = buildSmoothPath(chartData.rentals)
+  const mechanicsPath = buildSmoothPath(chartData.mechanics)
 
-  // Build area path for rentals (fill under line)
-  const lastIdx = chartData.rentals.length - 1
+  // Area fill under rentals
   const areaPath = chartData.rentals.length > 0
-    ? rentalsPath +
-      ` L ${toPoint(chartData.rentals[lastIdx], lastIdx).x} ${chartH - padY}` +
-      ` L ${padX} ${chartH - padY} Z`
+    ? `${rentalsPath} L ${toPoint(chartData.rentals[chartData.rentals.length - 1], chartData.rentals.length - 1).x} ${chartH - padBottom} L ${padLeft} ${chartH - padBottom} Z`
     : ''
 
   // Grid lines
   const gridLines = [0, 0.25, 0.5, 0.75, 1].map((frac) => ({
-    y: padTop + (chartH - padY - padTop) * (1 - frac),
-    label: Math.round(maxVal * frac).toString(),
+    y: padTop + (chartH - padBottom - padTop) * (1 - frac),
+    label: formatCompactPHP(maxVal * frac),
   }))
+
+  // Clean interval for X labels
+  const labelStep = Math.max(1, Math.ceil(labelCount / 6))
+  const shouldShowLabel = (i: number) => i === 0 || i === labelCount - 1 || i % labelStep === 0
 
   // Pagination for transactions table
   const PAGE_SIZE = 20
@@ -208,7 +232,7 @@ export function AdminRevenue() {
             </div>
           </div>
         </div>
-        <div className="admin-chart-container">
+        <div className="admin-chart-container" style={{ position: 'relative' }}>
           {loading ? (
             <div style={{ padding: 24, textAlign: 'center', color: 'var(--admin-muted)', height: chartH }}>
               Loading chart data…
@@ -218,74 +242,168 @@ export function AdminRevenue() {
               No revenue data for this period.
             </div>
           ) : (
-            <svg className="admin-chart-svg" viewBox={`0 0 ${chartW} ${chartH}`} preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="rentalsGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="rgba(232,168,56,0.2)" />
-                  <stop offset="100%" stopColor="rgba(232,168,56,0)" />
-                </linearGradient>
-              </defs>
+            <>
+              <svg className="admin-chart-svg" viewBox={`0 0 ${chartW} ${chartH}`}>
+                <defs>
+                  <linearGradient id="rentalsGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="rgba(232,168,56,0.25)" />
+                    <stop offset="100%" stopColor="rgba(232,168,56,0)" />
+                  </linearGradient>
+                </defs>
 
-              {/* Grid lines */}
-              {gridLines.map((line, i) => (
-                <g key={i}>
+                {/* Grid lines & Y-axis labels */}
+                {gridLines.map((line, i) => (
+                  <g key={i}>
+                    <line
+                      x1={padLeft}
+                      y1={line.y}
+                      x2={chartW - padRight}
+                      y2={line.y}
+                      className="admin-chart-grid-line"
+                    />
+                    <text
+                      x={padLeft - 10}
+                      y={line.y + 4}
+                      textAnchor="end"
+                      className="admin-chart-label"
+                      style={{ fontSize: 11, fill: 'var(--admin-muted, #94a3b8)' }}
+                    >
+                      {line.label}
+                    </text>
+                  </g>
+                ))}
+
+                {/* X-axis labels */}
+                {chartData.labels.map((label, i) => {
+                  if (!shouldShowLabel(i)) return null
+                  const x = padLeft + i * stepX
+                  const anchor = i === 0 ? 'start' : i === labelCount - 1 ? 'end' : 'middle'
+                  return (
+                    <text
+                      key={label + i}
+                      x={x}
+                      y={chartH - 8}
+                      textAnchor={anchor}
+                      className="admin-chart-label"
+                      style={{ fontSize: 11, fill: 'var(--admin-muted, #94a3b8)' }}
+                    >
+                      {label}
+                    </text>
+                  )
+                })}
+
+                {/* Area fill for rentals */}
+                {areaPath && <path d={areaPath} className="admin-chart-area-rentals" />}
+
+                {/* Lines */}
+                {rentalsPath && <path d={rentalsPath} className="admin-chart-line-rentals" />}
+                {mechanicsPath && <path d={mechanicsPath} className="admin-chart-line-mechanics" />}
+
+                {/* Active hover guideline */}
+                {hoveredIdx !== null && (
                   <line
-                    x1={padX}
-                    y1={line.y}
-                    x2={chartW}
-                    y2={line.y}
-                    className="admin-chart-grid-line"
+                    x1={toPoint(0, hoveredIdx).x}
+                    y1={padTop}
+                    x2={toPoint(0, hoveredIdx).x}
+                    y2={chartH - padBottom}
+                    stroke="rgba(255,255,255,0.25)"
+                    strokeDasharray="3 3"
+                    strokeWidth={1}
                   />
-                  <text
-                    x={padX - 8}
-                    y={line.y + 4}
-                    textAnchor="end"
-                    className="admin-chart-label"
-                  >
-                    {line.label}
-                  </text>
-                </g>
-              ))}
+                )}
 
-              {/* X-axis labels */}
-              {chartData.labels.map((label, i) => (
-                <text
-                  key={label}
-                  x={padX + i * stepX}
-                  y={chartH - 5}
-                  textAnchor="middle"
-                  className="admin-chart-label"
+                {/* Dots & hover targets */}
+                {chartData.rentals.map((val, i) => {
+                  const { x, y } = toPoint(val, i)
+                  const isHovered = hoveredIdx === i
+                  return (
+                    <circle
+                      key={`r-${i}`}
+                      cx={x}
+                      cy={y}
+                      r={isHovered ? 5.5 : 3.5}
+                      className="admin-chart-dot rentals"
+                      style={{ transition: 'all 0.15s ease' }}
+                    />
+                  )
+                })}
+                {chartData.mechanics.map((val, i) => {
+                  const { x, y } = toPoint(val, i)
+                  const isHovered = hoveredIdx === i
+                  return (
+                    <circle
+                      key={`m-${i}`}
+                      cx={x}
+                      cy={y}
+                      r={isHovered ? 5.5 : 3.5}
+                      className="admin-chart-dot mechanics"
+                      style={{ transition: 'all 0.15s ease' }}
+                    />
+                  )
+                })}
+
+                {/* Transparent hover hitboxes */}
+                {chartData.labels.map((_, i) => {
+                  const x = padLeft + i * stepX - (stepX / 2 || 15)
+                  const width = Math.max(stepX, 20)
+                  return (
+                    <rect
+                      key={`hit-${i}`}
+                      x={Math.max(padLeft, x)}
+                      y={padTop}
+                      width={width}
+                      height={chartH - padTop - padBottom}
+                      fill="transparent"
+                      style={{ cursor: 'pointer' }}
+                      onMouseEnter={() => setHoveredIdx(i)}
+                      onMouseLeave={() => setHoveredIdx(null)}
+                    />
+                  )
+                })}
+              </svg>
+
+              {/* Floating Tooltip */}
+              {hoveredIdx !== null && chartData.labels[hoveredIdx] && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${Math.min(Math.max(toPoint(0, hoveredIdx).x / chartW * 100, 15), 85)}%`,
+                    top: 12,
+                    transform: 'translateX(-50%)',
+                    background: 'rgba(15, 23, 42, 0.95)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: 8,
+                    padding: '8px 12px',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+                    pointerEvents: 'none',
+                    zIndex: 10,
+                    minWidth: 140,
+                    backdropFilter: 'blur(8px)',
+                  }}
                 >
-                  {label}
-                </text>
-              ))}
-
-              {/* Area fill for rentals */}
-              {areaPath && <path d={areaPath} className="admin-chart-area-rentals" />}
-
-              {/* Lines */}
-              {rentalsPath && <path d={rentalsPath} className="admin-chart-line-rentals" />}
-              {mechanicsPath && <path d={mechanicsPath} className="admin-chart-line-mechanics" />}
-
-              {/* Dots */}
-              {chartData.rentals.map((val, i) => {
-                const { x, y } = toPoint(val, i)
-                return <circle key={`r-${i}`} cx={x} cy={y} r={4} className="admin-chart-dot rentals" />
-              })}
-              {chartData.mechanics.map((val, i) => {
-                const { x, y } = toPoint(val, i)
-                return <circle key={`m-${i}`} cx={x} cy={y} r={4} className="admin-chart-dot mechanics" />
-              })}
-            </svg>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--admin-muted, #94a3b8)', marginBottom: 4 }}>
+                    {chartData.labels[hoveredIdx]}
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: 12 }}>
+                    <span style={{ color: 'var(--admin-accent, #e8a838)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--admin-accent, #e8a838)', display: 'inline-block' }} />
+                      Rentals:
+                    </span>
+                    <strong style={{ color: '#fff' }}>₱{(chartData.rentals[hoveredIdx] || 0).toLocaleString()}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: 12, marginTop: 2 }}>
+                    <span style={{ color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8', display: 'inline-block' }} />
+                      Services:
+                    </span>
+                    <strong style={{ color: '#fff' }}>₱{(chartData.mechanics[hoveredIdx] || 0).toLocaleString()}</strong>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
-
-      {/* ── Dispatch Emergency ────────────────────────────────── */}
-      <button className="admin-dispatch-btn">
-        <AlertTriangle size={16} />
-        Dispatch Emergency
-      </button>
 
       {/* ── Recent Transactions ───────────────────────────────── */}
       <div className="admin-transactions-card">

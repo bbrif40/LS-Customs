@@ -15,6 +15,7 @@ import { AdminUsers } from './AdminUsers'
 import { AdminBookings } from './AdminBookings'
 import { AdminRevenue } from './AdminRevenue'
 import { AdminTickets } from './AdminTickets'
+import { AdminCustomerUIEditor } from './AdminCustomerUIEditor'
 import { useOpenTicketCount, useAdminBookingsCount } from '../../hooks/useAdminData'
 import type { AdminView } from './AdminSidebar'
 
@@ -60,6 +61,7 @@ const ALL_VIEWS: AdminView[] = [
   'bookings',
   'tickets',
   'revenue',
+  'ui-editor',
 ]
 
 export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
@@ -87,6 +89,8 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
         return <AdminTickets />
       case 'revenue':
         return <AdminRevenue />
+      case 'ui-editor':
+        return <AdminCustomerUIEditor />
       default:
         return <AdminOverview onViewChange={setCurrentView} />
     }

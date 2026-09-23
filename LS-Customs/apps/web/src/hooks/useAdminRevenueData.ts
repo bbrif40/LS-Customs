@@ -286,51 +286,94 @@ export function useAdminRevenueData(
         ? ((aov - prevAovAmount) / prevAovAmount) * 100
         : aov > 0 ? 100 : 0
 
-      // ── 6. Build daily chart buckets ────────────────────────────
-      const buckets = new Map<string, { rentals: number; mechanics: number }>()
-      const allDates: string[] = []
+      // ── 6. Build chart buckets (granular by timeframe) ────────
+      type BucketPoint = { label: string; dateStart: Date; dateEnd: Date; rentals: number; mechanics: number }
+      const chartPoints: BucketPoint[] = []
 
-      for (let i = days - 1; i >= 0; i--) {
-        const d = new Date()
-        d.setDate(d.getDate() - i)
-        const dateKey = d.toLocaleDateString('en-US', { month: 'short' })
-        allDates.push(dateKey)
-        buckets.set(dateKey, { rentals: 0, mechanics: 0 })
+      if (days <= 7) {
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date()
+          d.setDate(d.getDate() - i)
+          d.setHours(0, 0, 0, 0)
+          const endD = new Date(d)
+          endD.setHours(23, 59, 59, 999)
+          chartPoints.push({
+            label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }),
+            dateStart: d,
+            dateEnd: endD,
+            rentals: 0,
+            mechanics: 0,
+          })
+        }
+      } else if (days <= 30) {
+        // Daily points for the period
+        for (let i = days - 1; i >= 0; i--) {
+          const d = new Date()
+          d.setDate(d.getDate() - i)
+          d.setHours(0, 0, 0, 0)
+          const endD = new Date(d)
+          endD.setHours(23, 59, 59, 999)
+          chartPoints.push({
+            label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            dateStart: d,
+            dateEnd: endD,
+            rentals: 0,
+            mechanics: 0,
+          })
+        }
+      } else if (days <= 90) {
+        // Weekly points (approx 12 weeks)
+        const numWeeks = 12
+        for (let i = numWeeks - 1; i >= 0; i--) {
+          const d = new Date()
+          d.setDate(d.getDate() - (i * 7 + 6))
+          d.setHours(0, 0, 0, 0)
+          const endD = new Date(d)
+          endD.setDate(d.getDate() + 7)
+          chartPoints.push({
+            label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            dateStart: d,
+            dateEnd: endD,
+            rentals: 0,
+            mechanics: 0,
+          })
+        }
+      } else {
+        // Monthly points
+        for (let i = 11; i >= 0; i--) {
+          const d = new Date()
+          d.setMonth(d.getMonth() - i, 1)
+          d.setHours(0, 0, 0, 0)
+          const endD = new Date(d)
+          endD.setMonth(d.getMonth() + 1, 0)
+          endD.setHours(23, 59, 59, 999)
+          chartPoints.push({
+            label: d.toLocaleDateString('en-US', { month: 'short' }),
+            dateStart: d,
+            dateEnd: endD,
+            rentals: 0,
+            mechanics: 0,
+          })
+        }
       }
 
+      // Aggregate payments exactly once into the matching date bucket
       for (const p of typedPayments) {
         if (!isPaymentSucceeded(p)) continue
-        const dateKey = new Date(p.created_at).toLocaleDateString('en-US', { month: 'short' })
-        const bucket = buckets.get(dateKey)
-        if (bucket) {
+        const pTime = new Date(p.created_at).getTime()
+        const target = chartPoints.find((pt) => pTime >= pt.dateStart.getTime() && pTime <= pt.dateEnd.getTime())
+        if (target) {
           if (p.booking_type === 'vehicle') {
-            bucket.rentals += Number(p.amount)
+            target.rentals += Number(p.amount)
           } else {
-            bucket.mechanics += Number(p.amount)
+            target.mechanics += Number(p.amount)
           }
         }
       }
 
-      // Aggregate same-month dates (e.g., Jan 5 + Jan 12 → Jan bucket)
-      const aggregated = new Map<string, { rentals: number; mechanics: number }>()
-      for (const dateKey of allDates) {
-        const bucket = buckets.get(dateKey)!
-        if (!aggregated.has(dateKey)) {
-          aggregated.set(dateKey, { rentals: 0, mechanics: 0 })
-        }
-        const agg = aggregated.get(dateKey)!
-        agg.rentals += bucket.rentals
-        agg.mechanics += bucket.mechanics
-      }
-
-      // Deduplicate labels (same month appears multiple times)
-      const uniqueLabels: string[] = []
-      for (const d of allDates) {
-        if (!uniqueLabels.includes(d)) uniqueLabels.push(d)
-      }
-
-      const rentalsData = uniqueLabels.map((l) => aggregated.get(l)!.rentals)
-      const mechanicsData = uniqueLabels.map((l) => aggregated.get(l)!.mechanics)
+      const chartLabels = chartPoints.map((pt) => pt.label)
+      const rentalsData = chartPoints.map((pt) => pt.rentals)
+      const mechanicsData = chartPoints.map((pt) => pt.mechanics)
 
       // ── 7. Build transaction list for the table ─────────────────
       const txList: RevenueTransaction[] = typedPayments.map((p) => {

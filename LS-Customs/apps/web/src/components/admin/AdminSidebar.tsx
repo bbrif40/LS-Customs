@@ -11,10 +11,9 @@ import {
   UserCog,
   DollarSign,
   FileBarChart,
-  AlertTriangle,
   LogOut,
   TicketPlus,
-  Receipt,
+  Palette,
 } from 'lucide-react'
 
 export type AdminView =
@@ -26,7 +25,7 @@ export type AdminView =
   | 'bookings'
   | 'revenue'
   | 'tickets'
-  | 'transactions'
+  | 'ui-editor'
 
 interface AdminSidebarProps {
   currentView: AdminView
@@ -35,7 +34,6 @@ interface AdminSidebarProps {
   userName: string
   openTicketCount?: number
   activeBookingsCount?: number
-  onDispatchEmergency?: () => void
 }
 
 const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[] = [
@@ -47,7 +45,7 @@ const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[]
   { id: 'bookings',      label: 'Bookings',          icon: FileBarChart },
   { id: 'tickets',       label: 'Ticket Requests',   icon: TicketPlus },
   { id: 'revenue',       label: 'Revenue',           icon: DollarSign },
-  { id: 'transactions',  label: 'Transactions',      icon: Receipt },
+  { id: 'ui-editor',     label: 'Customer UI',       icon: Palette },
 ]
 
 export function AdminSidebar({
@@ -57,7 +55,6 @@ export function AdminSidebar({
   userName,
   openTicketCount = 0,
   activeBookingsCount = 0,
-  onDispatchEmergency,
 }: AdminSidebarProps) {
   return (
     <aside className="admin-sidebar">
@@ -97,17 +94,6 @@ export function AdminSidebar({
           </button>
         ))}
       </nav>
-
-      {/* Dispatch Emergency */}
-      <button
-        className="admin-sidebar-dispatch"
-        onClick={onDispatchEmergency}
-        type="button"
-        aria-label="Dispatch emergency mechanic"
-      >
-        <AlertTriangle size={16} />
-        Dispatch Emergency
-      </button>
 
       {/* Bottom */}
       <div className="admin-sidebar-bottom">

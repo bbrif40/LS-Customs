@@ -3,11 +3,12 @@
  * Both featured rentals and trending services come from Supabase.
  */
 import { useEffect, useState } from 'react'
-import { ChevronRight, Car, Wrench, CalendarDays } from 'lucide-react'
+import { ChevronRight, Car, Wrench, CalendarDays, Sparkles } from 'lucide-react'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { useTrendingServices } from '../../hooks/useTrendingServices'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { useFavoriteVehicles } from '../../hooks/useFavoriteVehicles'
+import { useCustomerSiteSettings } from '../../hooks/useCustomerSiteSettings'
 import { VehicleCard } from '../common/VehicleCard'
 import { ServiceMini } from '../common/ServiceMini'
 import { LocationCard } from '../common/LocationCard'
@@ -53,6 +54,7 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
   const { vehicles: featured, loading: featuredLoading } = useCustomerVehicles()
   const { services: trending, loading: trendingLoading } = useTrendingServices(2)
   const { isFavorite, toggleFavorite } = useFavoriteVehicles()
+  const { settings } = useCustomerSiteSettings()
 
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -69,13 +71,63 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
 
   return (
     <div className={`page dashboard-page ${scrollRef.className}`} ref={scrollRef.ref}>
+      {/* ── Top Announcement & Promo Banner ─────────────────────── */}
+      {settings.showBanner && (
+        <div
+          className="customer-announcement-banner"
+          style={{
+            background: settings.bannerBg,
+            color: settings.bannerTextColor,
+            borderRadius: 12,
+            padding: '12px 18px',
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+            fontWeight: 600,
+            fontSize: 13,
+            transition: 'all 0.3s ease',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+            <Sparkles size={16} style={{ flexShrink: 0 }} />
+            <span>{settings.bannerText}</span>
+          </div>
+          {settings.bannerLinkView !== 'none' && settings.bannerLinkText && (
+            <button
+              type="button"
+              onClick={() => onView(settings.bannerLinkView as View)}
+              style={{
+                background: settings.bannerTextColor === '#000000' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.2)',
+                color: settings.bannerTextColor,
+                border: 'none',
+                padding: '6px 14px',
+                borderRadius: 6,
+                fontWeight: 700,
+                fontSize: 12,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4,
+              }}
+            >
+              {settings.bannerLinkText}
+              <ChevronRight size={14} />
+            </button>
+          )}
+        </div>
+      )}
+
       <section className="welcome-row">
         <div>
           <p className="eyebrow">{dateLabel}</p>
           <h1>
             {greeting}, {displayName} <span>✦</span>
           </h1>
-          <p className="muted">Your garage is in good hands. What do you need today?</p>
+          <p className="muted">{settings.welcomeSubtitle || 'Your garage is in good hands. What do you need today?'}</p>
         </div>
       </section>
 
@@ -119,19 +171,19 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
           </video>
           <div className="hero-overlay" aria-hidden="true" />
           <div className="hero-copy">
-            <p className="eyebrow light">LS CUSTOMS CONCIERGE</p>
+            <p className="eyebrow light">{settings.heroEyebrow || 'LS CUSTOMS CONCIERGE'}</p>
             <h2>
-              Premium vehicles.
+              {settings.heroHeadline || 'Premium vehicles.'}
               <br />
-              <em>Precision service.</em>
+              <em>{settings.heroHeadlineEm || 'Precision service.'}</em>
             </h2>
-            <p>Experience the perfect blend of high-end car rentals and on-demand, expert mobile mechanics.</p>
+            <p>{settings.heroSubtitle || 'Experience the perfect blend of high-end car rentals and on-demand, expert mobile mechanics.'}</p>
             <div className="hero-buttons">
               <button className="button light-button" onClick={() => onView('rentals')}>
-                Rent a vehicle <ChevronRight size={16} />
+                {settings.heroCtaRentalText || 'Rent a vehicle'} <ChevronRight size={16} />
               </button>
               <button className="ghost-button" onClick={() => onView('services')}>
-                Book a mechanic
+                {settings.heroCtaServiceText || 'Book a mechanic'}
               </button>
             </div>
           </div>
