@@ -2474,7 +2474,7 @@ html { scroll-behavior: smooth; }
 }
 .animate-on-scroll.visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
 }
 .animate-on-scroll.fade-down  { transform: translateY(-24px); }
 .animate-on-scroll.fade-down.visible  { transform: translateY(0); }

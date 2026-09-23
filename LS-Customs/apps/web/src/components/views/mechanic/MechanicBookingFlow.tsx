@@ -81,8 +81,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
     addressCity: string
     customerName: string
     customerPhone: string
-    mechanicName: string
-    mechanicPhone: string
+    mechanicName?: string | null
+    mechanicPhone?: string | null
   } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -176,11 +176,11 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
         .insert({
           customer_id: userId,
           address_id: hasPin ? null : effectiveAddressId,
-          mechanic_id: assignedMechanic?.id ?? null,
+          mechanic_id: null,
           scheduled_at: scheduledAt,
           status: 'pending',
           total_price: totalPricePesos,
-          notes: `Address: ${address.line1}, ${address.city} | Base: ${formattedBasePrice} + Distance Fee: ${formattedDistanceFee} (${distanceKm.toFixed(1)} km from ${assignedMechanic?.full_name ?? 'driver'})`,
+          notes: `Address: ${address.line1}, ${address.city} | Base: ${formattedBasePrice} + Distance Fee: ${formattedDistanceFee} (${distanceKm.toFixed(1)} km)`,
           pin_lat: hasPin ? address.pin_lat : null,
           pin_lng: hasPin ? address.pin_lng : null,
         })
@@ -230,8 +230,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome }: Mechanic
       addressCity,
       customerName: custName,
       customerPhone: custPhone,
-      mechanicName: mechName,
-      mechanicPhone: mechPhone,
+      mechanicName: null,
+      mechanicPhone: null,
     })
     setSubmitting(false)
     goTo('payment')

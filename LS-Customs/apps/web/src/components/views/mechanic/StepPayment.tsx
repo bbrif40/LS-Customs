@@ -176,30 +176,38 @@ export function StepPayment({
             }
             action={null}
           />
-          <SummaryRow
-            label="Assigned mechanic"
-            value={
-              <span className="summary-mechanic-badge">
-                <Wrench size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                {mechanicName || 'Mobile Roadside Specialist'}
-              </span>
-            }
-            action={null}
-          />
-          <SummaryRow
-            label="Mechanic phone"
-            value={
-              mechanicPhone ? (
-                <a href={`tel:${mechanicPhone.replace(/[^+\d]/g, '')}`} className="summary-phone-link mechanic">
-                  <Phone size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-                  {mechanicPhone}
-                </a>
-              ) : (
-                <span className="muted">+63 917 555 0192</span>
-              )
-            }
-            action={null}
-          />
+          {mechanicName ? (
+            <>
+              <SummaryRow
+                label="Assigned mechanic"
+                value={
+                  <span className="summary-mechanic-badge">
+                    <Wrench size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                    {mechanicName}
+                  </span>
+                }
+                action={null}
+              />
+              {mechanicPhone && (
+                <SummaryRow
+                  label="Mechanic phone"
+                  value={
+                    <a href={`tel:${mechanicPhone.replace(/[^+\d]/g, '')}`} className="summary-phone-link mechanic">
+                      <Phone size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
+                      {mechanicPhone}
+                    </a>
+                  }
+                  action={null}
+                />
+              )}
+            </>
+          ) : (
+            <SummaryRow
+              label="Assigned mechanic"
+              value={<span className="muted">Assigned upon dispatch</span>}
+              action={null}
+            />
+          )}
           <SummaryRow label="Service" value={serviceName} action={null} />
           {baseServicePrice && <SummaryRow label="Base service" value={baseServicePrice} action={null} />}
           {distanceFee && (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag, CreditCard, Check, Ban, CalendarX, BookOpen } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import { usePaymentStatus } from '../../hooks/usePaymentStatus'
@@ -12,7 +13,7 @@ import { useCustomerBookings, type CustomerServiceBooking, type CustomerVehicleB
 interface BookingsProps {
   userId: string | undefined
   onNotify: (message: string) => void
-  onView?: (view: string) => void
+  onView?: (view: any) => void
   /** When set, the matching service booking auto-expands its mechanic
    *  detail block. Set by Header.tsx when the user clicks an
    *  assignment notification. */
@@ -144,14 +145,20 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
     ? details.booking.service_booking_items?.map((item) => item.mechanic_services?.name).filter(Boolean).join(', ')
     : ''
   // Only show the mechanic's name/phone once the admin has actually
-  // assigned one. The PostgREST embed for mechanic_profiles is null
-  // when service_bookings.mechanic_id is null, so checking the embed
-  // alone would be enough — but tying it to mechanic_id makes the
-  // intent ("only after the admin assigns") explicit at the call site.
-  const isAssigned = isService && details.booking.mechanic_id != null
+  // assigned one.
+  const isAssigned = isService && ['assigned', 'en_route', 'in_progress', 'completed'].includes(details.booking.status) && details.booking.mechanic_id != null
   const mech = isAssigned ? details.booking.mechanic_profiles : null
   const mechName = isAssigned ? mech?.profiles?.full_name ?? null : null
   const mechPhone = isAssigned ? mech?.profiles?.phone ?? null : null
+
+  useEffect(() => {
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [])
+
   // Convenience ref for fields both kinds share (status, id, total_price).
   // Type-narrowed via the isService branch — TS understands the union
   // narrows inside each branch even without `details.booking` here.
@@ -238,7 +245,7 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
     setConfirmCancel(false)
   }
 
-  return (
+  return createPortal(
     <div className="map-modal-backdrop" onClick={onClose}>
       <div className="map-modal booking-details-modal" onClick={(event) => event.stopPropagation()}>
         <header>
@@ -450,7 +457,8 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
           <button className="outline-button" onClick={onClose}>Close</button>
         </footer>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -549,10 +557,8 @@ export function Bookings({ userId, onNotify, onView, selectedBookingId, onClearS
                 </div>
                 <h3>{booking.service_booking_items?.map((item) => item.mechanic_services?.name).filter(Boolean).join(', ') || 'Mobile mechanic service'}</h3>
                 <p className="muted"><MapPin size={13} /> Location saved for this booking</p>
-                {/* Show the mechanic as soon as the booking has one. For
-                    unassigned (pending) bookings the existing "Mechanic will
-                    be assigned shortly" copy in StepConfirmed still applies. */}
-                {booking.mechanic_id && mech && (
+                {/* Only display the mechanic once assigned */}
+                {['assigned', 'en_route', 'in_progress', 'completed'].includes(booking.status) && booking.mechanic_id && mech && (
                   <MechanicBlock name={mech.profiles?.full_name ?? null} phone={mech.profiles?.phone ?? null} />
                 )}
                 <div className="booking-actions">
@@ -581,7 +587,7 @@ export function Bookings({ userId, onNotify, onView, selectedBookingId, onClearS
         const lng = mech?.current_lng ?? liveBooking.pin_lng!
         const customerAddress = extractAddressFromNotes(liveBooking.notes)
         const isEnRoute = liveBooking.status === 'en_route'
-        return (
+        return createPortal(
           <div className="map-modal-backdrop" onClick={() => setLiveBooking(null)}>
             <div className="map-modal" onClick={(event) => event.stopPropagation()} style={{ maxWidth: isEnRoute ? 640 : 540 }}>
               <header>
@@ -616,7 +622,8 @@ export function Bookings({ userId, onNotify, onView, selectedBookingId, onClearS
                 />
               </div>
             </div>
-          </div>
+          </div>,
+          document.body
         )
       })()}
     </div>

@@ -457,6 +457,47 @@ export function useAdminVehicleBookings() {
       .update({ status })
       .eq('id', id)
     if (updateError) throw updateError
+
+    if (status === 'completed') {
+      try {
+        const { data: existingPayment } = await supabase
+          .from('payments')
+          .select('id, status')
+          .eq('booking_type', 'vehicle')
+          .eq('booking_id', id)
+          .maybeSingle()
+
+        if (existingPayment) {
+          if (existingPayment.status !== 'succeeded') {
+            await supabase
+              .from('payments')
+              .update({ status: 'succeeded' })
+              .eq('id', existingPayment.id)
+          }
+        } else {
+          const { data: bookingRow } = await supabase
+            .from('vehicle_bookings')
+            .select('customer_id, total_price')
+            .eq('id', id)
+            .maybeSingle()
+
+          if (bookingRow) {
+            await supabase.from('payments').insert({
+              booking_type: 'vehicle',
+              booking_id: id,
+              customer_id: bookingRow.customer_id,
+              amount: bookingRow.total_price,
+              currency: 'PHP',
+              status: 'succeeded',
+              provider: 'completed_rental',
+            })
+          }
+        }
+      } catch (err) {
+        console.warn('[useAdminData] payment sync warning:', err)
+      }
+    }
+
     await fetchData()
   }
 
@@ -699,6 +740,47 @@ export function useAdminServiceBookings() {
       .update({ status })
       .eq('id', id)
     if (updateError) throw updateError
+
+    if (status === 'completed') {
+      try {
+        const { data: existingPayment } = await supabase
+          .from('payments')
+          .select('id, status')
+          .eq('booking_type', 'service')
+          .eq('booking_id', id)
+          .maybeSingle()
+
+        if (existingPayment) {
+          if (existingPayment.status !== 'succeeded') {
+            await supabase
+              .from('payments')
+              .update({ status: 'succeeded' })
+              .eq('id', existingPayment.id)
+          }
+        } else {
+          const { data: bookingRow } = await supabase
+            .from('service_bookings')
+            .select('customer_id, total_price')
+            .eq('id', id)
+            .maybeSingle()
+
+          if (bookingRow) {
+            await supabase.from('payments').insert({
+              booking_type: 'service',
+              booking_id: id,
+              customer_id: bookingRow.customer_id,
+              amount: bookingRow.total_price,
+              currency: 'PHP',
+              status: 'succeeded',
+              provider: 'completed_service',
+            })
+          }
+        }
+      } catch (err) {
+        console.warn('[useAdminData] payment sync warning:', err)
+      }
+    }
+
     await fetchData()
   }
 

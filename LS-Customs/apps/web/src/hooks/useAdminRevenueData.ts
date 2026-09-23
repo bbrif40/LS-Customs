@@ -118,7 +118,7 @@ export function useAdminRevenueData(
         }
       }
 
-      // ── 4. Fetch booking references for nice labels ───────────
+      // ── 4. Fetch booking references & statuses ───────────────
       const vehicleBookingIds = typedPayments
         .filter((p) => p.booking_type === 'vehicle')
         .map((p) => p.booking_id)
@@ -127,28 +127,55 @@ export function useAdminRevenueData(
         .map((p) => p.booking_id)
 
       const vehicleRefs = new Map<string, string>()
+      const bookingStatusMap = new Map<string, string>()
+
       if (vehicleBookingIds.length > 0) {
         const { data: vbRows, error: vbError } = await supabase
           .from('vehicle_bookings')
-          .select('id, vehicles!inner(plate)')
+          .select('id, status, vehicles!inner(plate)')
           .in('id', vehicleBookingIds)
 
         if (!vbError && vbRows) {
-          type VehicleRow = { id: string; vehicles: { plate: string } | null }
+          type VehicleRow = { id: string; status?: string; vehicles: { plate: string } | null }
           for (const row of (vbRows ?? []) as unknown as VehicleRow[]) {
             if (row.vehicles?.plate) {
               vehicleRefs.set(row.id, `VS-${row.vehicles.plate}`)
+            }
+            if (row.status) {
+              bookingStatusMap.set(`vehicle:${row.id}`, row.status)
             }
           }
         }
       }
 
+      if (serviceBookingIds.length > 0) {
+        const { data: sbRows, error: sbError } = await supabase
+          .from('service_bookings')
+          .select('id, status')
+          .in('id', serviceBookingIds)
+
+        if (!sbError && sbRows) {
+          for (const row of (sbRows ?? []) as { id: string; status: string }[]) {
+            if (row.status) {
+              bookingStatusMap.set(`service:${row.id}`, row.status)
+            }
+          }
+        }
+      }
+
+      // Any booking that has been marked 'completed' by admin is considered paid/succeeded revenue
+      const isPaymentSucceeded = (p: Payment) => {
+        if (p.status === 'succeeded') return true
+        const bStatus = bookingStatusMap.get(`${p.booking_type}:${p.booking_id}`)
+        return bStatus === 'completed'
+      }
+
       // ── 5. Compute revenue stats ────────────────────────────────
       const currentRevenue = typedPayments
-        .filter((p) => p.status === 'succeeded')
+        .filter(isPaymentSucceeded)
         .reduce((sum, p) => sum + Number(p.amount), 0)
 
-      const currentCompletedCount = typedPayments.filter((p) => p.status === 'succeeded').length
+      const currentCompletedCount = typedPayments.filter(isPaymentSucceeded).length
       const prevRevenue = (prevError ? [] : (prevPayments ?? []))
         .filter((p) => p.status === 'succeeded')
         .reduce((sum, p) => sum + Number(p.amount), 0)
@@ -179,7 +206,7 @@ export function useAdminRevenueData(
       }
 
       for (const p of typedPayments) {
-        if (p.status !== 'succeeded') continue
+        if (!isPaymentSucceeded(p)) continue
         const dateKey = new Date(p.created_at).toLocaleDateString('en-US', { month: 'short' })
         const bucket = buckets.get(dateKey)
         if (bucket) {
@@ -218,6 +245,11 @@ export function useAdminRevenueData(
         const ref = p.booking_type === 'vehicle'
           ? (vehicleRefs.get(p.booking_id) ?? `#${p.booking_id.slice(0, 8)}`)
           : `#${p.booking_id.slice(0, 8)}`
+        const succeeded = isPaymentSucceeded(p)
+
+        if (succeeded && p.status !== 'succeeded') {
+          void supabase.from('payments').update({ status: 'succeeded' }).eq('id', p.id)
+        }
 
         return {
           date: new Date(p.created_at).toLocaleDateString('en-US', {
@@ -229,7 +261,7 @@ export function useAdminRevenueData(
           serviceType: p.booking_type === 'vehicle' ? 'Premium Sedan Rental' : 'Mobile Mechanic Service',
           serviceIcon: p.booking_type === 'vehicle' ? '🚗' : '🔧',
           amount: `${Number(p.amount).toLocaleString()}.00`,
-          status: p.status === 'succeeded' ? 'completed' : p.status as 'completed' | 'refunded' | 'pending',
+          status: succeeded ? 'completed' : p.status as 'completed' | 'refunded' | 'pending',
           provider: p.provider,
           paymentId: p.id,
         }
@@ -286,19 +318,24 @@ export function useAdminRevenueData(
     void fetchRevenue()
   }, [fetchRevenue])
 
-  // ── Realtime: refresh when payments change ─────────────────
+  // ── Realtime: refresh when payments or bookings change ──────
   useEffect(() => {
     const channel = supabase
       .channel('admin-revenue-changes')
       .on('postgres_changes', {
-        event: 'INSERT',
+        event: '*',
         schema: 'public',
         table: 'payments',
       }, () => { void fetchRevenue() })
       .on('postgres_changes', {
-        event: 'UPDATE',
+        event: '*',
         schema: 'public',
-        table: 'payments',
+        table: 'service_bookings',
+      }, () => { void fetchRevenue() })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'vehicle_bookings',
       }, () => { void fetchRevenue() })
       .subscribe()
 

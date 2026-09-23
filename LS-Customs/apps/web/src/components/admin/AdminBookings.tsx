@@ -252,8 +252,39 @@ export function AdminBookings() {
     if (!completionBooking) return
     setCompleting(true)
     try {
+      const isVehicle = 'vehicle_id' in completionBooking || activeTab === 'vehicles'
+      const bookingType = isVehicle ? 'vehicle' : 'service'
       const success = await handleStatusChange(completionBooking, 'completed')
       if (success) {
+        try {
+          const { data: existingPayment } = await supabase
+            .from('payments')
+            .select('id, status')
+            .eq('booking_type', bookingType)
+            .eq('booking_id', completionBooking.id)
+            .maybeSingle()
+
+          if (existingPayment) {
+            if (existingPayment.status !== 'succeeded') {
+              await supabase
+                .from('payments')
+                .update({ status: 'succeeded' })
+                .eq('id', existingPayment.id)
+            }
+          } else {
+            await supabase.from('payments').insert({
+              booking_type: bookingType,
+              booking_id: completionBooking.id,
+              customer_id: completionBooking.customer_id,
+              amount: completionBooking.total_price,
+              currency: 'PHP',
+              status: 'succeeded',
+              provider: isVehicle ? 'completed_rental' : 'completed_service',
+            })
+          }
+        } catch (paymentSyncErr) {
+          console.warn('[admin] payment status update warning:', paymentSyncErr)
+        }
         closeCompletionModal()
       }
     } catch (err) {

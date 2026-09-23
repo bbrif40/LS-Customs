@@ -52,22 +52,78 @@ export function useAdminOverviewStats(): UseAdminOverviewStatsResult {
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
       const fourteenDaysAgoIso = fourteenDaysAgo.toISOString()
 
-      const [currentRevenueRes, previousRevenueRes] = await Promise.all([
+      const [
+        currentRevenueRes,
+        previousRevenueRes,
+        currentCompletedVb,
+        previousCompletedVb,
+        currentCompletedSb,
+        previousCompletedSb,
+      ] = await Promise.all([
         supabase
           .from('payments')
-          .select('amount')
+          .select('booking_id, amount')
           .eq('status', 'succeeded')
           .gte('created_at', sevenDaysAgoIso),
         supabase
           .from('payments')
-          .select('amount')
+          .select('booking_id, amount')
           .eq('status', 'succeeded')
+          .gte('created_at', fourteenDaysAgoIso)
+          .lt('created_at', sevenDaysAgoIso),
+        supabase
+          .from('vehicle_bookings')
+          .select('id, total_price')
+          .eq('status', 'completed')
+          .gte('created_at', sevenDaysAgoIso),
+        supabase
+          .from('vehicle_bookings')
+          .select('id, total_price')
+          .eq('status', 'completed')
+          .gte('created_at', fourteenDaysAgoIso)
+          .lt('created_at', sevenDaysAgoIso),
+        supabase
+          .from('service_bookings')
+          .select('id, total_price')
+          .eq('status', 'completed')
+          .gte('created_at', sevenDaysAgoIso),
+        supabase
+          .from('service_bookings')
+          .select('id, total_price')
+          .eq('status', 'completed')
           .gte('created_at', fourteenDaysAgoIso)
           .lt('created_at', sevenDaysAgoIso),
       ])
 
-      const currentRevenue = currentRevenueRes.data?.reduce((sum, p) => sum + Number(p.amount), 0) ?? 0
-      const previousRevenue = previousRevenueRes.data?.reduce((sum, p) => sum + Number(p.amount), 0) ?? 0
+      const currentPaidBookingIds = new Set(currentRevenueRes.data?.map((p) => p.booking_id).filter(Boolean))
+      let currentRevenue = currentRevenueRes.data?.reduce((sum, p) => sum + Number(p.amount), 0) ?? 0
+      for (const vb of (currentCompletedVb.data ?? [])) {
+        if (!currentPaidBookingIds.has(vb.id)) {
+          currentRevenue += Number(vb.total_price)
+          currentPaidBookingIds.add(vb.id)
+        }
+      }
+      for (const sb of (currentCompletedSb.data ?? [])) {
+        if (!currentPaidBookingIds.has(sb.id)) {
+          currentRevenue += Number(sb.total_price)
+          currentPaidBookingIds.add(sb.id)
+        }
+      }
+
+      const prevPaidBookingIds = new Set(previousRevenueRes.data?.map((p) => p.booking_id).filter(Boolean))
+      let previousRevenue = previousRevenueRes.data?.reduce((sum, p) => sum + Number(p.amount), 0) ?? 0
+      for (const vb of (previousCompletedVb.data ?? [])) {
+        if (!prevPaidBookingIds.has(vb.id)) {
+          previousRevenue += Number(vb.total_price)
+          prevPaidBookingIds.add(vb.id)
+        }
+      }
+      for (const sb of (previousCompletedSb.data ?? [])) {
+        if (!prevPaidBookingIds.has(sb.id)) {
+          previousRevenue += Number(sb.total_price)
+          prevPaidBookingIds.add(sb.id)
+        }
+      }
       const revenueTrend = computeTrend(currentRevenue, previousRevenue)
 
       // ── 2. Active Rentals ───────────────────────────────────────

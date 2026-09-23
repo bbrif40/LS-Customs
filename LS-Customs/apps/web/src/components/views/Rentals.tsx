@@ -3,6 +3,7 @@
  * Pulls the active fleet from Supabase via useCustomerVehicles.
  */
 import { useState, useMemo, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronRight, Search, Loader2, CalendarDays, Fuel, MapPin, Settings2, SlidersHorizontal, Star, Users, X } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
@@ -66,6 +67,15 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
 
   const scrollRef = useScrollAnimation<HTMLDivElement>()
   const isPageVisible = scrollRef.className.includes('visible')
+
+  useEffect(() => {
+    if (!previewVehicle) return
+    const originalOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = originalOverflow
+    }
+  }, [previewVehicle])
 
   const filteredVehicles = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
@@ -217,7 +227,7 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
           ))}
         </div>
       )}
-      {previewVehicle && (
+      {previewVehicle && createPortal(
         <div className="vehicle-preview-backdrop" onClick={() => setPreviewVehicle(null)}>
           <div className="vehicle-preview-modal" onClick={(event) => event.stopPropagation()}>
             <header>
@@ -245,7 +255,8 @@ export function Rentals({ userId, onNotify }: RentalsProps) {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
