@@ -9,6 +9,7 @@ import { MapView } from '../common/map'
 import { VirtualMechanicTracker } from '../common/VirtualMechanicTracker'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { useCustomerBookings, type CustomerServiceBooking, type CustomerVehicleBooking } from '../../hooks/useCustomerBookings'
+import { BookingCalendar } from '../bookings/BookingCalendar'
 
 interface BookingsProps {
   userId: string | undefined
@@ -466,7 +467,7 @@ export function Bookings({ userId, onNotify, onView, selectedBookingId, onClearS
   const { vehicleBookings, serviceBookings, loading, error, refetch } = useCustomerBookings(userId)
   const [liveBooking, setLiveBooking] = useState<CustomerServiceBooking | null>(null)
   const [details, setDetails] = useState<BookingDetails | null>(null)
-  const [tab, setTab] = useState<'active' | 'history'>('active')
+  const [tab, setTab] = useState<'active' | 'history' | 'calendar'>('active')
   const [bookingType, setBookingType] = useState<'all' | 'rentals' | 'services'>('all')
 
   // Auto-open the details modal when a notification deep-links to a
@@ -489,14 +490,58 @@ export function Bookings({ userId, onNotify, onView, selectedBookingId, onClearS
   const visibleServices = bookingType === 'rentals' ? [] : serviceBookings.filter((b) => matches(b.status))
   const activeCount = vehicleBookings.filter((b) => activeStatuses.includes(b.status)).length + serviceBookings.filter((b) => activeStatuses.includes(b.status)).length
   const historyCount = vehicleBookings.filter((b) => historyStatuses.includes(b.status)).length + serviceBookings.filter((b) => historyStatuses.includes(b.status)).length
+  const totalCount = vehicleBookings.length + serviceBookings.length
   const scrollRef = useScrollAnimation<HTMLDivElement>()
 
   return (
     <div className={`page ${scrollRef.className}`} ref={scrollRef.ref}>
       <PageHeading eyebrow="YOUR ACTIVITY" title="Bookings & progress" detail="Keep an eye on your rentals and mobile service appointments." action={<button className="outline-button" onClick={() => void refetch()}><RefreshCw size={15} /> Refresh</button>} />
-      <div className="booking-tabs">
-        <button className={tab === 'active' ? 'active' : ''} onClick={() => setTab('active')}>Active <b>{activeCount}</b></button>
-        <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>All history <b>{historyCount}</b></button>
+      <div className="booking-tabs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 20 }}>
+          <button className={tab === 'active' ? 'active' : ''} onClick={() => setTab('active')}>Active <b>{activeCount}</b></button>
+          <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>All history <b>{historyCount}</b></button>
+          <button className={tab === 'calendar' ? 'active' : ''} onClick={() => setTab('calendar')}>Schedule Calendar <b>{totalCount}</b></button>
+        </div>
+        <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 3, borderRadius: 20, marginBottom: 12 }}>
+          <button
+            type="button"
+            onClick={() => setTab((prev) => prev === 'calendar' ? 'active' : prev)}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 16,
+              border: 'none',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              background: tab !== 'calendar' ? '#203c3a' : 'transparent',
+              color: tab !== 'calendar' ? '#ffffff' : 'var(--muted)',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            List View
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('calendar')}
+            style={{
+              padding: '5px 12px',
+              borderRadius: 16,
+              border: 'none',
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: 'pointer',
+              background: tab === 'calendar' ? '#203c3a' : 'transparent',
+              color: tab === 'calendar' ? '#ffffff' : 'var(--muted)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Calendar size={13} />
+            Calendar View
+          </button>
+        </div>
       </div>
       <div className="booking-type-filter" aria-label="Filter bookings by type">
         <span>Show</span>
@@ -506,7 +551,15 @@ export function Bookings({ userId, onNotify, onView, selectedBookingId, onClearS
           </button>
         ))}
       </div>
-      {loading ? <div className="loading-state"><Loader2 size={20} className="spin" /> Loading your bookings…</div> : error ? <div className="empty-state"><p>{error}</p><button className="button dark-button" onClick={() => void refetch()}>Retry</button></div> : vehicleBookings.length === 0 && serviceBookings.length === 0 ? (
+      {tab === 'calendar' ? (
+        <BookingCalendar
+          vehicleBookings={vehicleBookings}
+          serviceBookings={serviceBookings}
+          bookingType={bookingType}
+          onSelectBooking={(d) => setDetails(d)}
+          onView={onView}
+        />
+      ) : loading ? <div className="loading-state"><Loader2 size={20} className="spin" /> Loading your bookings…</div> : error ? <div className="empty-state"><p>{error}</p><button className="button dark-button" onClick={() => void refetch()}>Retry</button></div> : vehicleBookings.length === 0 && serviceBookings.length === 0 ? (
         <div className="bookings-empty-state">
           <div className="bookings-empty-icon"><BookOpen size={28} /></div>
           <h3>No bookings yet</h3>
