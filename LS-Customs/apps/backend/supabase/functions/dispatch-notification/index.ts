@@ -273,15 +273,18 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const body: DispatchNotificationRequest = await req.json().catch(() => ({}));
+    const rawBody: any = await req.json().catch(() => ({}));
+    const record = rawBody.record ?? null;
+    const notificationId = rawBody.notification_id || record?.id;
+    const hasNotificationId = Boolean(notificationId && UUID_REGEX.test(notificationId));
+    const rawPhone = rawBody.phone || record?.phone;
+    const rawMessage = rawBody.message || rawBody.body || record?.body;
+    const hasDirectSms = Boolean(rawPhone && rawMessage);
 
-    const hasNotificationId = Boolean(body.notification_id && UUID_REGEX.test(body.notification_id));
-    const hasDirectSms = Boolean(body.phone && body.message);
-
-    if (!hasNotificationId && !hasDirectSms) {
+    if (!hasNotificationId && !hasDirectSms && !rawBody.booking_id && !record?.metadata?.booking_id) {
       return jsonResponse(null, {
         code: "VALIDATION_ERROR",
-        message: "Missing required fields: provide either notification_id or both phone and message",
+        message: "Missing required fields: provide either notification_id, phone & message, or booking_id",
       }, 400);
     }
 
@@ -290,26 +293,29 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
     let notification: Record<string, unknown> | null = null;
-    let metadata: Record<string, unknown> = {};
+    let metadata: Record<string, unknown> = (rawBody.metadata || record?.metadata || {}) as Record<string, unknown>;
 
-    if (body.notification_id) {
+    if (notificationId) {
       const { data, error } = await supabase
         .from("notifications")
         .select("id, user_id, type, title, body, metadata")
-        .eq("id", body.notification_id)
+        .eq("id", notificationId)
         .maybeSingle();
 
       if (!error && data) {
         notification = data;
-        metadata = (data.metadata as Record<string, unknown>) ?? {};
+        metadata = {
+          ...metadata,
+          ...((data.metadata as Record<string, unknown>) ?? {}),
+        };
       }
     }
 
     // Idempotency: check if already successfully dispatched
     if (metadata.dispatched === true) {
-      console.log(`[dispatch-notification] Notification ${body.notification_id} already dispatched`);
+      console.log(`[dispatch-notification] Notification ${notificationId} already dispatched`);
       return jsonResponse({
-        notification_id: body.notification_id,
+        notification_id: notificationId,
         dispatched: true,
         channels: (metadata.channels_dispatched as string[]) ?? [],
         reason: "already_dispatched",
@@ -317,8 +323,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Resolve target recipient phone number
-    let targetPhone = body.phone ?? null;
-    const recipientUserId = (body.user_id || notification?.user_id) as string | undefined;
+    let targetPhone = rawPhone ?? null;
+    const recipientUserId = (rawBody.user_id || record?.user_id || notification?.user_id) as string | undefined;
 
     if (!targetPhone && recipientUserId) {
       const { data: profile } = await supabase
@@ -339,9 +345,49 @@ Deno.serve(async (req: Request) => {
       targetPhone = String(metadata.phone);
     }
 
+    // Fallback: check booking for customer phone if still unresolved
+    const bookingId = rawBody.booking_id || metadata.booking_id || record?.metadata?.booking_id;
+    if (!targetPhone && bookingId) {
+      const { data: sb } = await supabase
+        .from("service_bookings")
+        .select("customer_id")
+        .eq("id", bookingId)
+        .maybeSingle();
+
+      if (sb?.customer_id) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("phone")
+          .eq("id", sb.customer_id)
+          .maybeSingle();
+        if (prof?.phone) {
+          targetPhone = prof.phone;
+        }
+      }
+
+      if (!targetPhone) {
+        const { data: vb } = await supabase
+          .from("vehicle_bookings")
+          .select("customer_id")
+          .eq("id", bookingId)
+          .maybeSingle();
+
+        if (vb?.customer_id) {
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("phone")
+            .eq("id", vb.customer_id)
+            .maybeSingle();
+          if (prof?.phone) {
+            targetPhone = prof.phone;
+          }
+        }
+      }
+    }
+
     const normalizedPhone = normalizePhoneNumber(targetPhone);
-    const smsMessage = body.message || (notification?.body as string) || "LS Customs Notification";
-    const notificationTitle = body.title || (notification?.title as string) || "Notification";
+    const smsMessage = rawMessage || (notification?.body as string) || "LS Customs: Your booking status has been updated.";
+    const notificationTitle = rawBody.title || record?.title || (notification?.title as string) || "Notification";
 
     const channels: string[] = [];
     const errors: string[] = [];
@@ -372,18 +418,32 @@ Deno.serve(async (req: Request) => {
 
     // --- 2. SMS Delivery Pipeline ---
     if (normalizedPhone) {
+      const textbeeKey = Deno.env.get("TEXTBEE_API_KEY");
+      const textbeeDeviceId = Deno.env.get("TEXTBEE_DEVICE_ID");
       const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
       const twilioToken = Deno.env.get("TWILIO_AUTH_TOKEN");
       const twilioFrom = Deno.env.get("TWILIO_FROM_NUMBER");
-      const textbeeKey = Deno.env.get("TEXTBEE_API_KEY");
-      const textbeeDeviceId = Deno.env.get("TEXTBEE_DEVICE_ID");
       const semaphoreKey = Deno.env.get("SEMAPHORE_API_KEY");
       const semaphoreSender = Deno.env.get("SEMAPHORE_SENDER_NAME");
 
       let smsSent = false;
 
-      // Option A: Semaphore (Philippines primary SMS gateway)
-      if (isRealSecret(semaphoreKey)) {
+      // Option A: TextBee (Primary SMS Gateway Device)
+      if (isRealSecret(textbeeKey)) {
+        console.log(`[dispatch-notification] Attempting SMS dispatch via TextBee to ${normalizedPhone}`);
+        const result = await sendSmsTextBee(normalizedPhone, smsMessage, textbeeKey!, textbeeDeviceId);
+        if (result.success) {
+          channels.push("sms_textbee");
+          smsSent = true;
+          console.log(`[dispatch-notification] TextBee SMS delivered to ${normalizedPhone}`);
+        } else {
+          errors.push(`textbee_failed: ${result.error}`);
+          console.error(`[dispatch-notification] TextBee error:`, result.error);
+        }
+      }
+
+      // Option B: Semaphore (Philippines SMS gateway)
+      if (!smsSent && isRealSecret(semaphoreKey)) {
         console.log(`[dispatch-notification] Attempting SMS dispatch via Semaphore to ${normalizedPhone}`);
         const result = await sendSmsSemaphore(normalizedPhone, smsMessage, semaphoreKey!, semaphoreSender);
         if (result.success) {
@@ -396,7 +456,7 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Option B: Twilio
+      // Option C: Twilio
       if (!smsSent && isRealSecret(twilioSid) && isRealSecret(twilioToken) && twilioFrom) {
         console.log(`[dispatch-notification] Attempting SMS dispatch via Twilio to ${normalizedPhone}`);
         const result = await sendSmsTwilio(normalizedPhone, twilioFrom, smsMessage, twilioSid!, twilioToken!);
@@ -410,27 +470,12 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Option C: TextBee
-      if (!smsSent && isRealSecret(textbeeKey)) {
-        console.log(`[dispatch-notification] Attempting SMS dispatch via TextBee to ${normalizedPhone}`);
-        const result = await sendSmsTextBee(normalizedPhone, smsMessage, textbeeKey!, textbeeDeviceId);
-        if (result.success) {
-          channels.push("sms_textbee");
-          smsSent = true;
-          console.log(`[dispatch-notification] TextBee SMS delivered to ${normalizedPhone}`);
-        } else {
-          errors.push(`textbee_failed: ${result.error}`);
-          console.error(`[dispatch-notification] TextBee error:`, result.error);
-        }
-      }
-
-      // Option D: Simulated Fallback (when no live carrier credentials are configured in Supabase secrets)
+      // Option D: Simulated Fallback
       if (!smsSent) {
         simulated = true;
         channels.push("simulated_sms");
         console.log(
-          `[dispatch-notification] [SIMULATED SMS] Recipient: ${normalizedPhone} | Message: "${smsMessage}". ` +
-          `To send live carrier SMS, configure SEMAPHORE_API_KEY, TWILIO_*, or TEXTBEE_API_KEY in Supabase secrets.`
+          `[dispatch-notification] [SIMULATED SMS] Recipient: ${normalizedPhone} | Message: "${smsMessage}".`
         );
       }
     } else {
@@ -461,7 +506,7 @@ Deno.serve(async (req: Request) => {
 
     const isSuccess = channels.length > 0;
     const responsePayload: DispatchNotificationResponse = {
-      notification_id: (notification?.id as string) || body.notification_id,
+      notification_id: (notification?.id as string) || notificationId,
       dispatched: isSuccess,
       simulated,
       channels,

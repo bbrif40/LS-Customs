@@ -498,6 +498,15 @@ export function useAdminVehicleBookings() {
       }
     }
 
+    // Immediately trigger SMS dispatch for customer notification
+    void supabase.functions.invoke('dispatch-notification', {
+      body: {
+        booking_id: id,
+        title: `Rental ${status}`,
+        message: `LS Customs: Your vehicle rental booking #${id.slice(0, 8)} status is now ${status}.`,
+      },
+    }).catch((err) => console.warn('[useAdminData] dispatch-notification warning:', err))
+
     await fetchData()
   }
 
@@ -780,6 +789,15 @@ export function useAdminServiceBookings() {
         console.warn('[useAdminData] payment sync warning:', err)
       }
     }
+
+    // Immediately trigger SMS dispatch for customer notification
+    void supabase.functions.invoke('dispatch-notification', {
+      body: {
+        booking_id: id,
+        title: `Service Booking ${status}`,
+        message: `LS Customs: Your service booking #${id.slice(0, 8)} status is now ${status}.`,
+      },
+    }).catch((err) => console.warn('[useAdminData] dispatch-notification warning:', err))
 
     await fetchData()
   }
