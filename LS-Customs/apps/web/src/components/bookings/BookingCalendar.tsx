@@ -346,34 +346,11 @@ export function BookingCalendar({
       </div>
 
       {/* ── Main Layout: Calendar Grid + Day Details Inspector ── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1.8fr) minmax(320px, 1.1fr)',
-          gap: 0,
-          background: 'var(--card-bg, #ffffff)',
-          border: '1px solid var(--line, #e2e8f0)',
-          borderRadius: '0 0 16px 16px',
-          overflow: 'hidden',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
-        }}
-      >
+      <div className="booking-calendar-container">
         {/* Left Pane: Monthly Calendar Grid */}
-        <div style={{ padding: '16px 20px 20px', borderRight: '1px solid var(--line, #e2e8f0)' }}>
+        <div className="booking-calendar-left-pane">
           {/* Weekday Header */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(7, 1fr)',
-              textAlign: 'center',
-              marginBottom: 8,
-              fontSize: 11,
-              fontWeight: 700,
-              color: 'var(--muted, #64748b)',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-            }}
-          >
+          <div className="booking-calendar-weekdays">
             {WEEKDAY_NAMES.map((w) => (
               <div key={w} style={{ padding: '8px 0' }}>
                 {w}
@@ -382,13 +359,7 @@ export function BookingCalendar({
           </div>
 
           {/* Days Grid */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(7, 1fr)',
-              gap: 4,
-            }}
-          >
+          <div className="booking-calendar-days-grid">
             {allCalendarDays.map(({ day, key, isCurrentMonth }) => {
               const dayEvents = eventsByDate.get(key) ?? []
               const isToday = key === todayKey
@@ -404,10 +375,8 @@ export function BookingCalendar({
                 <div
                   key={key}
                   onClick={() => setSelectedDateKey(key)}
+                  className="booking-calendar-day-cell"
                   style={{
-                    minHeight: 82,
-                    padding: '6px 8px',
-                    borderRadius: 10,
                     background: isSelected
                       ? '#f0f7f3'
                       : isToday
@@ -420,12 +389,7 @@ export function BookingCalendar({
                       : isToday
                       ? '1.5px dashed #4d8b67'
                       : '1px solid #f1f5f9',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
                     opacity: isCurrentMonth ? 1 : 0.45,
-                    position: 'relative',
                   }}
                   title={dayEvents.length > 0 ? `${dayEvents.length} booking(s)` : undefined}
                 >
@@ -492,17 +456,8 @@ export function BookingCalendar({
                     {dayEvents.slice(0, 2).map((ev) => (
                       <div
                         key={ev.id}
+                        className="booking-calendar-event-pill"
                         style={{
-                          fontSize: 9,
-                          fontWeight: 600,
-                          padding: '2px 5px',
-                          borderRadius: 4,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 3,
                           background: ev.isCompleted
                             ? '#edf7f0'
                             : ev.isCancelled
@@ -533,7 +488,7 @@ export function BookingCalendar({
                         ) : (
                           <Wrench size={9} style={{ flexShrink: 0 }} />
                         )}
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span>
                           {ev.title}
                         </span>
                       </div>
@@ -592,7 +547,7 @@ export function BookingCalendar({
         </div>
 
         {/* Right Pane: Day Details Inspector */}
-        <div style={{ padding: '20px 22px', background: '#fafcfb', display: 'flex', flexDirection: 'column' }}>
+        <div className="booking-calendar-right-pane">
           <div style={{ marginBottom: 16, paddingBottom: 12, borderBottom: '1px solid var(--line, #e2e8f0)' }}>
             <span
               style={{

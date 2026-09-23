@@ -138,16 +138,16 @@ export function CalendarSkeleton() {
       </div>
 
       {/* Grid + Inspector Skeleton */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.8fr) minmax(320px, 1.1fr)' }}>
-        <div style={{ padding: 20, borderRight: '1px solid #f1f5f9' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8, marginBottom: 12 }}>
+      <div className="booking-calendar-container">
+        <div className="booking-calendar-left-pane">
+          <div className="booking-calendar-weekdays" style={{ marginBottom: 12 }}>
             {Array.from({ length: 7 }).map((_, i) => (
               <Skeleton key={i} height={14} width="60%" style={{ margin: '0 auto' }} />
             ))}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
+          <div className="booking-calendar-days-grid">
             {Array.from({ length: 28 }).map((_, i) => (
-              <div key={i} style={{ height: 82, padding: 8, background: '#f8fafc', borderRadius: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div key={i} className="booking-calendar-day-cell" style={{ padding: 8, background: '#f8fafc', gap: 6 }}>
                 <Skeleton height={16} width={16} rounded="50%" />
                 {i % 3 === 0 && <Skeleton height={14} width="90%" rounded={4} />}
                 {i % 4 === 0 && <Skeleton height={14} width="70%" rounded={4} />}
@@ -157,7 +157,7 @@ export function CalendarSkeleton() {
         </div>
 
         {/* Right pane skeleton */}
-        <div style={{ padding: 20, background: '#fafcfb', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="booking-calendar-right-pane">
           <Skeleton height={12} width="30%" />
           <Skeleton height={20} width="60%" rounded={6} />
           <Skeleton height={13} width="40%" style={{ marginBottom: 10 }} />
