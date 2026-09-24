@@ -256,8 +256,9 @@ export function useAdminRevenueData(
         }
       }
 
-      // Any booking that has been marked 'completed' by admin is considered paid/succeeded revenue
+      // Succeeded revenue requires payment to be succeeded or booking completed, but never if refunded/failed
       const isPaymentSucceeded = (p: Payment) => {
+        if (p.status === 'refunded' || p.status === 'failed') return false
         if (p.status === 'succeeded') return true
         const bStatus = bookingStatusMap.get(`${p.booking_type}:${p.booking_id}`)
         return bStatus === 'completed'
@@ -383,7 +384,7 @@ export function useAdminRevenueData(
           : `#${p.booking_id.slice(0, 8)}`
         const succeeded = isPaymentSucceeded(p)
 
-        if (succeeded && p.status !== 'succeeded' && !p.id.startsWith('vb-')) {
+        if (succeeded && p.status !== 'succeeded' && p.status !== 'refunded' && p.status !== 'failed' && !p.id.startsWith('vb-')) {
           void supabase.from('payments').update({ status: 'succeeded' }).eq('id', p.id)
         }
 
@@ -401,7 +402,7 @@ export function useAdminRevenueData(
           serviceIcon: p.booking_type === 'vehicle' ? 'vehicle' : 'service',
           amount: `${Number(p.amount).toLocaleString()}.00`,
           status: succeeded ? 'completed' : p.status as 'completed' | 'refunded' | 'pending',
-          provider: p.provider,
+          provider: 'paymongo',
           paymentId: p.id,
         }
       })

@@ -17,13 +17,14 @@ export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded'
 
 export interface AdminPayment extends Omit<Payment, 'customer_id'> {
   customer_name: string | null
-  booking_ref: string | null  // vehicle: "VS-{plate}", service: "LSC-{id}"
+  booking_ref: string | null
 }
 
 interface UseAdminPaymentsResult {
   payments: AdminPayment[]
   loading: boolean
   error: string | null
+  updatePaymentStatus: (paymentId: string, status: PaymentStatus) => Promise<boolean>
   refund: (paymentId: string) => Promise<void>
   refetch: () => Promise<void>
 }
@@ -78,51 +79,9 @@ export function useAdminPayments(): UseAdminPaymentsResult {
         profiles: { full_name: string | null } | null
       }>
 
-      // Fetch vehicle booking plates (for reference labels)
-      const vehicleIds = rows.filter((r) => r.booking_type === 'vehicle').map((r) => r.booking_id)
-      const serviceIds = rows.filter((r) => r.booking_type === 'service').map((r) => r.booking_id)
-
-      const vehicleRefs = new Map<string, string>()
-      const serviceRefs = new Map<string, string>()
-
-      if (vehicleIds.length > 0) {
-        type VehicleRow = { id: string; vehicles: { name: string } | null }
-        const { data: vehicles, error: vErr } = await supabase
-          .from('vehicle_bookings')
-          .select('id, vehicles(name)')
-          .in('id', vehicleIds)
-        if (!vErr && vehicles) {
-          for (const v of (vehicles as unknown as VehicleRow[])) {
-            if (v.vehicles?.name) {
-              vehicleRefs.set(v.id, v.vehicles.name)
-            } else {
-              vehicleRefs.set(v.id, `VR-${v.id.slice(0, 8).toUpperCase()}`)
-            }
-          }
-        }
-      }
-
-      if (serviceIds.length > 0) {
-        // Service bookings don't have a plate; use the booking ID as the ref
-        type ServiceRow = { id: string }
-        const { data: services, error: sErr } = await supabase
-          .from('service_bookings')
-          .select('id')
-          .in('id', serviceIds)
-        if (!sErr && services) {
-          for (const s of (services as unknown as ServiceRow[])) {
-            // Just map to a short reference
-            serviceRefs.set(s.id, s.id.slice(0, 8))
-          }
-        }
-      }
-
       const enriched: AdminPayment[] = rows.map((row) => {
-        const bookingRef = row.booking_type === 'vehicle'
-          ? vehicleRefs.get(row.booking_id)
-            ? `VS-${vehicleRefs.get(row.booking_id)}`
-            : `#${row.booking_id.slice(0, 8)}`
-          : `#${serviceRefs.get(row.booking_id) ?? row.booking_id.slice(0, 8)}`
+        // Booking reference must stay as booking reference hash, not the vehicle name
+        const bookingRef = `#${row.booking_id.slice(0, 8)}`
 
         return {
           id: row.id,
@@ -131,7 +90,7 @@ export function useAdminPayments(): UseAdminPaymentsResult {
           customer_id: row.customer_id,
           amount: row.amount,
           currency: row.currency,
-          provider: row.provider,
+          provider: 'paymongo',
           provider_reference: row.provider_reference,
           status: row.status,
           created_at: row.created_at,
@@ -151,60 +110,86 @@ export function useAdminPayments(): UseAdminPaymentsResult {
     }
   }, [])
 
-  const refund = useCallback(async (paymentId: string): Promise<void> => {
+  const updatePaymentStatus = useCallback(async (paymentId: string, newStatus: PaymentStatus): Promise<boolean> => {
     const original = payments.find((p) => p.id === paymentId)
-    if (!original) return
+    if (!original) return false
 
-    // Optimistically mark as refunded
+    // Optimistically update
     setPayments((current) =>
-      current.map((p) => (p.id === paymentId ? { ...p, status: 'refunded' } : p)),
+      current.map((p) => (p.id === paymentId ? { ...p, status: newStatus } : p)),
     )
 
     try {
-      const { error: refundError } = await supabase.functions.invoke('refund-payment', {
-        body: { payment_id: paymentId },
-      })
-      if (refundError) {
-        // Rollback
-        setPayments((current) =>
-          current.map((p) => (p.id === paymentId ? { ...p, status: original.status } : p)),
-        )
-        throw refundError
+      const { error: updateError } = await supabase
+        .from('payments')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', paymentId)
+
+      if (updateError) {
+        throw updateError
       }
+
+      // If refund, try invoking edge function in the background
+      if (newStatus === 'refunded') {
+        try {
+          await supabase.functions.invoke('refund-payment', {
+            body: { payment_id: paymentId },
+          })
+        } catch (fnErr) {
+          console.warn('[useAdminPayments] edge refund notice:', fnErr)
+        }
+      }
+
+      return true
     } catch (err) {
+      console.error('[useAdminPayments] failed to update status:', err)
       const msg = err instanceof Error ? err.message : String(err)
       setError(msg)
-      // Rollback to original status
+      // Rollback
       setPayments((current) =>
         current.map((p) => (p.id === paymentId ? { ...p, status: original.status } : p)),
       )
+      return false
     }
   }, [payments])
+
+  const refund = useCallback(async (paymentId: string): Promise<void> => {
+    await updatePaymentStatus(paymentId, 'refunded')
+  }, [updatePaymentStatus])
 
   // Subscribe to payment status changes in real time
   useEffect(() => {
     const channel = supabase
       .channel('admin-payments-changes')
       .on('postgres_changes', {
-        event: 'UPDATE',
+        event: '*',
         schema: 'public',
         table: 'payments',
       }, (payload) => {
-        const updated = payload.new as Partial<AdminPayment>
-        setPayments((current) =>
-          current.map((p) =>
-            p.id === updated.id
-              ? { ...p, ...updated, status: (updated.status ?? p.status) as PaymentStatus }
-              : p,
-          ),
-        )
+        if (payload.eventType === 'DELETE') {
+          const oldRow = payload.old as { id?: string }
+          if (oldRow?.id) {
+            setPayments((cur) => cur.filter((p) => p.id !== oldRow.id))
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const updated = payload.new as Partial<AdminPayment>
+          setPayments((current) =>
+            current.map((p) =>
+              p.id === updated.id
+                ? { ...p, ...updated, status: (updated.status ?? p.status) as PaymentStatus }
+                : p,
+            ),
+          )
+        } else if (payload.eventType === 'INSERT') {
+          void fetchPayments()
+        }
       })
       .subscribe()
 
     return () => { void supabase.removeChannel(channel) }
-  }, [])
+  }, [fetchPayments])
 
   useEffect(() => { void fetchPayments() }, [fetchPayments])
 
-  return { payments, loading, error, refund, refetch: fetchPayments }
+  return { payments, loading, error, updatePaymentStatus, refund, refetch: fetchPayments }
 }

@@ -282,7 +282,7 @@ export function AdminBookings() {
               amount: completionBooking.total_price,
               currency: 'PHP',
               status: 'succeeded',
-              provider: isVehicle ? 'completed_rental' : 'completed_service',
+              provider: 'paymongo',
             })
           }
         } catch (paymentSyncErr) {

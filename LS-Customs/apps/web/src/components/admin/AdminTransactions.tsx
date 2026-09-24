@@ -15,7 +15,7 @@
  * tabs feel like one surface.
  */
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Loader2, RefreshCw, Trash2, CreditCard } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, RefreshCw, CheckCircle2, RotateCcw } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { carOutline, constructOutline } from 'ionicons/icons'
 import { useAdminPayments } from '../../hooks/useAdminPayments'
@@ -34,16 +34,10 @@ const statusLabels: Record<string, string> = {
   refunded: 'Refunded',
 }
 
-const providerLabels: Record<string, string> = {
-  stripe: 'Stripe',
-  paymongo: 'PayMongo',
-  admin_violation: 'Admin',
-}
-
-const PAGE_SIZE = 20
+const PAGE_SIZE = 10
 
 export function AdminTransactions() {
-  const { payments, loading, error, refund, refetch } = useAdminPayments()
+  const { payments, loading, error, updatePaymentStatus, refetch } = useAdminPayments()
   const [page, setPage] = useState(1)
 
   const totalPages = Math.ceil(payments.length / PAGE_SIZE)
@@ -81,23 +75,20 @@ export function AdminTransactions() {
     )
   }
 
-  const handleRefund = async (paymentId: string) => {
+  const handleMarkSucceeded = async (paymentId: string) => {
     const confirmed = window.confirm(
-      'Issue a refund for this payment? The customer will be notified and the funds will be returned within 5–10 business days.',
+      'Mark this payment as Succeeded? This will confirm the transaction and automatically update the revenue reports.',
     )
     if (!confirmed) return
-    await refund(paymentId)
+    await updatePaymentStatus(paymentId, 'succeeded')
   }
 
-  const handleRetry = async (payment: { id: string; booking_type: 'vehicle' | 'service'; booking_id: string; amount: number; currency: string }) => {
-    // Re-create a payment intent so the customer can try again.
-    // The frontend for customer retry uses PaymentForm; from admin we just
-    // notify the customer with an in-app message + reset the payment intent.
-    // A full customer-facing retry flow can be built later; for now this
-    // resets the payment status so the customer can re-initiate from Bookings.
-    const confirmed = window.confirm(`Retry the charge for ₱${payment.amount.toFixed(2)} ${payment.currency}?`)
+  const handleRefund = async (paymentId: string) => {
+    const confirmed = window.confirm(
+      'Issue a refund for this payment? The transaction will be marked as refunded and deducted from the revenue reports.',
+    )
     if (!confirmed) return
-    window.alert('Retry link feature coming soon. Customer can retry payment from the Bookings view.')
+    await updatePaymentStatus(paymentId, 'refunded')
   }
 
   return (
@@ -135,8 +126,8 @@ export function AdminTransactions() {
           <tbody>
             {paginated.map((payment) => {
               const statusColor = statusColors[payment.status] ?? '#9ca3af'
-              const canRefund = payment.status === 'succeeded' && payment.provider !== 'admin_violation'
-              const canRetry = payment.status === 'failed'
+              const isSucceeded = payment.status === 'succeeded'
+              const isRefunded = payment.status === 'refunded'
 
               return (
                 <tr key={payment.id}>
@@ -167,8 +158,8 @@ export function AdminTransactions() {
                   <td style={{ textAlign: 'right', fontWeight: 600, color: '#e8a838' }}>
                     {payment.amount.toFixed(2)} {payment.currency}
                   </td>
-                  <td style={{ fontSize: 13 }}>
-                    {providerLabels[payment.provider ?? ''] ?? payment.provider ?? '—'}
+                  <td style={{ fontSize: 13, fontWeight: 500 }}>
+                    PayMongo
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <span
@@ -184,30 +175,52 @@ export function AdminTransactions() {
                     </span>
                   </td>
                   <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {canRefund && (
-                        <button
-                          className="admin-vehicle-btn secondary"
-                          onClick={() => void handleRefund(payment.id)}
-                          style={{ padding: '4px 8px', fontSize: 11, borderColor: '#ef4444', color: '#ef4444' }}
-                          title="Refund this payment"
-                        >
-                          <Trash2 size={12} /> Refund
-                        </button>
-                      )}
-                      {canRetry && (
-                        <button
-                          className="admin-vehicle-btn secondary"
-                          onClick={() => void handleRetry({ id: payment.id, booking_type: payment.booking_type, booking_id: payment.booking_id, amount: payment.amount, currency: payment.currency })}
-                          style={{ padding: '4px 8px', fontSize: 11 }}
-                          title="Retry the failed charge"
-                        >
-                          <CreditCard size={12} /> Retry
-                        </button>
-                      )}
-                      {!canRefund && !canRetry && (
-                        <span style={{ fontSize: 11, color: 'var(--admin-muted)' }}>—</span>
-                      )}
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <button
+                        className="admin-vehicle-btn secondary"
+                        onClick={() => void handleMarkSucceeded(payment.id)}
+                        disabled={isSucceeded}
+                        style={{
+                          padding: '4px 10px',
+                          fontSize: 11,
+                          borderColor: isSucceeded ? '#16a34a' : '#22c55e',
+                          color: isSucceeded ? '#16a34a' : '#22c55e',
+                          background: isSucceeded ? 'rgba(34, 197, 94, 0.12)' : 'transparent',
+                          opacity: isSucceeded ? 0.65 : 1,
+                          cursor: isSucceeded ? 'default' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontWeight: 600,
+                          borderRadius: 6,
+                        }}
+                        title={isSucceeded ? 'Payment is already marked Succeeded' : 'Mark as Succeeded (updates Revenue)'}
+                      >
+                        <CheckCircle2 size={12} /> Succeeded
+                      </button>
+
+                      <button
+                        className="admin-vehicle-btn secondary"
+                        onClick={() => void handleRefund(payment.id)}
+                        disabled={isRefunded}
+                        style={{
+                          padding: '4px 10px',
+                          fontSize: 11,
+                          borderColor: isRefunded ? '#93c5fd' : '#ef4444',
+                          color: isRefunded ? '#60a5fa' : '#ef4444',
+                          background: isRefunded ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                          opacity: isRefunded ? 0.65 : 1,
+                          cursor: isRefunded ? 'default' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontWeight: 600,
+                          borderRadius: 6,
+                        }}
+                        title={isRefunded ? 'Payment is already marked Refunded' : 'Issue Refund (updates Revenue)'}
+                      >
+                        <RotateCcw size={12} /> {isRefunded ? 'Refunded' : 'Refund'}
+                      </button>
                     </div>
                   </td>
                 </tr>
