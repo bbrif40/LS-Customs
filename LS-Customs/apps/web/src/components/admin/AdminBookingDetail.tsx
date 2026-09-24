@@ -467,7 +467,7 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
           <RecordAuditTrail
             recordType="service_booking"
             recordId={booking.id}
-            recordTitle={booking.bookingReference || booking.serviceName}
+            recordTitle={booking.service_booking_items?.[0]?.mechanic_services?.name || ('Service #' + booking.id.slice(0, 8))}
             autoLogView={true}
           />
         </div>

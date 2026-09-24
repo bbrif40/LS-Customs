@@ -570,8 +570,21 @@ export function Bookings({
             vehicleBookings={vehicleBookings}
             serviceBookings={serviceBookings}
             bookingType={bookingType}
-            onSelectBooking={(d) => setDetails(d)}
             onView={onView}
+            onSelectBooking={(d) => {
+              if (d.kind === 'service') {
+                setDetails({
+                  kind: 'service',
+                  booking: d.booking,
+                  onViewMap: d.onViewMap ?? (() => setLiveBooking(d.booking)),
+                })
+              } else {
+                setDetails({
+                  kind: 'rental',
+                  booking: d.booking,
+                })
+              }
+            }}
             onBookService={(date) => {
               if (onBookServiceWithDate) {
                 onBookServiceWithDate(date)

@@ -129,7 +129,7 @@ begin
 end;
 $$;
 
--- 3. Legacy trigger function fallback (safe if invoked directly)
+-- 3. Legacy trigger function fallback
 create or replace function public.log_admin_booking_mutation()
 returns trigger
 language plpgsql
@@ -144,7 +144,7 @@ begin
 end;
 $$;
 
--- 4. Re-attach triggers to respective dedicated functions
+-- 4. Re-attach triggers to dedicated functions
 drop trigger if exists trg_audit_service_bookings on public.service_bookings;
 create trigger trg_audit_service_bookings
   after update on public.service_bookings
