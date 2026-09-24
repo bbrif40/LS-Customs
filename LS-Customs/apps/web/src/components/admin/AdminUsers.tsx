@@ -52,12 +52,14 @@ export function AdminUsers() {
 
   const filteredUsers = users?.filter((u) => {
     if (roleFilter !== 'all' && u.role !== roleFilter) return false
-    const searchTerm = searchQuery.toLowerCase()
+    const searchTerm = searchQuery.toLowerCase().trim()
     if (searchTerm) {
       const nameMatch = u.full_name?.toLowerCase().includes(searchTerm)
+      const phoneMatch = u.phone?.toLowerCase().includes(searchTerm)
       const emailMatch = u.id?.toLowerCase().includes(searchTerm)
-      if (!nameMatch && !emailMatch) return false
+      if (!nameMatch && !phoneMatch && !emailMatch) return false
     }
+    return true
   }) || []
 
   const pageSize = 10

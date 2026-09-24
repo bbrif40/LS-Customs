@@ -31,6 +31,7 @@ export interface ChartDataPoint {
 export interface RevenueTransaction {
   date: string
   customer: string
+  bookingId: string
   serviceType: string
   serviceIcon: string
   amount: string
@@ -379,9 +380,7 @@ export function useAdminRevenueData(
       // ── 7. Build transaction list for the table ─────────────────
       const txList: RevenueTransaction[] = typedPayments.map((p) => {
         const customer = customersById.get(p.customer_id) ?? (p.customer_id ? p.customer_id.slice(0, 8) : 'Customer')
-        const ref = p.booking_type === 'vehicle'
-          ? (vehicleRefs.get(p.booking_id) ?? `#${p.booking_id.slice(0, 8)}`)
-          : `#${p.booking_id.slice(0, 8)}`
+        const bookingId = p.booking_id ? `#${p.booking_id.slice(0, 8)}` : '—'
         const succeeded = isPaymentSucceeded(p)
 
         if (succeeded && p.status !== 'succeeded' && p.status !== 'refunded' && p.status !== 'failed' && !p.id.startsWith('vb-')) {
@@ -398,6 +397,7 @@ export function useAdminRevenueData(
             year: 'numeric',
           }),
           customer,
+          bookingId,
           serviceType: p.booking_type === 'vehicle' ? vehicleLabel : 'Mobile Mechanic Service',
           serviceIcon: p.booking_type === 'vehicle' ? 'vehicle' : 'service',
           amount: `${Number(p.amount).toLocaleString()}.00`,

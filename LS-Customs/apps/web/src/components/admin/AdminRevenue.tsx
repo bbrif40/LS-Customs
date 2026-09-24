@@ -422,7 +422,7 @@ export function AdminRevenue() {
           </div>
         </div>
         {loading ? (
-          <AdminTableSkeleton rows={6} cols={5} />
+          <AdminTableSkeleton rows={6} cols={6} />
         ) : (
           <>
             <table className="admin-table">
@@ -430,6 +430,7 @@ export function AdminRevenue() {
                 <tr>
                   <th>Date</th>
                   <th>Customer</th>
+                  <th>Booking ID</th>
                   <th>Service Type</th>
                   <th style={{ textAlign: 'right' }}>Amount (₱)</th>
                   <th style={{ textAlign: 'right' }}>Status</th>
@@ -440,6 +441,7 @@ export function AdminRevenue() {
                   <tr key={`${tx.paymentId}-${i}`}>
                     <td style={{ color: 'var(--admin-muted)', fontSize: 12 }}>{tx.date}</td>
                     <td style={{ fontWeight: 600 }}>{tx.customer}</td>
+                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#e8a838' }}>{tx.bookingId}</td>
                     <td>
                       <div className="admin-table-service">
                         <div className="admin-table-service-icon">
