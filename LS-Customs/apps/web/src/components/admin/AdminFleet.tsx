@@ -4,7 +4,7 @@
  * Admins can see all vehicles (including inactive), create, edit, and deactivate.
  */
 import { useState, useEffect } from 'react'
-import { Plus, Search, Edit, Trash2, X, Check, Loader2 } from 'lucide-react'
+import { Plus, Search, Edit, Trash2, X, Check, Loader2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { carSportOutline, checkmarkCircleOutline, warningOutline } from 'ionicons/icons'
 import { useAdminVehicles, createVehicle, updateVehicle, deactivateVehicle } from '../../hooks/useAdminData'
@@ -380,45 +380,29 @@ export function AdminFleet() {
 
       {/* ── Pagination Bar ───────────────────────────────────── */}
       {totalPages > 1 && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, padding: '12px 16px', background: '#1a2234', borderRadius: 8 }}>
-          <span style={{ fontSize: 13, color: '#9ca3af' }}>
-            Showing {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filteredVehicles.length)} of {filteredVehicles.length} vehicles
+        <div className="admin-transactions-pagination" style={{ marginTop: 20 }}>
+          <span>
+            Showing {((safePage - 1) * pageSize) + 1} to {Math.min(safePage * pageSize, filteredVehicles.length)} of {filteredVehicles.length} vehicles
           </span>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="admin-pagination-btns">
             <button
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              className="admin-pagination-btn"
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={safePage === 1}
-              style={{
-                padding: '6px 14px',
-                borderRadius: 6,
-                border: '1px solid #374151',
-                background: safePage === 1 ? '#1f2937' : '#2563eb',
-                color: safePage === 1 ? '#6b7280' : '#ffffff',
-                cursor: safePage === 1 ? 'not-allowed' : 'pointer',
-                fontSize: 13,
-                fontWeight: 500,
-              }}
+              title="Previous Page"
             >
-              Previous
+              <ChevronLeft size={14} />
             </button>
-            <span style={{ fontSize: 13, color: '#e5e7eb', padding: '0 8px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px', color: 'var(--admin-muted)', fontSize: 13, fontWeight: 500 }}>
               Page {safePage} of {totalPages}
             </span>
             <button
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              className="admin-pagination-btn"
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={safePage === totalPages}
-              style={{
-                padding: '6px 14px',
-                borderRadius: 6,
-                border: '1px solid #374151',
-                background: safePage === totalPages ? '#1f2937' : '#2563eb',
-                color: safePage === totalPages ? '#6b7280' : '#ffffff',
-                cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
-                fontSize: 13,
-                fontWeight: 500,
-              }}
+              title="Next Page"
             >
-              Next
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
