@@ -417,7 +417,15 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- 2. SMS Delivery Pipeline ---
-    if (normalizedPhone) {
+    // User requirement: Only send SMS when status is assigned, rest no.
+    const isAssigned =
+      metadata.new_status === "assigned" ||
+      metadata.dispatch_sms === true ||
+      metadata.dispatch_sms === "true" ||
+      String(notificationTitle || "").toLowerCase().includes("assign") ||
+      String(rawMessage || "").toLowerCase().includes("assigned");
+
+    if (normalizedPhone && isAssigned) {
       const textbeeKey = Deno.env.get("TEXTBEE_API_KEY");
       const textbeeDeviceId = Deno.env.get("TEXTBEE_DEVICE_ID");
       const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
@@ -478,6 +486,8 @@ Deno.serve(async (req: Request) => {
           `[dispatch-notification] [SIMULATED SMS] Recipient: ${normalizedPhone} | Message: "${smsMessage}".`
         );
       }
+    } else if (normalizedPhone && !isAssigned) {
+      console.log(`[dispatch-notification] Skipping SMS delivery: not an assigned event (title="${notificationTitle}")`);
     } else {
       errors.push("no_valid_phone_number");
       console.warn(`[dispatch-notification] No valid phone number provided for recipient`);
