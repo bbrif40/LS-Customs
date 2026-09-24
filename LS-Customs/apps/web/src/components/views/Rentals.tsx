@@ -103,6 +103,9 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
     }
   }, [previewVehicle])
 
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+
   const filteredVehicles = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     return vehicles.filter((v) => {
@@ -129,6 +132,10 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
       return true
     })
   }, [vehicles, activeCategory, searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(filteredVehicles.length / pageSize))
+  const safePage = Math.min(currentPage, totalPages)
+  const paginatedVehicles = filteredVehicles.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   if (selectedVehicle && bookingId) {
     const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
@@ -188,11 +195,29 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
       <div className="rental-toolbar">
         <div className="rental-toolbar-label"><SlidersHorizontal size={15} /><strong>Browse fleet</strong></div>
         <div className="filter-row">
-          {CATEGORY_TABS.map((tab) => <button key={tab.id} className={`filter ${activeCategory === tab.id ? 'active' : ''}`} onClick={() => setActiveCategory(tab.id)}>{tab.label}</button>)}
+          {CATEGORY_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              className={`filter ${activeCategory === tab.id ? 'active' : ''}`}
+              onClick={() => {
+                setActiveCategory(tab.id)
+                setCurrentPage(1)
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
         <label className="search-field">
           <Search size={17} />
-          <input placeholder="Search vehicles..." value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} />
+          <input
+            placeholder="Search vehicles..."
+            value={searchQuery}
+            onChange={(event) => {
+              setSearchQuery(event.target.value)
+              setCurrentPage(1)
+            }}
+          />
         </label>
       </div>
 
@@ -232,19 +257,61 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
             : 'No vehicles match your filters.'}
         </div>
       ) : (
-        <div className={`vehicle-grid rentals-grid stagger-children ${isPageVisible ? 'visible' : ''}`}>
-          {filteredVehicles.map((vehicle) => (
-            <VehicleCard
-              key={vehicle.name}
-              vehicle={vehicle}
-              unavailable={unavailableIds.has(vehicle.id)}
-              isFavorite={isFavorite(vehicle.id)}
-              onToggleFavorite={() => toggleFavorite(vehicle.id)}
-              onView={() => setPreviewVehicle(vehicle)}
-              onBook={() => void chooseVehicle(vehicle)}
-            />
-          ))}
-        </div>
+        <>
+          <div className={`vehicle-grid rentals-grid stagger-children ${isPageVisible ? 'visible' : ''}`}>
+            {paginatedVehicles.map((vehicle) => (
+              <VehicleCard
+                key={vehicle.name}
+                vehicle={vehicle}
+                unavailable={unavailableIds.has(vehicle.id)}
+                isFavorite={isFavorite(vehicle.id)}
+                onToggleFavorite={() => toggleFavorite(vehicle.id)}
+                onView={() => setPreviewVehicle(vehicle)}
+                onBook={() => void chooseVehicle(vehicle)}
+              />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, padding: '14px 20px', background: 'var(--surface, #ffffff)', borderRadius: 12, border: '1px solid var(--border, #e5e7eb)' }}>
+              <span style={{ fontSize: 13, color: 'var(--muted, #6b7280)' }}>
+                Showing {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filteredVehicles.length)} of {filteredVehicles.length} vehicles
+              </span>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="button"
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: 13,
+                    opacity: safePage === 1 ? 0.5 : 1,
+                    cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Previous
+                </button>
+                <span style={{ fontSize: 13, color: 'var(--foreground, #374151)', padding: '0 8px', fontWeight: 500 }}>
+                  Page {safePage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="button"
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: 13,
+                    opacity: safePage === totalPages ? 0.5 : 1,
+                    cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
       {previewVehicle && createPortal(
         <div className="vehicle-preview-backdrop" onClick={() => setPreviewVehicle(null)}>

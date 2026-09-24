@@ -83,10 +83,17 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
 
   const scrollRef = useScrollAnimation()
 
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+
   const filtered = useMemo(() => {
     if (activeCategory === 'all') return services
     return services.filter((s) => s.category === activeCategory)
   }, [services, activeCategory])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize))
+  const safePage = Math.min(currentPage, totalPages)
+  const paginatedServices = filtered.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   return (
     <div className={`page ${scrollRef.className}`} ref={scrollRef.ref as React.RefObject<HTMLDivElement>}>
@@ -108,7 +115,10 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
           <div className="category-tabs">
             <button
               className={activeCategory === 'all' ? 'active' : ''}
-              onClick={() => setActiveCategory('all')}
+              onClick={() => {
+                setActiveCategory('all')
+                setCurrentPage(1)
+              }}
             >
               All services
             </button>
@@ -116,7 +126,10 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
               <button
                 key={raw}
                 className={activeCategory === raw ? 'active' : ''}
-                onClick={() => setActiveCategory(raw)}
+                onClick={() => {
+                  setActiveCategory(raw)
+                  setCurrentPage(1)
+                }}
               >
                 {prettyLabel(raw)}
               </button>
@@ -128,7 +141,7 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
           {!loading && filtered.length === 0 && (
             <p className="muted" style={{ padding: '24px 0' }}>No services in this category yet.</p>
           )}
-          {filtered.map((service) => (
+          {paginatedServices.map((service) => (
             <article className="service-row" key={service.id}>
               <div className="service-row-icon">{service.icon}</div>
               <div className="service-row-copy">
@@ -147,6 +160,46 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
               </div>
             </article>
           ))}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, padding: '12px 16px', background: 'var(--surface, #ffffff)', borderRadius: 10, border: '1px solid var(--border, #e5e7eb)' }}>
+              <span style={{ fontSize: 13, color: 'var(--muted, #6b7280)' }}>
+                Showing {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filtered.length)} of {filtered.length} services
+              </span>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  className="button"
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: 13,
+                    opacity: safePage === 1 ? 0.5 : 1,
+                    cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Previous
+                </button>
+                <span style={{ fontSize: 13, color: 'var(--foreground, #374151)', padding: '0 8px', fontWeight: 500 }}>
+                  Page {safePage} of {totalPages}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={safePage === totalPages}
+                  className="button"
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: 13,
+                    opacity: safePage === totalPages ? 0.5 : 1,
+                    cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
         <aside className="dispatch-card">
           <div className="dispatch-icon">

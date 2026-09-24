@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag, CreditCard, Check, Ban, CalendarX, BookOpen } from 'lucide-react'
+import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag, CreditCard, Check, Ban, CalendarX, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import { usePaymentStatus } from '../../hooks/usePaymentStatus'
 import { PaymentForm } from '../common/PaymentForm'
@@ -502,6 +502,37 @@ export function Bookings({
   const activeCount = vehicleBookings.filter((b) => activeStatuses.includes(b.status)).length + serviceBookings.filter((b) => activeStatuses.includes(b.status)).length
   const historyCount = vehicleBookings.filter((b) => historyStatuses.includes(b.status)).length + serviceBookings.filter((b) => historyStatuses.includes(b.status)).length
   const totalCount = vehicleBookings.length + serviceBookings.length
+  const LIST_PAGE_SIZE = 10
+  const [listPage, setListPage] = useState(1)
+
+  useEffect(() => {
+    setListPage(1)
+  }, [tab, bookingType])
+
+  type CombinedBookingItem =
+    | { kind: 'rental'; booking: CustomerVehicleBooking; sortTime: number }
+    | { kind: 'service'; booking: CustomerServiceBooking; sortTime: number }
+
+  const combinedBookings = useMemo(() => {
+    const list: CombinedBookingItem[] = []
+    for (const vb of visibleVehicles) {
+      const time = vb.created_at ? new Date(vb.created_at).getTime() : 0
+      list.push({ kind: 'rental', booking: vb, sortTime: time })
+    }
+    for (const sb of visibleServices) {
+      const time = sb.scheduled_at ? new Date(sb.scheduled_at).getTime() : 0
+      list.push({ kind: 'service', booking: sb, sortTime: time })
+    }
+    return list.sort((a, b) => b.sortTime - a.sortTime)
+  }, [visibleVehicles, visibleServices])
+
+  const totalListPages = Math.max(1, Math.ceil(combinedBookings.length / LIST_PAGE_SIZE))
+  const safeListPage = Math.min(Math.max(1, listPage), totalListPages)
+  const paginatedListBookings = combinedBookings.slice(
+    (safeListPage - 1) * LIST_PAGE_SIZE,
+    safeListPage * LIST_PAGE_SIZE
+  )
+
   const scrollRef = useScrollAnimation<HTMLDivElement>()
 
   return (
@@ -614,58 +645,137 @@ export function Bookings({
           </div>
         </div>
       ) : visibleVehicles.length === 0 && visibleServices.length === 0 ? <div className="empty-state"><p>{tab === 'active' ? 'No active bookings right now. Completed and cancelled bookings live in All history.' : 'No completed or cancelled bookings yet.'}</p></div> : (
-        <div className="booking-grid">
-          {visibleVehicles.map((booking) => {
-            const isSelected = selectedBookingId === booking.id
-            return (
-              <button
-                type="button"
-                className={`booking-card booking-card-clickable ${isSelected ? 'selected' : ''}`}
-                key={`vehicle-${booking.id}`}
-                onClick={() => setDetails({ kind: 'rental', booking })}
-                aria-label={`View details for ${booking.vehicles?.name ?? 'rental'}`}
-              >
-                <div className="booking-card-head"><div><span className={`status-pill ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span>{booking.payments && <span className={`status-pill ${paymentStatusClass(booking.payments.status)}`}>{paymentStatusLabel(booking.payments.status)}</span>}<p>Rental · {booking.start_date} to {booking.end_date}</p></div><CarFront size={22} /></div>
-                <h3>{booking.vehicles?.name ?? 'Vehicle rental'}</h3><p className="muted">{booking.pickup_location ?? 'Pickup location to be confirmed'}</p>
-                <div className="booking-actions"><strong>₱{Number(booking.total_price).toLocaleString()}</strong><span className="muted">booking-{booking.id.slice(0, 8)}</span></div>
-              </button>
-            )
-          })}
-          {visibleServices.map((booking) => {
-            const mech = booking.mechanic_profiles
-            const location = mech?.current_lat != null && mech?.current_lng != null
-              || (booking.pin_lat != null && booking.pin_lng != null)
-            const isSelected = selectedBookingId === booking.id
-            return (
-              <button
-                type="button"
-                className={`booking-card booking-card-clickable ${isSelected ? 'selected' : ''}`}
-                key={`service-${booking.id}`}
-                onClick={() => setDetails({ kind: 'service', booking, onViewMap: () => setLiveBooking(booking) })}
-                aria-label={`View details for service booking`}
-              >
-                <div className="booking-card-head">
-                  <div>
-                    <span className={`status-pill ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span>
-                    {booking.payments && <span className={`status-pill ${paymentStatusClass(booking.payments.status)}`}>{paymentStatusLabel(booking.payments.status)}</span>}
-                    <p>Mobile service · {new Date(booking.scheduled_at).toLocaleString()}</p>
+        <>
+          <div className="booking-grid">
+            {paginatedListBookings.map((item) => {
+              if (item.kind === 'rental') {
+                const booking = item.booking
+                const isSelected = selectedBookingId === booking.id
+                return (
+                  <button
+                    type="button"
+                    className={`booking-card booking-card-clickable ${isSelected ? 'selected' : ''}`}
+                    key={`vehicle-${booking.id}`}
+                    onClick={() => setDetails({ kind: 'rental', booking })}
+                    aria-label={`View details for ${booking.vehicles?.name ?? 'rental'}`}
+                  >
+                    <div className="booking-card-head">
+                      <div>
+                        <span className={`status-pill ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span>
+                        {booking.payments && <span className={`status-pill ${paymentStatusClass(booking.payments.status)}`}>{paymentStatusLabel(booking.payments.status)}</span>}
+                        <p>Rental · {booking.start_date} to {booking.end_date}</p>
+                      </div>
+                      <CarFront size={22} />
+                    </div>
+                    <h3>{booking.vehicles?.name ?? 'Vehicle rental'}</h3>
+                    <p className="muted">{booking.pickup_location ?? 'Pickup location to be confirmed'}</p>
+                    <div className="booking-actions">
+                      <strong>₱{Number(booking.total_price).toLocaleString()}</strong>
+                      <span className="muted">booking-{booking.id.slice(0, 8)}</span>
+                    </div>
+                  </button>
+                )
+              }
+
+              const booking = item.booking
+              const mech = booking.mechanic_profiles
+              const isSelected = selectedBookingId === booking.id
+              return (
+                <button
+                  type="button"
+                  className={`booking-card booking-card-clickable ${isSelected ? 'selected' : ''}`}
+                  key={`service-${booking.id}`}
+                  onClick={() => setDetails({ kind: 'service', booking, onViewMap: () => setLiveBooking(booking) })}
+                  aria-label={`View details for service booking`}
+                >
+                  <div className="booking-card-head">
+                    <div>
+                      <span className={`status-pill ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span>
+                      {booking.payments && <span className={`status-pill ${paymentStatusClass(booking.payments.status)}`}>{paymentStatusLabel(booking.payments.status)}</span>}
+                      <p>Mobile service · {new Date(booking.scheduled_at).toLocaleString()}</p>
+                    </div>
+                    <Wrench size={22} />
                   </div>
-                  <Wrench size={22} />
-                </div>
-                <h3>{booking.service_booking_items?.map((item) => item.mechanic_services?.name).filter(Boolean).join(', ') || 'Mobile mechanic service'}</h3>
-                <p className="muted"><MapPin size={13} /> Location saved for this booking</p>
-                {/* Only display the mechanic once assigned */}
-                {['assigned', 'en_route', 'in_progress', 'completed'].includes(booking.status) && booking.mechanic_id && mech && (
-                  <MechanicBlock name={mech.profiles?.full_name ?? null} phone={mech.profiles?.phone ?? null} />
-                )}
-                <div className="booking-actions">
-                  <strong>₱{Number(booking.total_price).toLocaleString()}</strong>
-                  <span className="muted">service-{booking.id.slice(0, 8)}</span>
-                </div>
-              </button>
-            )
-          })}
-        </div>
+                  <h3>{booking.service_booking_items?.map((it) => it.mechanic_services?.name).filter(Boolean).join(', ') || 'Mobile mechanic service'}</h3>
+                  <p className="muted"><MapPin size={13} /> Location saved for this booking</p>
+                  {/* Only display the mechanic once assigned */}
+                  {['assigned', 'en_route', 'in_progress', 'completed'].includes(booking.status) && booking.mechanic_id && mech && (
+                    <MechanicBlock name={mech.profiles?.full_name ?? null} phone={mech.profiles?.phone ?? null} />
+                  )}
+                  <div className="booking-actions">
+                    <strong>₱{Number(booking.total_price).toLocaleString()}</strong>
+                    <span className="muted">service-{booking.id.slice(0, 8)}</span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* List View Pagination: 10 items per page */}
+          {totalListPages > 1 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 12,
+                marginTop: 20,
+                padding: '12px 18px',
+                background: '#ffffff',
+                borderRadius: 12,
+                border: '1px solid var(--line, #e2e8f0)',
+                fontSize: 13,
+                color: 'var(--muted, #64748b)',
+              }}
+            >
+              <span>
+                Showing {(safeListPage - 1) * LIST_PAGE_SIZE + 1} to{' '}
+                {Math.min(safeListPage * LIST_PAGE_SIZE, combinedBookings.length)} of{' '}
+                {combinedBookings.length} bookings
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <button
+                  type="button"
+                  className="outline-button"
+                  onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                  disabled={safeListPage === 1}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: 12,
+                    cursor: safeListPage === 1 ? 'not-allowed' : 'pointer',
+                    opacity: safeListPage === 1 ? 0.45 : 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
+                  <ChevronLeft size={14} /> Previous
+                </button>
+                <span style={{ fontWeight: 700, color: 'var(--ink, #1a202c)', minWidth: 70, textAlign: 'center' }}>
+                  Page {safeListPage} of {totalListPages}
+                </span>
+                <button
+                  type="button"
+                  className="outline-button"
+                  onClick={() => setListPage((p) => Math.min(totalListPages, p + 1))}
+                  disabled={safeListPage === totalListPages}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: 12,
+                    cursor: safeListPage === totalListPages ? 'not-allowed' : 'pointer',
+                    opacity: safeListPage === totalListPages ? 0.45 : 1,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 5,
+                  }}
+                >
+                  Next <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
       {details && (
         <BookingDetailsModal

@@ -11,8 +11,8 @@
  * - Phone and address are still read-only on this screen (per the saved
  *   edits from earlier). City is read-only; the customer owns that field.
  */
-import { useState } from 'react'
-import { Search, User, Shield, Wrench, Loader2, Flag, AlertTriangle, X } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Search, User, Shield, Wrench, Loader2, Flag, AlertTriangle, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { peopleOutline, shieldCheckmarkOutline, constructOutline, personOutline, callOutline, locationOutline } from 'ionicons/icons'
 import {
@@ -58,8 +58,18 @@ export function AdminUsers() {
       const emailMatch = u.id?.toLowerCase().includes(searchTerm)
       if (!nameMatch && !emailMatch) return false
     }
-    return true
   }) || []
+
+  const pageSize = 10
+  const [currentPage, setCurrentPage] = useState(1)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [roleFilter, searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize))
+  const safePage = Math.min(Math.max(1, currentPage), totalPages)
+  const paginatedUsers = filteredUsers.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   const roleCounts = {
     admin: users?.filter(u => u.role === 'admin').length || 0,
@@ -217,7 +227,7 @@ export function AdminUsers() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map((user) => {
+                {paginatedUsers.map((user) => {
                   const RoleIcon = roleIcons[user.role] || User
                   const addr = addressesByCustomerId[user.id]
 
@@ -312,6 +322,73 @@ export function AdminUsers() {
                 })}
               </tbody>
             </table>
+
+            {totalPages > 1 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 18px',
+                  borderTop: '1px solid var(--admin-border)',
+                  fontSize: 12,
+                  color: 'var(--admin-muted)',
+                  background: 'var(--admin-card)',
+                }}
+              >
+                <span>
+                  Showing {(safePage - 1) * pageSize + 1} to{' '}
+                  {Math.min(safePage * pageSize, filteredUsers.length)} of {filteredUsers.length} users
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button
+                    type="button"
+                    className="admin-pagination-btn"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={safePage === 1}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: 6,
+                      border: '1px solid var(--admin-border)',
+                      background: 'none',
+                      color: safePage === 1 ? 'var(--admin-muted)' : 'var(--admin-ink)',
+                      cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                      opacity: safePage === 1 ? 0.45 : 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 12,
+                    }}
+                  >
+                    <ChevronLeft size={13} /> Previous
+                  </button>
+                  <span style={{ fontWeight: 600, color: 'var(--admin-ink)', minWidth: 60, textAlign: 'center' }}>
+                    Page {safePage} of {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="admin-pagination-btn"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={safePage === totalPages}
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: 6,
+                      border: '1px solid var(--admin-border)',
+                      background: 'none',
+                      color: safePage === totalPages ? 'var(--admin-muted)' : 'var(--admin-ink)',
+                      cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                      opacity: safePage === totalPages ? 0.45 : 1,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 4,
+                      fontSize: 12,
+                    }}
+                  >
+                    Next <ChevronRight size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

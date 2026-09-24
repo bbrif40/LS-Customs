@@ -98,6 +98,9 @@ export function AdminFleet() {
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+
   // Filter vehicles client-side
   const filteredVehicles = vehicles?.filter((v) => {
     if (activeFilter === 'active' && !v.is_active) return false
@@ -109,6 +112,10 @@ export function AdminFleet() {
     }
     return true
   }) || []
+
+  const totalPages = Math.max(1, Math.ceil(filteredVehicles.length / pageSize))
+  const safePage = Math.min(currentPage, totalPages)
+  const paginatedVehicles = filteredVehicles.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   // Stats calculation
   const totalVehicles = vehicles?.length || 0
@@ -248,7 +255,10 @@ export function AdminFleet() {
           <button
             key={f}
             className={`admin-filter-btn ${activeFilter === f ? 'active' : ''}`}
-            onClick={() => setActiveFilter(f as 'all' | 'active' | 'inactive')}
+            onClick={() => {
+              setActiveFilter(f as 'all' | 'active' | 'inactive')
+              setCurrentPage(1)
+            }}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)} Vehicles
           </button>
@@ -259,7 +269,10 @@ export function AdminFleet() {
             type="text"
             placeholder="Search fleet..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setCurrentPage(1)
+            }}
           />
         </div>
       </div>
@@ -268,7 +281,10 @@ export function AdminFleet() {
       <div className="admin-filter-row" style={{ marginTop: 8, gap: 6, flexWrap: 'wrap', borderTop: '1px solid #2d3748', paddingTop: 10 }}>
         <button
           className={`admin-filter-btn ${selectedCategory === 'all' ? 'active' : ''}`}
-          onClick={() => setSelectedCategory('all')}
+          onClick={() => {
+            setSelectedCategory('all')
+            setCurrentPage(1)
+          }}
           style={{ fontSize: 12, padding: '4px 10px' }}
         >
           All Categories ({totalVehicles})
@@ -279,7 +295,10 @@ export function AdminFleet() {
             <button
               key={c.id}
               className={`admin-filter-btn ${selectedCategory === c.id ? 'active' : ''}`}
-              onClick={() => setSelectedCategory(c.id)}
+              onClick={() => {
+                setSelectedCategory(c.id)
+                setCurrentPage(1)
+              }}
               style={{ fontSize: 12, padding: '4px 10px' }}
             >
               {c.label} ({count})
@@ -295,7 +314,7 @@ export function AdminFleet() {
             No vehicles found. <button onClick={openCreateModal} style={{ color: '#e8a838', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Add the first vehicle</button>
           </div>
         ) : (
-          filteredVehicles.map((vehicle) => (
+          paginatedVehicles.map((vehicle) => (
             <div className="admin-vehicle-card" key={vehicle.id}>
               {/* Vehicle Image */}
               <div className="admin-vehicle-image">
@@ -358,6 +377,52 @@ export function AdminFleet() {
           ))
         )}
       </div>
+
+      {/* ── Pagination Bar ───────────────────────────────────── */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, padding: '12px 16px', background: '#1a2234', borderRadius: 8 }}>
+          <span style={{ fontSize: 13, color: '#9ca3af' }}>
+            Showing {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filteredVehicles.length)} of {filteredVehicles.length} vehicles
+          </span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 6,
+                border: '1px solid #374151',
+                background: safePage === 1 ? '#1f2937' : '#2563eb',
+                color: safePage === 1 ? '#6b7280' : '#ffffff',
+                cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              Previous
+            </button>
+            <span style={{ fontSize: 13, color: '#e5e7eb', padding: '0 8px' }}>
+              Page {safePage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 6,
+                border: '1px solid #374151',
+                background: safePage === totalPages ? '#1f2937' : '#2563eb',
+                color: safePage === totalPages ? '#6b7280' : '#ffffff',
+                cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Create/Edit Modal ────────────────────────────────── */}
       {showModal && (

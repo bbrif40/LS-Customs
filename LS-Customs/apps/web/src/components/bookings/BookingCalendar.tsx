@@ -3,7 +3,7 @@
  * Visualizes scheduled/active, previous, and completed/done bookings and vehicle rentals.
  * Features month navigation, day inspection, category filtering, and direct receipt modal integration.
  */
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import {
   ChevronLeft,
   ChevronRight,
@@ -84,6 +84,12 @@ export function BookingCalendar({
   // Current viewed month and year
   const [currentDate, setCurrentDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedDateKey, setSelectedDateKey] = useState<string>(todayKey)
+  const [calendarPage, setCalendarPage] = useState<number>(1)
+
+  // Reset page to 1 whenever selected date or filter changes
+  useEffect(() => {
+    setCalendarPage(1)
+  }, [selectedDateKey, bookingType])
 
   // Is selected date in the past
   const isSelectedDatePast = selectedDateKey < todayKey
@@ -243,6 +249,15 @@ export function BookingCalendar({
 
   // Bookings on the selected day
   const selectedDayEvents = eventsByDate.get(selectedDateKey) ?? []
+
+  // Calendar view pagination: show 2 items per page to eliminate long page scrolling
+  const CALENDAR_PAGE_SIZE = 2
+  const totalCalendarPages = Math.max(1, Math.ceil(selectedDayEvents.length / CALENDAR_PAGE_SIZE))
+  const safeCalendarPage = Math.min(Math.max(1, calendarPage), totalCalendarPages)
+  const paginatedDayEvents = selectedDayEvents.slice(
+    (safeCalendarPage - 1) * CALENDAR_PAGE_SIZE,
+    safeCalendarPage * CALENDAR_PAGE_SIZE
+  )
 
   // Formatted label for selected date header
   const selectedDateFormatted = useMemo(() => {
@@ -650,117 +665,188 @@ export function BookingCalendar({
                 )}
               </div>
             ) : (
-              selectedDayEvents.map((ev) => (
-                <div
-                  key={ev.id}
-                  onClick={() => {
-                    if (ev.kind === 'rental') {
-                      onSelectBooking({ kind: 'rental', booking: ev.raw as CustomerVehicleBooking })
-                    } else {
-                      onSelectBooking({
-                        kind: 'service',
-                        booking: ev.raw as CustomerServiceBooking,
-                      })
-                    }
-                  }}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid var(--line, #e2e8f0)',
-                    borderRadius: 12,
-                    padding: '14px 16px',
-                    cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#35684f'
-                    e.currentTarget.style.transform = 'translateY(-1px)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--line, #e2e8f0)'
-                    e.currentTarget.style.transform = 'none'
-                  }}
-                >
-                  {/* Card Header: Type Badge & Status */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                    <span
+              <>
+                {paginatedDayEvents.map((ev) => (
+                  <div
+                    key={ev.id}
+                    onClick={() => {
+                      if (ev.kind === 'rental') {
+                        onSelectBooking({ kind: 'rental', booking: ev.raw as CustomerVehicleBooking })
+                      } else {
+                        onSelectBooking({
+                          kind: 'service',
+                          booking: ev.raw as CustomerServiceBooking,
+                        })
+                      }
+                    }}
+                    style={{
+                      background: '#ffffff',
+                      border: '1px solid var(--line, #e2e8f0)',
+                      borderRadius: 12,
+                      padding: '14px 16px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
+                      transition: 'all 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#35684f'
+                      e.currentTarget.style.transform = 'translateY(-1px)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = 'var(--line, #e2e8f0)'
+                      e.currentTarget.style.transform = 'none'
+                    }}
+                  >
+                    {/* Card Header: Type Badge & Status */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          color: ev.kind === 'rental' ? '#926017' : '#0369a1',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 5,
+                        }}
+                      >
+                        {ev.kind === 'rental' ? <CarFront size={13} /> : <Wrench size={13} />}
+                        {ev.kind === 'rental' ? 'Vehicle Rental' : 'Mobile Service'}
+                      </span>
+                      <span
+                        className={`status-pill ${
+                          ev.isCompleted ? 'green' : ev.isCancelled ? 'red' : 'amber'
+                        }`}
+                      >
+                        {ev.status.replace('_', ' ').toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h4 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 4px', color: 'var(--ink, #1a202c)' }}>
+                      {ev.title}
+                    </h4>
+                    {ev.subtitle && (
+                      <p style={{ fontSize: 11, color: '#35684f', fontWeight: 600, margin: '0 0 8px' }}>
+                        {ev.subtitle}
+                      </p>
+                    )}
+
+                    {/* Time / Location */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11, color: 'var(--muted, #64748b)', marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                        <Clock size={12} />
+                        <span>{ev.timeLabel}</span>
+                      </div>
+                      {ev.location && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                          <MapPin size={12} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {ev.location}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Footer: Price + View Receipt Button */}
+                    <div
                       style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        letterSpacing: '0.04em',
-                        textTransform: 'uppercase',
-                        color: ev.kind === 'rental' ? '#926017' : '#0369a1',
                         display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
-                        gap: 5,
+                        paddingTop: 8,
+                        borderTop: '1px solid #f1f5f9',
                       }}
                     >
-                      {ev.kind === 'rental' ? <CarFront size={13} /> : <Wrench size={13} />}
-                      {ev.kind === 'rental' ? 'Vehicle Rental' : 'Mobile Service'}
-                    </span>
-                    <span
-                      className={`status-pill ${
-                        ev.isCompleted ? 'green' : ev.isCancelled ? 'red' : 'amber'
-                      }`}
-                    >
-                      {ev.status.replace('_', ' ').toUpperCase()}
-                    </span>
-                  </div>
-
-                  {/* Title */}
-                  <h4 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 4px', color: 'var(--ink, #1a202c)' }}>
-                    {ev.title}
-                  </h4>
-                  {ev.subtitle && (
-                    <p style={{ fontSize: 11, color: '#35684f', fontWeight: 600, margin: '0 0 8px' }}>
-                      {ev.subtitle}
-                    </p>
-                  )}
-
-                  {/* Time / Location */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 11, color: 'var(--muted, #64748b)', marginBottom: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <Clock size={12} />
-                      <span>{ev.timeLabel}</span>
+                      <strong style={{ fontSize: 14, color: 'var(--ink, #1a202c)' }}>
+                        ₱{ev.price.toLocaleString()}
+                      </strong>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: '#35684f',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3,
+                        }}
+                      >
+                        View receipt <ExternalLink size={11} />
+                      </span>
                     </div>
-                    {ev.location && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <MapPin size={12} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {ev.location}
-                        </span>
-                      </div>
-                    )}
                   </div>
+                ))}
 
-                  {/* Footer: Price + View Receipt Button */}
+                {/* Calendar View Pagination: 2 items per page */}
+                {totalCalendarPages > 1 && (
                   <div
                     style={{
                       display: 'flex',
-                      justifyContent: 'space-between',
                       alignItems: 'center',
-                      paddingTop: 8,
-                      borderTop: '1px solid #f1f5f9',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      background: '#ffffff',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: 10,
+                      fontSize: 11,
+                      color: 'var(--muted, #64748b)',
+                      marginTop: 2,
                     }}
                   >
-                    <strong style={{ fontSize: 14, color: 'var(--ink, #1a202c)' }}>
-                      ₱{ev.price.toLocaleString()}
-                    </strong>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: '#35684f',
-                        fontWeight: 700,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 3,
-                      }}
-                    >
-                      View receipt <ExternalLink size={11} />
+                    <span>
+                      {(safeCalendarPage - 1) * CALENDAR_PAGE_SIZE + 1}–
+                      {Math.min(safeCalendarPage * CALENDAR_PAGE_SIZE, selectedDayEvents.length)} of{' '}
+                      {selectedDayEvents.length}
                     </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button
+                        type="button"
+                        onClick={() => setCalendarPage((p) => Math.max(1, p - 1))}
+                        disabled={safeCalendarPage === 1}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          border: '1px solid #cbd5e1',
+                          background: safeCalendarPage === 1 ? '#f8fafc' : '#ffffff',
+                          color: safeCalendarPage === 1 ? '#94a3b8' : 'var(--ink, #1a202c)',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: safeCalendarPage === 1 ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 3,
+                        }}
+                      >
+                        <ChevronLeft size={12} /> Prev
+                      </button>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--ink, #1a202c)', minWidth: 38, textAlign: 'center' }}>
+                        {safeCalendarPage} / {totalCalendarPages}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setCalendarPage((p) => Math.min(totalCalendarPages, p + 1))}
+                        disabled={safeCalendarPage === totalCalendarPages}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: 6,
+                          border: '1px solid #cbd5e1',
+                          background: safeCalendarPage === totalCalendarPages ? '#f8fafc' : '#ffffff',
+                          color: safeCalendarPage === totalCalendarPages ? '#94a3b8' : 'var(--ink, #1a202c)',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: safeCalendarPage === totalCalendarPages ? 'not-allowed' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 3,
+                        }}
+                      >
+                        Next <ChevronRight size={12} />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                )}
+              </>
             )}
             {selectedDayEvents.length > 0 && !isSelectedDatePast && (
               <div

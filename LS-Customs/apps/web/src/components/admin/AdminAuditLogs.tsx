@@ -3,7 +3,7 @@
  * Shows who checked records and who made changes, with filters for
  * admin, action type, record type, and time range.
  */
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   ShieldCheck,
   Eye,
@@ -15,6 +15,8 @@ import {
   Clock,
   Users,
   Layers,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import { useAdminAuditLogs } from '../../hooks/useAdminAuditLogs'
 import type { AuditActionType } from '../../services/auditLogger'
@@ -181,6 +183,15 @@ export function AdminAuditLogs() {
   } = useAdminAuditLogs()
 
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const PAGE_SIZE = 10
+  const [currentPage, setCurrentPage] = useState(1)
+  const totalPages = Math.max(1, Math.ceil(logs.length / PAGE_SIZE))
+  const safePage = Math.min(Math.max(1, currentPage), totalPages)
+  const paginatedLogs = logs.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filters])
 
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -439,7 +450,7 @@ export function AdminAuditLogs() {
         )}
 
         {/* Log Rows */}
-        {logs.map((entry, idx) => {
+        {paginatedLogs.map((entry, idx) => {
           const details = entry.details || {}
           const descriptionParts: string[] = []
           if (entry.action_type === 'status_change') {
@@ -546,6 +557,73 @@ export function AdminAuditLogs() {
             </div>
           )
         })}
+
+        {totalPages > 1 && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 18px',
+              borderTop: '1px solid var(--admin-border)',
+              fontSize: 12,
+              color: 'var(--admin-muted)',
+              background: 'var(--admin-card)',
+            }}
+          >
+            <span>
+              Showing {(safePage - 1) * PAGE_SIZE + 1} to{' '}
+              {Math.min(safePage * PAGE_SIZE, logs.length)} of {logs.length} entries
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button
+                type="button"
+                className="admin-pagination-btn"
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={safePage === 1}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: 6,
+                  border: '1px solid var(--admin-border)',
+                  background: 'none',
+                  color: safePage === 1 ? 'var(--admin-muted)' : 'var(--admin-ink)',
+                  cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                  opacity: safePage === 1 ? 0.45 : 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 12,
+                }}
+              >
+                <ChevronLeft size={13} /> Previous
+              </button>
+              <span style={{ fontWeight: 600, color: 'var(--admin-ink)', minWidth: 60, textAlign: 'center' }}>
+                Page {safePage} of {totalPages}
+              </span>
+              <button
+                type="button"
+                className="admin-pagination-btn"
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={safePage === totalPages}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: 6,
+                  border: '1px solid var(--admin-border)',
+                  background: 'none',
+                  color: safePage === totalPages ? 'var(--admin-muted)' : 'var(--admin-ink)',
+                  cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                  opacity: safePage === totalPages ? 0.45 : 1,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                  fontSize: 12,
+                }}
+              >
+                Next <ChevronRight size={13} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

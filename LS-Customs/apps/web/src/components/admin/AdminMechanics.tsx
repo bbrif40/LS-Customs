@@ -117,6 +117,9 @@ export function AdminMechanics() {
   const [searchQuery, setSearchQuery] = useState('')
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'available' | 'unavailable'>('all')
 
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+
   const filteredMechanics = mechanics?.filter((m) => {
     const profile = getMechanicProfile(m)
     if (availabilityFilter === 'available' && !m.is_available) return false
@@ -135,6 +138,10 @@ export function AdminMechanics() {
     }
     return true
   }) || []
+
+  const totalPages = Math.max(1, Math.ceil(filteredMechanics.length / pageSize))
+  const safePage = Math.min(currentPage, totalPages)
+  const paginatedMechanics = filteredMechanics.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   const totalMechanics = mechanics?.length || 0
   const availableMechanics = mechanics?.filter((m) => m.is_available).length || 0
@@ -222,7 +229,10 @@ export function AdminMechanics() {
           <button
             key={f}
             className={`admin-filter-btn ${availabilityFilter === f ? 'active' : ''}`}
-            onClick={() => setAvailabilityFilter(f as 'all' | 'available' | 'unavailable')}
+            onClick={() => {
+              setAvailabilityFilter(f as 'all' | 'available' | 'unavailable')
+              setCurrentPage(1)
+            }}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
           </button>
@@ -233,7 +243,10 @@ export function AdminMechanics() {
             type="text"
             placeholder="Search by name, phone, or specialty..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value)
+              setCurrentPage(1)
+            }}
           />
         </div>
       </div>
@@ -260,7 +273,7 @@ export function AdminMechanics() {
                 </tr>
               </thead>
               <tbody>
-                {filteredMechanics.map((mechanic) => {
+                {paginatedMechanics.map((mechanic) => {
                   const profile = getMechanicProfile(mechanic)
                   const fullName = profile?.full_name?.trim() || 'Mechanic'
                   const initials = fullName
@@ -407,6 +420,52 @@ export function AdminMechanics() {
           </div>
         )}
       </div>
+
+      {/* ── Pagination Bar ───────────────────────────────────── */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 20, padding: '12px 16px', background: '#1a2234', borderRadius: 8 }}>
+          <span style={{ fontSize: 13, color: '#9ca3af' }}>
+            Showing {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filteredMechanics.length)} of {filteredMechanics.length} mechanics
+          </span>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={safePage === 1}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 6,
+                border: '1px solid #374151',
+                background: safePage === 1 ? '#1f2937' : '#2563eb',
+                color: safePage === 1 ? '#6b7280' : '#ffffff',
+                cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              Previous
+            </button>
+            <span style={{ fontSize: 13, color: '#e5e7eb', padding: '0 8px' }}>
+              Page {safePage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={safePage === totalPages}
+              style={{
+                padding: '6px 14px',
+                borderRadius: 6,
+                border: '1px solid #374151',
+                background: safePage === totalPages ? '#1f2937' : '#2563eb',
+                color: safePage === totalPages ? '#6b7280' : '#ffffff',
+                cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                fontSize: 13,
+                fontWeight: 500,
+              }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
