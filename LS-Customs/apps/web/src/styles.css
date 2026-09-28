@@ -4160,10 +4160,6 @@ html { scroll-behavior: smooth; }
   position: relative;
   z-index: 1;
   max-width: 440px;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  height: 100%;
 }
 
 .hero-card h2 {
@@ -4214,62 +4210,21 @@ html { scroll-behavior: smooth; }
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
 
-/* Concierge chips revealed upon expansion */
-.hero-expanded-features {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
-  max-height: 0;
-  opacity: 0;
-  overflow: hidden;
-  transform: translateY(-6px);
-  pointer-events: none;
-  transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-              opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
-              transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.hero-card.expanded .hero-expanded-features {
-  max-height: 60px;
-  opacity: 1;
-  transform: translateY(0);
-  pointer-events: auto;
-  margin-bottom: 6px;
-}
-
-.hero-feature-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #d5e5dd;
-  font-size: 11px;
-  font-weight: 500;
-  backdrop-filter: blur(4px);
-}
-
-.hero-feature-chip .hero-chip-icon {
-  color: #e8bf67;
-}
-
 /* The hero buttons smoothly glide downward alongside the expansion */
 .hero-buttons {
   display: flex;
-  gap: 10px;
-  margin-top: auto;
-  padding-top: 23px;
+  align-items: center;
+  gap: 12px;
+  margin-top: 23px;
   position: relative;
   z-index: 2;
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
-              padding-top 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+              margin-top 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hero-card.expanded .hero-buttons {
-  padding-top: 28px;
+  margin-top: 34px;
+  transform: translateY(8px);
 }
 
 /* ── Location Card ── */

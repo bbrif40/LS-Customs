@@ -3,7 +3,7 @@
  * Both featured rentals and trending services come from Supabase.
  */
 import { useEffect, useState } from 'react'
-import { ChevronRight, Car, Wrench, CalendarDays, Sparkles, Maximize2, Minimize2, ShieldCheck } from 'lucide-react'
+import { ChevronRight, Car, Wrench, CalendarDays, Sparkles, Maximize2, Minimize2 } from 'lucide-react'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { useTrendingServices } from '../../hooks/useTrendingServices'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
@@ -192,17 +192,6 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
               <em>{settings.heroHeadlineEm || 'Precision service.'}</em>
             </h2>
             <p>{settings.heroSubtitle || 'Experience the perfect blend of high-end car rentals and on-demand, expert mobile mechanics.'}</p>
-            
-            <div className="hero-expanded-features" aria-hidden={!isHeroExpanded}>
-              <div className="hero-feature-chip">
-                <Sparkles size={12} className="hero-chip-icon" />
-                <span>24/7 Priority Concierge</span>
-              </div>
-              <div className="hero-feature-chip">
-                <ShieldCheck size={12} className="hero-chip-icon" />
-                <span>Certified On-Demand Dispatch</span>
-              </div>
-            </div>
 
             <div className="hero-buttons">
               <button className="button light-button" onClick={() => onView('rentals')}>
