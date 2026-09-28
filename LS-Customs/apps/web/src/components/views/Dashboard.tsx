@@ -3,7 +3,7 @@
  * Both featured rentals and trending services come from Supabase.
  */
 import { useEffect, useState } from 'react'
-import { ChevronRight, Car, Wrench, CalendarDays, Sparkles } from 'lucide-react'
+import { ChevronRight, Car, Wrench, CalendarDays, Sparkles, Maximize2, Minimize2, ShieldCheck } from 'lucide-react'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { useTrendingServices } from '../../hooks/useTrendingServices'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
@@ -58,6 +58,7 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
   const { settings } = useCustomerSiteSettings()
 
   const [now, setNow] = useState(() => new Date())
+  const [isHeroExpanded, setIsHeroExpanded] = useState(false)
   useEffect(() => {
     const tick = () => setNow(new Date())
     tick()
@@ -157,8 +158,8 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
         </button>
       </div>
 
-      <section className={`hero-grid stagger-hero ${isDashboardVisible ? 'visible' : ''}`}>
-        <article className="hero-card">
+      <section className={`hero-grid stagger-hero ${isDashboardVisible ? 'visible' : ''} ${isHeroExpanded ? 'is-expanded' : ''}`}>
+        <article className={`hero-card ${isHeroExpanded ? 'expanded' : ''}`}>
           <video
             className="hero-video"
             autoPlay
@@ -171,6 +172,18 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
             <source src="/customer-videos/dashboardvidep.mp4" type="video/mp4" />
           </video>
           <div className="hero-overlay" aria-hidden="true" />
+          
+          <button
+            type="button"
+            className="hero-expand-toggle"
+            onClick={() => setIsHeroExpanded((prev) => !prev)}
+            aria-label={isHeroExpanded ? 'Collapse hero view' : 'Expand hero view'}
+            title={isHeroExpanded ? 'Collapse hero view' : 'Expand hero view'}
+          >
+            {isHeroExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+            <span>{isHeroExpanded ? 'Minimize' : 'Expand'}</span>
+          </button>
+
           <div className="hero-copy">
             <p className="eyebrow light">{settings.heroEyebrow || 'LS CUSTOMS CONCIERGE'}</p>
             <h2>
@@ -179,6 +192,18 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
               <em>{settings.heroHeadlineEm || 'Precision service.'}</em>
             </h2>
             <p>{settings.heroSubtitle || 'Experience the perfect blend of high-end car rentals and on-demand, expert mobile mechanics.'}</p>
+            
+            <div className="hero-expanded-features" aria-hidden={!isHeroExpanded}>
+              <div className="hero-feature-chip">
+                <Sparkles size={12} className="hero-chip-icon" />
+                <span>24/7 Priority Concierge</span>
+              </div>
+              <div className="hero-feature-chip">
+                <ShieldCheck size={12} className="hero-chip-icon" />
+                <span>Certified On-Demand Dispatch</span>
+              </div>
+            </div>
+
             <div className="hero-buttons">
               <button className="button light-button" onClick={() => onView('rentals')}>
                 {settings.heroCtaRentalText || 'Rent a vehicle'} <ChevronRight size={16} />
@@ -189,7 +214,11 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
             </div>
           </div>
         </article>
-        <LocationCard onNotify={onNotify} />
+        <LocationCard
+          onNotify={onNotify}
+          isExpanded={isHeroExpanded}
+          onToggleExpand={setIsHeroExpanded}
+        />
       </section>
 
       <section className="section-heading">

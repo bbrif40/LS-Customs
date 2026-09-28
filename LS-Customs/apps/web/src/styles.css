@@ -4090,3 +4090,333 @@ html { scroll-behavior: smooth; }
     border-bottom: 1px solid var(--line, #e2e8f0);
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   HERO & LOCATION EXPANSION ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════ */
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 0.75fr;
+  gap: 17px;
+  align-items: stretch;
+  transition: gap 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-card {
+  position: relative;
+  isolation: isolate;
+  background: #203b3b;
+  color: #eaf3e9;
+  border-radius: var(--radius);
+  padding: 32px 36px;
+  min-height: 277px;
+  height: 277px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              min-height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s ease;
+}
+
+.hero-card.expanded {
+  min-height: 485px;
+  height: 485px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.28);
+}
+
+.hero-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -2;
+  object-fit: cover;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(1);
+}
+
+.hero-card.expanded .hero-video {
+  transform: scale(1.03);
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: linear-gradient(135deg, rgba(16, 32, 34, 0.82) 0%, rgba(20, 42, 43, 0.65) 60%, rgba(16, 30, 32, 0.88) 100%);
+  transition: background 0.5s ease;
+}
+
+.hero-card.expanded .hero-overlay {
+  background: linear-gradient(135deg, rgba(14, 28, 30, 0.86) 0%, rgba(18, 38, 39, 0.68) 55%, rgba(14, 26, 28, 0.92) 100%);
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+}
+
+.hero-card h2 {
+  font-size: 31px;
+  line-height: 1.08;
+  letter-spacing: -1px;
+  margin: 12px 0 13px;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-card p:not(.eyebrow) {
+  color: #adc0bb;
+  font-size: 12px;
+  line-height: 1.6;
+  max-width: 385px;
+  margin: 0;
+}
+
+/* Glassmorphic expand toggle button on top right of hero card */
+.hero-expand-toggle {
+  position: absolute;
+  top: 24px;
+  right: 28px;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(18, 33, 35, 0.6);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #d8e6e0;
+  border-radius: 8px;
+  padding: 6px 11px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.hero-expand-toggle:hover {
+  background: rgba(28, 52, 55, 0.88);
+  border-color: rgba(232, 191, 103, 0.5);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+}
+
+/* Concierge chips revealed upon expansion */
+.hero-expanded-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-card.expanded .hero-expanded-features {
+  max-height: 60px;
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+  margin-bottom: 6px;
+}
+
+.hero-feature-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #d5e5dd;
+  font-size: 11px;
+  font-weight: 500;
+  backdrop-filter: blur(4px);
+}
+
+.hero-feature-chip .hero-chip-icon {
+  color: #e8bf67;
+}
+
+/* The hero buttons smoothly glide downward alongside the expansion */
+.hero-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 23px;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              padding-top 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-card.expanded .hero-buttons {
+  padding-top: 28px;
+}
+
+/* ── Location Card ── */
+.location-card {
+  background: #e6efe8;
+  border-radius: var(--radius);
+  padding: 26px 26px 22px;
+  min-height: 277px;
+  height: 277px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  box-sizing: border-box;
+  transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              min-height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s ease;
+}
+
+.location-card.expanded {
+  min-height: 485px;
+  height: 485px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.07);
+}
+
+.location-top-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.location-expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(65, 110, 91, 0.22);
+  color: #35624e;
+  border-radius: 7px;
+  padding: 5px 9px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.location-expand-toggle:hover {
+  background: #ffffff;
+  color: #1f4233;
+  border-color: rgba(65, 110, 91, 0.45);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.location-map-wrapper {
+  position: relative;
+  height: 87px;
+  margin-top: 14px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #d5e6dc;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: height 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.4s ease;
+}
+
+.location-card.expanded .location-map-wrapper {
+  height: 295px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06), inset 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+.location-map-wrapper .map-lines {
+  margin-top: 0;
+  height: 100%;
+  width: 100%;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.map-lines-hint {
+  position: absolute;
+  bottom: 8px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(4px);
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #315846;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+}
+
+.map-lines:hover .map-lines-hint {
+  background: #ffffff;
+  color: #1c3d2f;
+  transform: translateY(-1px);
+}
+
+.location-helper {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+  transition: opacity 0.3s ease;
+}
+
+/* Location actions move smoothly alongside the map expansion */
+.location-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 12px;
+  position: relative;
+  z-index: 2;
+  transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1),
+              padding-top 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Mobile responsive handling */
+@media (max-width: 900px) {
+  .hero-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .hero-card,
+  .hero-card.expanded,
+  .location-card,
+  .location-card.expanded {
+    height: auto !important;
+  }
+  .hero-card {
+    min-height: 277px !important;
+  }
+  .hero-card.expanded {
+    min-height: 440px !important;
+  }
+  .location-card {
+    min-height: 277px !important;
+  }
+  .location-card.expanded {
+    min-height: 480px !important;
+  }
+}
+

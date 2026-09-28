@@ -81,6 +81,28 @@ export default function MapSurface(props: MapSurfaceProps) {
     return null
   }
 
+  // Auto-resize Leaflet map whenever container dimensions change (e.g. expansion animation).
+  function AutoResize() {
+    const map = useMap()
+    useEffect(() => {
+      const container = map.getContainer()
+      if (!container || typeof ResizeObserver === 'undefined') return
+      let rafId: number
+      const ro = new ResizeObserver(() => {
+        cancelAnimationFrame(rafId)
+        rafId = requestAnimationFrame(() => {
+          map.invalidateSize({ animate: false })
+        })
+      })
+      ro.observe(container)
+      return () => {
+        cancelAnimationFrame(rafId)
+        ro.disconnect()
+      }
+    }, [map])
+    return null
+  }
+
   // Map click → emit new pin position.
   function ClickCatcher() {
     useMapEvents({
@@ -106,6 +128,7 @@ export default function MapSurface(props: MapSurfaceProps) {
         />
         <Recenter c={center} />
         <FitBounds L={libs.L} />
+        <AutoResize />
         {onMapClick && <ClickCatcher />}
         {pins.map((p) => (
           <Marker key={p.id} position={[p.lat, p.lng]} icon={makeIcon(p.color)}>

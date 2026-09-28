@@ -55,9 +55,9 @@ export function MapView({
       : FALLBACK_CENTER
 
   return (
-    <div className={className} style={{ width: '100%' }}>
+    <div className={className} style={{ width: '100%', height: typeof height === 'string' && height.endsWith('%') ? height : '100%' }}>
       <MapBoundary height={height}>
-        <Suspense fallback={<div className="map-skeleton" style={{ height }}>Loading map…</div>}>
+        <Suspense fallback={<div className="map-skeleton" style={{ height: typeof height === 'number' ? height : '100%' }}>Loading map…</div>}>
           <MapSurface
             center={c}
             zoom={zoom}
