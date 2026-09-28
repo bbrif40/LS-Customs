@@ -3,7 +3,7 @@
  * Both featured rentals and trending services come from Supabase.
  */
 import { useEffect, useState } from 'react'
-import { ChevronRight, Car, Wrench, CalendarDays, Sparkles, Maximize2, Minimize2 } from 'lucide-react'
+import { ChevronRight, Car, Wrench, CalendarDays, Sparkles } from 'lucide-react'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { useTrendingServices } from '../../hooks/useTrendingServices'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
@@ -172,17 +172,6 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
             <source src="/customer-videos/dashboardvidep.mp4" type="video/mp4" />
           </video>
           <div className="hero-overlay" aria-hidden="true" />
-          
-          <button
-            type="button"
-            className="hero-expand-toggle"
-            onClick={() => setIsHeroExpanded((prev) => !prev)}
-            aria-label={isHeroExpanded ? 'Collapse hero view' : 'Expand hero view'}
-            title={isHeroExpanded ? 'Collapse hero view' : 'Expand hero view'}
-          >
-            {isHeroExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-            <span>{isHeroExpanded ? 'Minimize' : 'Expand'}</span>
-          </button>
 
           <div className="hero-copy">
             <p className="eyebrow light">{settings.heroEyebrow || 'LS CUSTOMS CONCIERGE'}</p>

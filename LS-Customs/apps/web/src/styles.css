@@ -4178,38 +4178,6 @@ html { scroll-behavior: smooth; }
   margin: 0;
 }
 
-/* Glassmorphic expand toggle button on top right of hero card */
-.hero-expand-toggle {
-  position: absolute;
-  top: 24px;
-  right: 28px;
-  z-index: 4;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(18, 33, 35, 0.6);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #d8e6e0;
-  border-radius: 8px;
-  padding: 6px 11px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.hero-expand-toggle:hover {
-  background: rgba(28, 52, 55, 0.88);
-  border-color: rgba(232, 191, 103, 0.5);
-  color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-}
-
 /* The hero buttons smoothly glide downward alongside the expansion */
 .hero-buttons {
   display: flex;
@@ -4248,38 +4216,6 @@ html { scroll-behavior: smooth; }
   min-height: 485px;
   height: 485px;
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.07);
-}
-
-.location-top-controls {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.location-expand-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: rgba(255, 255, 255, 0.75);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(65, 110, 91, 0.22);
-  color: #35624e;
-  border-radius: 7px;
-  padding: 5px 9px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-}
-
-.location-expand-toggle:hover {
-  background: #ffffff;
-  color: #1f4233;
-  border-color: rgba(65, 110, 91, 0.45);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
 }
 
 .location-map-wrapper {

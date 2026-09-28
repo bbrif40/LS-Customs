@@ -4,7 +4,7 @@
  * and renders the resolved pin on a Leaflet + OpenStreetMap map.
  */
 import { useState } from 'react'
-import { MapPin, ChevronRight, Maximize2, Minimize2 } from 'lucide-react'
+import { MapPin, ChevronRight } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import { MapView } from './map'
 
@@ -77,21 +77,9 @@ export function LocationCard({ onNotify, isExpanded: isExpandedProp, onToggleExp
       <div className="card-top">
         <div>
           <p className="eyebrow">SHARE YOUR LOCATION</p>
-          <h3>{coordinates ? address : isExpanded ? 'Los Santos Map' : 'Open your location'}</h3>
+          <h3>{coordinates ? address : 'Open your location'}</h3>
         </div>
-        <div className="location-top-controls">
-          <button
-            type="button"
-            className="location-expand-toggle"
-            onClick={toggleExpand}
-            aria-label={isExpanded ? 'Collapse location map' : 'Expand location map'}
-            title={isExpanded ? 'Collapse location map' : 'Expand location map'}
-          >
-            {isExpanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-            <span>{isExpanded ? 'Minimize' : 'Expand'}</span>
-          </button>
-          <MapPin className="pin" size={22} />
-        </div>
+        <MapPin className="pin" size={24} />
       </div>
       
       <div className={`location-map-wrapper ${isExpanded ? 'is-expanded' : ''}`}>
