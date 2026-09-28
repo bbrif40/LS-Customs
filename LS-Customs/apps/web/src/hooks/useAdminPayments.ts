@@ -129,6 +129,22 @@ export function useAdminPayments(): UseAdminPaymentsResult {
         throw updateError
       }
 
+      // If marked as succeeded by the admin, trigger customer email receipt via Resend
+      if (newStatus === 'succeeded') {
+        try {
+          await supabase.functions.invoke('send-receipt', {
+            body: {
+              paymentId,
+              bookingId: original.booking_id,
+              bookingType: original.booking_type === 'vehicle' ? 'rental' : 'service',
+              amount: original.amount,
+            },
+          })
+        } catch (fnErr) {
+          console.warn('[useAdminPayments] send-receipt notice:', fnErr)
+        }
+      }
+
       // If refund, try invoking edge function in the background
       if (newStatus === 'refunded') {
         try {

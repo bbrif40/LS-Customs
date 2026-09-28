@@ -24,7 +24,6 @@ import {
   normalizeWebhookEvent,
   verifyWebhookSignature,
 } from "../_shared/paymentProvider.ts";
-import { sendResendReceipt } from "../_shared/resend.ts";
 
 Deno.serve(async (req: Request) => {
   // Handle CORS preflight
@@ -210,64 +209,6 @@ Deno.serve(async (req: Request) => {
           console.error("Failed to update booking status:", updateBookingError.message);
         }
       }
-
-      // Asynchronously trigger customer email receipt via Resend
-      (async () => {
-        try {
-          let customerName = "Valued Customer";
-          let customerEmail: string | undefined;
-          let itemTitle = payment.booking_type === "vehicle" ? "Vehicle Rental" : "Mobile Mechanic Service";
-          let amount: number | undefined;
-
-          if (payment.booking_type === "vehicle") {
-            const { data: vb } = await supabase
-              .from("vehicle_bookings")
-              .select("customer_id, total_price, vehicles(name)")
-              .eq("id", payment.booking_id)
-              .maybeSingle();
-
-            if (vb?.customer_id) {
-              const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", vb.customer_id).maybeSingle();
-              customerName = prof?.full_name || customerName;
-              const { data: usr } = await supabase.auth.admin.getUserById(vb.customer_id);
-              customerEmail = usr?.user?.email;
-              itemTitle = (vb.vehicles as any)?.name || itemTitle;
-              amount = vb.total_price;
-            }
-          } else {
-            const { data: sb } = await supabase
-              .from("service_bookings")
-              .select("customer_id, price, services(name)")
-              .eq("id", payment.booking_id)
-              .maybeSingle();
-
-            if (sb?.customer_id) {
-              const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", sb.customer_id).maybeSingle();
-              customerName = prof?.full_name || customerName;
-              const { data: usr } = await supabase.auth.admin.getUserById(sb.customer_id);
-              customerEmail = usr?.user?.email;
-              itemTitle = (sb.services as any)?.name || itemTitle;
-              amount = sb.price;
-            }
-          }
-
-          if (!customerEmail) {
-            customerEmail = Deno.env.get("RESEND_FALLBACK_EMAIL") || "bbri7198@gmail.com";
-          }
-
-          await sendResendReceipt({
-            customerName,
-            customerEmail,
-            bookingId: payment.booking_id,
-            bookingType: payment.booking_type === "vehicle" ? "rental" : "service",
-            itemTitle,
-            amount,
-            status: "Payment Succeeded & Confirmed",
-          });
-        } catch (e) {
-          console.error("[payment-webhook] Receipt dispatch error:", e);
-        }
-      })();
     }
 
     // ------------------------------------------------------------------

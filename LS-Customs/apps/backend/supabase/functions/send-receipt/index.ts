@@ -34,7 +34,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const {
+    let {
+      paymentId,
       bookingId,
       bookingType = "service",
       itemTitle,
@@ -48,27 +49,49 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createServiceClient();
 
-    // If customerEmail is missing, resolve it from the database via bookingId or user_id
-    if (!customerEmail && bookingId) {
-      if (bookingType === "rental") {
+    // 1. If paymentId is passed, resolve payment row
+    if (paymentId && (!bookingId || amount === undefined)) {
+      const { data: pay } = await supabase
+        .from("payments")
+        .select("id, booking_id, booking_type, amount, customer_id")
+        .eq("id", paymentId)
+        .maybeSingle();
+
+      if (pay) {
+        bookingId = bookingId || pay.booking_id;
+        bookingType = bookingType || (pay.booking_type === "vehicle" ? "rental" : "service");
+        amount = amount !== undefined ? amount : pay.amount;
+      }
+    }
+
+    // 2. Resolve booking and customer details from database if needed
+    if (bookingId) {
+      if (bookingType === "rental" || bookingType === "vehicle") {
         const { data: vb } = await supabase
           .from("vehicle_bookings")
-          .select("customer_id, vehicles(name), start_date, total_price")
+          .select("customer_id, start_date, end_date, total_price, vehicles(name)")
           .eq("id", bookingId)
           .maybeSingle();
 
-        if (vb?.customer_id) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", vb.customer_id)
-            .maybeSingle();
+        if (vb) {
+          amount = amount !== undefined ? amount : vb.total_price;
+          itemTitle = itemTitle || (vb.vehicles as any)?.name || "Premium Vehicle Rental";
+          scheduledDate = scheduledDate || `From ${vb.start_date || "Scheduled Date"}`;
 
-          customerName = customerName || profile?.full_name || "Valued Customer";
+          if (!customerName || !customerEmail) {
+            if (vb.customer_id) {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("id", vb.customer_id)
+                .maybeSingle();
 
-          // Fetch email from auth admin
-          const { data: userData } = await supabase.auth.admin.getUserById(vb.customer_id);
-          customerEmail = userData?.user?.email;
+              customerName = customerName || profile?.full_name || "Valued Customer";
+
+              const { data: userData } = await supabase.auth.admin.getUserById(vb.customer_id);
+              customerEmail = customerEmail || userData?.user?.email;
+            }
+          }
         }
       } else {
         const { data: sb } = await supabase
@@ -77,44 +100,51 @@ Deno.serve(async (req: Request) => {
           .eq("id", bookingId)
           .maybeSingle();
 
-        if (sb?.customer_id) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("id", sb.customer_id)
-            .maybeSingle();
+        if (sb) {
+          amount = amount !== undefined ? amount : sb.price;
+          itemTitle = itemTitle || (sb.services as any)?.name || "Mobile Mechanic Service";
+          scheduledDate = scheduledDate || (sb.scheduled_at ? new Date(sb.scheduled_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "As Scheduled");
+          location = location || sb.location_address || "On-site / Customer Location";
 
-          customerName = customerName || profile?.full_name || "Valued Customer";
+          if (!customerName || !customerEmail) {
+            if (sb.customer_id) {
+              const { data: profile } = await supabase
+                .from("profiles")
+                .select("full_name")
+                .eq("id", sb.customer_id)
+                .maybeSingle();
 
-          // Fetch email from auth admin
-          const { data: userData } = await supabase.auth.admin.getUserById(sb.customer_id);
-          customerEmail = userData?.user?.email;
+              customerName = customerName || profile?.full_name || "Valued Customer";
+
+              const { data: userData } = await supabase.auth.admin.getUserById(sb.customer_id);
+              customerEmail = customerEmail || userData?.user?.email;
+            }
+          }
         }
       }
     }
 
     if (!customerEmail) {
-      // Default / fallback to developer email during Resend onboarding testing
       customerEmail = Deno.env.get("RESEND_FALLBACK_EMAIL") || "bbri7198@gmail.com";
     }
 
-    if (!bookingId) {
+    if (!bookingId && !paymentId) {
       return jsonResponse(null, {
         code: "VALIDATION_ERROR",
-        message: "Missing required bookingId parameter",
+        message: "Missing required bookingId or paymentId parameter",
       }, 400);
     }
 
     const receiptData: ReceiptEmailData = {
       customerName: customerName || "Valued Customer",
       customerEmail,
-      bookingId: String(bookingId),
+      bookingId: String(bookingId || paymentId),
       bookingType,
       itemTitle: itemTitle || (bookingType === "rental" ? "Premium Vehicle Rental" : "Certified Mechanic Service"),
       amount,
       scheduledDate,
       location,
-      status: "Confirmed & Acknowledged",
+      status: "Confirmed & Succeeded",
     };
 
     console.log(`[send-receipt] Sending receipt to ${customerEmail} for booking #${bookingId}`);
