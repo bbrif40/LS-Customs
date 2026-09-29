@@ -54,4 +54,15 @@ jobs:
           deno-version: v2.x
       - name: Type-check Edge Functions
         run: |
-          deno check --config apps/backend/supabase/functions/deno.json apps/backend/supabase/functions/*/index.ts
+          failed=0
+          for f in apps/backend/supabase/functions/*/index.ts; do
+            echo "Checking $f..."
+            if ! out=$(deno check "$f" 2>&1); then
+              echo "::error file=$f::$out"
+              echo "$out"
+              failed=1
+            fi
+          done
+          if [ $failed -ne 0 ]; then
+            exit 1
+          fi
