@@ -6,8 +6,11 @@
     "types": ["node"]
   },
   "include": [
+    "scripts/**/*",
+    "tests/**/*"
+  ],
+  "exclude": [
     "supabase/functions/**/*",
-    "tests/**/*",
-    "supabase/migrations/**/*.sql"
+    "node_modules"
   ]
 }

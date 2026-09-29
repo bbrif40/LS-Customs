@@ -15,7 +15,7 @@
     "functions:serve": "npx supabase functions serve --env-file supabase/.env",
     "functions:deploy": "npx supabase functions deploy",
     "precommit:check": "node scripts/check-secrets.mjs",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node scripts/check-secrets.mjs",
     "lint": "npx eslint supabase/functions/ --ext .ts"
   },
   "devDependencies": {

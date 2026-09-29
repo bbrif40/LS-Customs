@@ -230,7 +230,7 @@ function buildLiveDataBlock(data: {
     for (const [cat, svcs] of byCategory) {
       const minPrice = Math.min(...svcs.map(s => Number(s.base_price)));
       const label = cat.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-      lines.push(`  • ${label} — from ₱${minPrice.toLocaleString()} (e.g. ${svcs[0].name})`);
+      lines.push(`  • ${label} — from ₱${minPrice.toLocaleString()} (e.g. ${svcs[0]?.name ?? "Service"})`);
     }
     parts.push(`=== LIVE MECHANIC SERVICE CATALOG ===\n${lines.join("\n")}`);
   }

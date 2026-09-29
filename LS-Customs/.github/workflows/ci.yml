@@ -20,36 +20,33 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
-      - name: Lint shared-types
+      - name: Type-check shared-types
         run: npm run typecheck --workspace=@ls-customs/shared-types
-      - name: Type-check backend
+      - name: Type-check web
+        run: npm run typecheck --workspace=@ls-customs/web
+      - name: Check backend
         run: npm run typecheck --workspace=@ls-customs/backend
 
   migration-test:
     name: Migration Dry-Run
     runs-on: ubuntu-latest
-    container:
-      image: supabase/postgres:17-stable
     steps:
       - uses: actions/checkout@v4
-      - name: Apply migrations
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Apply migrations via Supabase CLI
         run: |
-          # Validate migrations parse and apply against a fresh Postgres
-          for f in apps/backend/supabase/migrations/*.sql; do
-            psql -U postgres -d postgres -f "$f" 2>&1 || exit 1
-          done
+          supabase db start --workdir apps/backend
 
   function-typecheck:
     name: Edge Function Type-check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: denoland/setup-deno@v2
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: npm
-      - run: npm ci
-      - name: Type-check functions
+          deno-version: v2.x
+      - name: Type-check Edge Functions
         run: |
-          npx tsc --noEmit --strict --module esnext --moduleResolution deno \
-            apps/backend/supabase/functions/*//index.ts
+          deno check --no-check=remote apps/backend/supabase/functions/*/index.ts

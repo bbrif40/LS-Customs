@@ -60,7 +60,7 @@ function buildTrackingNumber(customerId: string, ts: number, description: string
   return `ticket-${trackingSuffix(customerId, ts, description)}`
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })

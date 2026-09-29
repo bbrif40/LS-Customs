@@ -254,7 +254,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Find nearest using Haversine distance
-    const nearest = mechanics.reduce((best: typeof mechanics[0] | null, current) => {
+    const nearest = mechanics.reduce((best: (typeof mechanics[0] & { _distance?: number }) | null, current: typeof mechanics[0]) => {
       if (!current.current_lat || !current.current_lng) return best;
       const dist = haversineDistance(
         pinLat!, pinLng!,
