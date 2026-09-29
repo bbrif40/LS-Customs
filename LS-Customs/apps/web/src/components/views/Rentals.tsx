@@ -13,6 +13,7 @@ import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { useFavoriteVehicles } from '../../hooks/useFavoriteVehicles'
 import { VehicleCard } from '../common/VehicleCard'
 import { PageHeading } from '../common/PageHeading'
+import { FleetTickerBanner } from '../common/FleetTickerBanner'
 import { RentalPayment } from './RentalPayment'
 
 interface RentalsProps {
@@ -177,6 +178,11 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
         eyebrow="FLEET COLLECTION"
         title="Find your next drive"
         detail="Choose from a curated fleet, ready when you are."
+      />
+
+      <FleetTickerBanner
+        vehicles={vehicles}
+        onSelectVehicle={(vehicle) => setPreviewVehicle(vehicle)}
       />
 
       <section className="rental-planner" aria-label="Rental dates">
