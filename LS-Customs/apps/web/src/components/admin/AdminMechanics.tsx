@@ -319,7 +319,7 @@ export function AdminMechanics() {
                             )}
                           </div>
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: 14, color: '#f1f5f9' }}>{fullName}</div>
+                            <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--admin-ink, #142026)' }}>{fullName}</div>
                             <div style={{ fontSize: 11, color: 'var(--admin-muted)', fontFamily: 'monospace', marginTop: 2 }}>
                               ID: {mechanic.id.slice(0, 8)}...
                             </div>

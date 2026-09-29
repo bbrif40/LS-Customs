@@ -276,7 +276,7 @@ export function AdminServices() {
                     <Edit size={13} /> Edit
                   </button>
                   <button
-                    className="admin-vehicle-btn secondary"
+                    className="admin-vehicle-btn secondary danger"
                     onClick={() => handleDeactivate(service)}
                     disabled={!service.is_active}
                     style={{ opacity: service.is_active ? 1 : 0.5, padding: '8px 16px' }}

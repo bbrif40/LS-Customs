@@ -1383,6 +1383,19 @@
   border-color: #9ca3af;
 }
 
+.admin-vehicle-btn.danger,
+.admin-vehicle-btn.secondary.danger {
+  background: rgba(198, 107, 84, 0.08);
+  color: var(--admin-danger);
+  border: 1px solid rgba(198, 107, 84, 0.25);
+}
+
+.admin-vehicle-btn.danger:hover,
+.admin-vehicle-btn.secondary.danger:hover {
+  background: rgba(198, 107, 84, 0.15);
+  border-color: var(--admin-danger);
+}
+
 /* ═══════════════════════════════════════════════════════════════════
    Modal & Form (Create / Edit Vehicle)
    ═══════════════════════════════════════════════════════════════════ */
