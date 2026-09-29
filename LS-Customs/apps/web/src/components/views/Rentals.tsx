@@ -180,10 +180,7 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
         detail="Choose from a curated fleet, ready when you are."
       />
 
-      <FleetTickerBanner
-        vehicles={vehicles}
-        onSelectVehicle={(vehicle) => setPreviewVehicle(vehicle)}
-      />
+      <FleetTickerBanner vehicles={vehicles} />
 
       <section className="rental-planner" aria-label="Rental dates">
         <div className="rental-planner-heading">

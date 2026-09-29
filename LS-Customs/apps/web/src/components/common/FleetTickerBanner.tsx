@@ -8,7 +8,6 @@ import type { Vehicle } from '../../types'
 
 interface FleetTickerBannerProps {
   vehicles: Vehicle[]
-  onSelectVehicle?: (vehicle: Vehicle) => void
 }
 
 const FALLBACK_FLEET: { name: string; tag: string; price: string }[] = [
@@ -24,7 +23,7 @@ const FALLBACK_FLEET: { name: string; tag: string; price: string }[] = [
   { name: 'Mazda 3 Fastback', tag: 'Hatchback', price: '₱3,100/day' },
 ]
 
-export function FleetTickerBanner({ vehicles, onSelectVehicle }: FleetTickerBannerProps) {
+export function FleetTickerBanner({ vehicles }: FleetTickerBannerProps) {
   // Use loaded vehicles if available, otherwise fallback
   const items = useMemo(() => {
     if (vehicles && vehicles.length > 0) {
@@ -33,7 +32,6 @@ export function FleetTickerBanner({ vehicles, onSelectVehicle }: FleetTickerBann
         name: v.name.toUpperCase(),
         tag: (v.tag || v.category || '').toUpperCase().replace('_', ' '),
         price: (v.price.includes('/day') ? v.price : `${v.price}/day`).toUpperCase(),
-        rawVehicle: v,
       }))
     }
     return FALLBACK_FLEET.map((f, i) => ({
@@ -41,7 +39,6 @@ export function FleetTickerBanner({ vehicles, onSelectVehicle }: FleetTickerBann
       name: f.name.toUpperCase(),
       tag: f.tag.toUpperCase(),
       price: f.price.toUpperCase(),
-      rawVehicle: null,
     }))
   }, [vehicles])
 
@@ -57,22 +54,13 @@ export function FleetTickerBanner({ vehicles, onSelectVehicle }: FleetTickerBann
       <div className="fleet-ticker-track" aria-hidden="false">
         {duplicatedItems.map((item, index) => (
           <span key={`${item.id}-${index}`} className="fleet-ticker-segment">
-            <button
-              type="button"
-              className="fleet-ticker-item"
-              onClick={() => {
-                if (item.rawVehicle && onSelectVehicle) {
-                  onSelectVehicle(item.rawVehicle)
-                }
-              }}
-              title={item.rawVehicle ? `View ${item.name}` : undefined}
-            >
+            <span className="fleet-ticker-item">
               <span className="ticker-car-name">{item.name}</span>
               <span className="ticker-car-dot" aria-hidden="true">•</span>
               <span className="ticker-car-tag">{item.tag}</span>
               <span className="ticker-car-dot" aria-hidden="true">•</span>
               <span className="ticker-car-price">{item.price}</span>
-            </button>
+            </span>
             <span className="fleet-ticker-sep" aria-hidden="true">•</span>
           </span>
         ))}

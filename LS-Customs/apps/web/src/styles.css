@@ -4674,6 +4674,7 @@ html { scroll-behavior: smooth; }
   mask-image: linear-gradient(90deg, transparent 0%, #000 36px, #000 calc(100% - 36px), transparent 100%);
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 36px, #000 calc(100% - 36px), transparent 100%);
   user-select: none;
+  pointer-events: none;
 }
 
 .fleet-ticker-track {
@@ -4713,15 +4714,8 @@ html { scroll-behavior: smooth; }
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #334155;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  cursor: default;
   white-space: nowrap;
-}
-
-.fleet-ticker-item:hover {
-  background: #f1f5f9;
-  color: #0f172a;
 }
 
 .ticker-car-name {
