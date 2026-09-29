@@ -9,11 +9,14 @@ import 'leaflet/dist/leaflet.css';
 import './styles.css';
 import './admin.css';
 import { App } from './App';
+import { ToastProvider } from './components/common/ToastProvider';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <IonApp>
-      <App />
+      <ToastProvider>
+        <App />
+      </ToastProvider>
     </IonApp>
   </StrictMode>,
 );

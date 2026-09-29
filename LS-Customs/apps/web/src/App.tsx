@@ -6,7 +6,6 @@
 import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react'
 import { X } from 'lucide-react'
 import { supabase } from './supabaseClient'
-import { ToastProvider } from './components/common/ToastProvider'
 import { useAuth } from './hooks/useAuth'
 import { useAdminAuth } from './hooks/useAdminAuth'
 import { navItems } from './data/navigation'
@@ -314,7 +313,6 @@ export function App() {
   }
 
   return (
-    <ToastProvider>
     <RootErrorBoundary>
       <TicketRealtimeProvider userId={userId ?? null} userRole="customer">
         <div className="app-frame">
@@ -464,6 +462,5 @@ export function App() {
         </div>
       </TicketRealtimeProvider>
     </RootErrorBoundary>
-    </ToastProvider>
   )
 }

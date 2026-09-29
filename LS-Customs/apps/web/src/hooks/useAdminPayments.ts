@@ -90,7 +90,7 @@ export function useAdminPayments(): UseAdminPaymentsResult {
           customer_id: row.customer_id,
           amount: row.amount,
           currency: row.currency,
-          provider: 'paymongo',
+          provider: row.provider ?? 'paymongo',
           provider_reference: row.provider_reference,
           status: row.status,
           created_at: row.created_at,

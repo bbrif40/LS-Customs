@@ -50,9 +50,9 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         </button>
         <div className="auth-logo">✳</div>
         <p className="eyebrow">WELCOME TO LS CUSTOMS</p>
-        <h2 id="auth-title">Welcome back.</h2>
+        <h2 id="auth-title">{mode === 'create-account' ? 'Create an account.' : 'Welcome back.'}</h2>
         <p className="auth-description">
-          Sign in to access your rentals, mechanic services, and AI assistant.
+          Sign in or create an account to access your rentals, mechanic services, and AI assistant.
         </p>
 
         {error && (
@@ -70,17 +70,8 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
           <span>G</span> {loading ? 'Connecting...' : 'Continue with Google'}
         </button>
 
-        <p className="auth-switch">
-          New to LS Customs?
-          <button
-            type="button"
-            onClick={() => {
-              onModeChange('create-account')
-              setError('')
-            }}
-          >
-            Create an account
-          </button>
+        <p className="auth-switch" style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', marginTop: '14px', lineHeight: '1.5' }}>
+          New to LS Customs? Signing in with Google automatically creates your account with no additional setup needed.
         </p>
 
         <small className="auth-legal">

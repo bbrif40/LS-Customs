@@ -3,6 +3,8 @@
  *
  * Sends a transactional booking / rental / service receipt email to a customer via Resend.
  *
+ * Auth: Requires an authenticated JWT. Caller must be an admin OR the booking owner.
+ *
  * Receives:
  * - customerName: Customer's display name
  * - customerEmail: Customer's email address
@@ -17,7 +19,10 @@
  */
 
 import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
-import { createServiceClient } from "../_shared/supabaseClient.ts";
+import {
+  createServiceClient,
+  extractJwt,
+} from "../_shared/supabaseClient.ts";
 import { sendResendReceipt, type ReceiptEmailData } from "../_shared/resend.ts";
 
 Deno.serve(async (req: Request) => {
@@ -33,6 +38,29 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // ------------------------------------------------------------------
+    // Authenticate caller
+    // ------------------------------------------------------------------
+    const jwt = extractJwt(req);
+    const supabase = createServiceClient();
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(jwt);
+    if (userError || !userData?.user) {
+      return jsonResponse(null, {
+        code: "UNAUTHENTICATED",
+        message: userError?.message ?? "Missing or invalid JWT",
+      }, 401);
+    }
+    const callerId = userData.user.id;
+
+    // Check if caller is admin
+    const { data: callerProfile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", callerId)
+      .maybeSingle();
+    const isAdmin = callerProfile?.role === "admin";
+
     const body = await req.json().catch(() => ({}));
     let {
       paymentId,
@@ -47,8 +75,6 @@ Deno.serve(async (req: Request) => {
     let customerName = body.customerName;
     let customerEmail = body.customerEmail;
 
-    const supabase = createServiceClient();
-
     // 1. If paymentId is passed, resolve payment row
     if (paymentId && (!bookingId || amount === undefined)) {
       const { data: pay } = await supabase
@@ -58,6 +84,13 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (pay) {
+        // Ownership check: caller must own the payment or be admin
+        if (!isAdmin && pay.customer_id !== callerId) {
+          return jsonResponse(null, {
+            code: "FORBIDDEN",
+            message: "You do not own this payment",
+          }, 403);
+        }
         bookingId = bookingId || pay.booking_id;
         bookingType = bookingType || (pay.booking_type === "vehicle" ? "rental" : "service");
         amount = amount !== undefined ? amount : pay.amount;
@@ -74,6 +107,14 @@ Deno.serve(async (req: Request) => {
           .maybeSingle();
 
         if (vb) {
+          // Ownership check
+          if (!isAdmin && vb.customer_id !== callerId) {
+            return jsonResponse(null, {
+              code: "FORBIDDEN",
+              message: "You do not own this booking",
+            }, 403);
+          }
+
           amount = amount !== undefined ? amount : vb.total_price;
           itemTitle = itemTitle || (vb.vehicles as any)?.name || "Premium Vehicle Rental";
           scheduledDate = scheduledDate || `From ${vb.start_date || "Scheduled Date"}`;
@@ -88,23 +129,56 @@ Deno.serve(async (req: Request) => {
 
               customerName = customerName || profile?.full_name || "Valued Customer";
 
-              const { data: userData } = await supabase.auth.admin.getUserById(vb.customer_id);
-              customerEmail = customerEmail || userData?.user?.email;
+              const { data: userDataRow } = await supabase.auth.admin.getUserById(vb.customer_id);
+              customerEmail = customerEmail || userDataRow?.user?.email;
             }
           }
         }
       } else {
+        // Fix M-6: Use correct schema columns for service_bookings
         const { data: sb } = await supabase
           .from("service_bookings")
-          .select("customer_id, services(name), scheduled_at, price, location_address")
+          .select("customer_id, scheduled_at, total_price, pin_lat, pin_lng, address_id")
           .eq("id", bookingId)
           .maybeSingle();
 
         if (sb) {
-          amount = amount !== undefined ? amount : sb.price;
-          itemTitle = itemTitle || (sb.services as any)?.name || "Mobile Mechanic Service";
+          // Ownership check
+          if (!isAdmin && sb.customer_id !== callerId) {
+            return jsonResponse(null, {
+              code: "FORBIDDEN",
+              message: "You do not own this booking",
+            }, 403);
+          }
+
+          amount = amount !== undefined ? amount : sb.total_price;
+
+          // Resolve service names from service_booking_items
+          if (!itemTitle) {
+            try {
+              const { data: items } = await supabase
+                .from("service_booking_items")
+                .select("mechanic_services(name)")
+                .eq("service_booking_id", bookingId);
+              const serviceNames = (items as any[])?.map((i) => i.mechanic_services?.name).filter(Boolean).join(", ");
+              itemTitle = serviceNames || "Mobile Mechanic Service";
+            } catch {
+              itemTitle = "Mobile Mechanic Service";
+            }
+          }
+
           scheduledDate = scheduledDate || (sb.scheduled_at ? new Date(sb.scheduled_at).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }) : "As Scheduled");
-          location = location || sb.location_address || "On-site / Customer Location";
+
+          // Resolve address if address_id is present
+          if (!location && sb.address_id) {
+            const { data: addr } = await supabase
+              .from("addresses")
+              .select("line1, city")
+              .eq("id", sb.address_id)
+              .maybeSingle();
+            location = addr ? `${addr.line1}, ${addr.city}` : "On-site / Customer Location";
+          }
+          location = location || "On-site / Customer Location";
 
           if (!customerName || !customerEmail) {
             if (sb.customer_id) {
@@ -116,16 +190,22 @@ Deno.serve(async (req: Request) => {
 
               customerName = customerName || profile?.full_name || "Valued Customer";
 
-              const { data: userData } = await supabase.auth.admin.getUserById(sb.customer_id);
-              customerEmail = customerEmail || userData?.user?.email;
+              const { data: userDataRow } = await supabase.auth.admin.getUserById(sb.customer_id);
+              customerEmail = customerEmail || userDataRow?.user?.email;
             }
           }
         }
       }
     }
 
+    // Fix C-5: If no customer email could be resolved, skip sending instead
+    // of falling back to a hardcoded personal address.
     if (!customerEmail) {
-      customerEmail = Deno.env.get("RESEND_FALLBACK_EMAIL") || "bbri7198@gmail.com";
+      console.warn("[send-receipt] Could not resolve customer email — skipping send.");
+      return jsonResponse(null, {
+        code: "MISSING_EMAIL",
+        message: "Could not resolve customer email address. Receipt not sent.",
+      }, 422);
     }
 
     if (!bookingId && !paymentId) {
@@ -169,6 +249,14 @@ Deno.serve(async (req: Request) => {
     }, null, 200);
 
   } catch (err: unknown) {
+    // Handle non-Error throws (e.g., from extractJwt)
+    if (err && typeof err === "object" && "status" in err) {
+      const errObj = err as { code: string; message: string; status: number };
+      return jsonResponse(null, {
+        code: errObj.code ?? "UNAUTHENTICATED",
+        message: errObj.message,
+      }, errObj.status);
+    }
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[send-receipt] Unhandled exception:", msg);
     return jsonResponse(null, {

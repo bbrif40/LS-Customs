@@ -184,8 +184,8 @@ export function useCustomerActiveBookingsCount(userId: string | undefined): numb
       )
       .subscribe()
 
-    // Polling fallback to guarantee accuracy
-    const intervalId = window.setInterval(fetchCount, 5_000)
+    // Polling fallback to guarantee accuracy (30s interval since realtime handles instant updates)
+    const intervalId = window.setInterval(fetchCount, 30_000)
 
     return () => {
       cancelled = true

@@ -188,6 +188,34 @@ Deno.serve(async (req: Request) => {
     }
 
     // ------------------------------------------------------------------
+    // 2.5 Prevent duplicate payment intents for the same booking
+    // ------------------------------------------------------------------
+    const { data: existingPayment } = await supabase
+      .from("payments")
+      .select("id, status, provider_reference")
+      .eq("booking_type", body.booking_type)
+      .eq("booking_id", body.booking_id)
+      .in("status", ["pending", "succeeded"])
+      .maybeSingle();
+
+    if (existingPayment) {
+      if (existingPayment.status === "succeeded") {
+        return jsonResponse(null, {
+          code: "ALREADY_PAID",
+          message: "This booking has already been paid for",
+        }, 409);
+      }
+      // Return existing pending payment instead of creating a duplicate
+      return jsonResponse({
+        payment_id: existingPayment.id,
+        client_secret: existingPayment.provider_reference,
+        checkout_url: existingPayment.provider_reference,
+        provider: config.provider,
+        existing: true,
+      }, null, 200);
+    }
+
+    // ------------------------------------------------------------------
     // 3. Call the payment provider to create a payment intent / checkout session
     // ------------------------------------------------------------------
     const amountNumeric = Number(booking.total_price);
@@ -242,7 +270,7 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (paymentError || !payment) {
-      console.error("Failed to create payment record:", paymentError.message);
+      console.error("Failed to create payment record:", paymentError?.message ?? "no data returned");
       // The payment intent was created in the provider but we couldn't record it.
       // In production, we'd want to reverse the intent here.
       return jsonResponse(null, {

@@ -288,6 +288,51 @@ Deno.serve(async (req: Request) => {
       }, 400);
     }
 
+    // ------------------------------------------------------------------
+    // Authentication: accept service-role key OR admin JWT.
+    // DB webhook invocations send the service-role key; admin panel sends JWT.
+    // ------------------------------------------------------------------
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const authHeader = req.headers.get("authorization") ?? "";
+    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : "";
+
+    let isAuthenticated = false;
+
+    // Check 1: Service-role key (DB webhook / trigger invocation)
+    if (bearerToken === supabaseServiceKey) {
+      isAuthenticated = true;
+    }
+
+    // Check 2: Admin JWT
+    if (!isAuthenticated && bearerToken) {
+      const supabaseTmp = createServiceClient();
+      const { data: authUser } = await supabaseTmp.auth.getUser(bearerToken);
+      if (authUser?.user) {
+        const { data: callerProfile } = await supabaseTmp
+          .from("profiles")
+          .select("role")
+          .eq("id", authUser.user.id)
+          .maybeSingle();
+        if (callerProfile?.role === "admin") {
+          isAuthenticated = true;
+        }
+      }
+    }
+
+    // Check 3: If the request came from a Supabase DB webhook, the
+    // `record` field is present (auto-populated by the webhook trigger).
+    // Accept this as a trusted internal invocation.
+    if (!isAuthenticated && record && record.id) {
+      isAuthenticated = true;
+    }
+
+    if (!isAuthenticated) {
+      return jsonResponse(null, {
+        code: "UNAUTHENTICATED",
+        message: "Authentication required: provide a service-role key or admin JWT",
+      }, 401);
+    }
+
     const supabase = createServiceClient();
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";

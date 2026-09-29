@@ -51,6 +51,7 @@ export function useServices(): UseServicesResult {
       const { data, error: queryError } = await supabase
         .from('mechanic_services')
         .select('id, main_category, name, description, base_price, estimated_duration_minutes, is_active')
+        .eq('is_active', true)
         .order('main_category', { ascending: true })
 
       if (queryError) throw queryError

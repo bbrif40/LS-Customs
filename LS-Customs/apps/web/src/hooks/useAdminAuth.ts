@@ -83,10 +83,6 @@ export function useAdminAuth(): UseAdminAuthReturn {
       const name = resolveDisplayName(session)
       setUserName(name)
       setUserEmail(session.user.email || '')
-      sessionStorage.setItem('lsc_admin_auth', 'true')
-      sessionStorage.setItem('lsc_admin_role', userRole)
-      sessionStorage.setItem('lsc_admin_user', name)
-      sessionStorage.setItem('lsc_admin_email', session.user.email || '')
     } else {
       // Non-admin session present (or no role). The admin dashboard is gated
       // by `isAuthenticated`, so we just keep local state clean here. We do
@@ -177,10 +173,6 @@ export function useAdminAuth(): UseAdminAuthReturn {
         // Ignore
       }
     }
-    sessionStorage.removeItem('lsc_admin_auth')
-    sessionStorage.removeItem('lsc_admin_role')
-    sessionStorage.removeItem('lsc_admin_user')
-    sessionStorage.removeItem('lsc_admin_email')
     clearAdminSession()
   }
 

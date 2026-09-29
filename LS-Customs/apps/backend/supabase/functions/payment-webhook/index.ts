@@ -228,12 +228,24 @@ Deno.serve(async (req: Request) => {
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("payment-webhook error:", message);
-    // Even on error, return 200 to prevent provider retries
-    // unless it's a signature failure (which we handle above).
+
+    // Distinguish transient errors (DB failures, network issues) from
+    // permanent ones (bad data shape, unknown event types). Transient
+    // errors should return 500 so the payment provider retries the webhook.
+    const isTransient =
+      message.includes("fetch") ||
+      message.includes("network") ||
+      message.includes("timeout") ||
+      message.includes("connect") ||
+      message.includes("ECONNREFUSED") ||
+      message.includes("503") ||
+      message.includes("502") ||
+      (err instanceof Error && err.name === "TypeError");
+
     return new Response(
-      JSON.stringify({ received: false }),
+      JSON.stringify({ received: false, retryable: isTransient }),
       {
-        status: 200,
+        status: isTransient ? 500 : 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",

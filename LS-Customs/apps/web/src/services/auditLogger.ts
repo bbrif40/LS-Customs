@@ -98,6 +98,15 @@ export async function logRecordView(params: {
     return // Skip duplicate view within throttle window
   }
 
+  // Periodic eviction of expired entries to avoid unbounded memory growth
+  if (viewThrottleCache.size > 100) {
+    for (const [key, timestamp] of viewThrottleCache.entries()) {
+      if (now - timestamp > VIEW_THROTTLE_MS) {
+        viewThrottleCache.delete(key)
+      }
+    }
+  }
+
   viewThrottleCache.set(cacheKey, now)
 
   await logAdminAudit({

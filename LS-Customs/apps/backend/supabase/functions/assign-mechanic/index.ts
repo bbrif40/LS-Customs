@@ -88,34 +88,47 @@ Deno.serve(async (req: Request) => {
     // ------------------------------------------------------------------
     // Determine caller identity (if authenticated)
     // ------------------------------------------------------------------
-    // Per API.md §2.1: accepts either a customer JWT or a service-role
-    // call from a DB webhook. No JWT → trusted webhook invocation.
+    // Per API.md §2.1: accepts either a customer/admin JWT or a service-role
+    // call from a DB webhook. Service-role key must be explicitly verified.
     const supabase = createServiceClient();
     let callerId: string | null = null;
+    let isServiceRole = false;
 
-    try {
-      const jwt = extractJwt(req);
-      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-      const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
-        method: "GET",
-        headers: {
-          "apikey": anonKey,
-          "Authorization": `Bearer ${jwt}`,
-        },
-      });
-      if (!userRes.ok) {
+    const authHeader = req.headers.get("authorization") ?? "";
+    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+    // Check if this is a service-role invocation (DB webhook)
+    if (bearerToken && bearerToken === serviceRoleKey) {
+      isServiceRole = true;
+    } else {
+      // Try to authenticate as a regular user
+      try {
+        const jwt = extractJwt(req);
+        const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+        const userRes = await fetch(`${supabaseUrl}/auth/v1/user`, {
+          method: "GET",
+          headers: {
+            "apikey": anonKey,
+            "Authorization": `Bearer ${jwt}`,
+          },
+        });
+        if (!userRes.ok) {
+          return jsonResponse(null, {
+            code: "UNAUTHENTICATED",
+            message: "Invalid or expired JWT",
+          }, 401);
+        }
+        const user = await userRes.json();
+        callerId = user.id;
+      } catch {
+        // No valid JWT and not service-role — reject
         return jsonResponse(null, {
           code: "UNAUTHENTICATED",
-          message: "Invalid or expired JWT",
+          message: "Authentication required: provide a valid JWT or service-role key",
         }, 401);
       }
-      const user = await userRes.json();
-      callerId = user.id;
-    } catch {
-      // No JWT provided — assume service-role/webhook invocation.
-      // The caller is trusted (DB webhook), so we proceed without
-      // an ownership check.
     }
 
     // ------------------------------------------------------------------

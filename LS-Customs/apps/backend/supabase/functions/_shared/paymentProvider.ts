@@ -332,11 +332,9 @@ async function createStripePaymentIntent(
   const params = new URLSearchParams({
     amount: amountInCents.toString(),
     currency: "php",
-    metadata: JSON.stringify({
-      booking_type: bookingType,
-      booking_id: bookingId,
-      customer_id: userId,
-    }),
+    "metadata[booking_type]": bookingType,
+    "metadata[booking_id]": bookingId,
+    "metadata[customer_id]": userId,
   });
 
   const headers: Record<string, string> = {

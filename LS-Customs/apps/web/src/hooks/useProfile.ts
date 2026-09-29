@@ -96,6 +96,10 @@ export function useProfile(userId: string | undefined): UseProfileResult {
         if (Object.prototype.hasOwnProperty.call(updates, 'avatar_url')) {
           window.dispatchEvent(new CustomEvent('ls-profile-updated', { detail: { avatarUrl: updates.avatar_url ?? null } }))
         }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to update profile'
+        setError(msg)
+        throw err
       } finally {
         setSaving(false)
       }
@@ -147,6 +151,10 @@ export function useProfile(userId: string | undefined): UseProfileResult {
           if (insertError) throw insertError
           setDefaultAddress(data as DefaultAddress)
         }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to save address'
+        setError(msg)
+        throw err
       } finally {
         setSaving(false)
       }

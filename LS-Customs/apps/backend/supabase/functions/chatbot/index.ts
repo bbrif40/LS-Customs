@@ -490,6 +490,28 @@ Deno.serve(async (req: Request) => {
   const userMessage: string = body.message?.trim() ||
     (history.length > 0 ? history[history.length - 1]?.content?.trim() || "" : "");
 
+  // ------------------------------------------------------------------
+  // Security: when user_id is provided, verify it matches the caller's
+  // JWT. This prevents spoofing ticket creation and booking lookups.
+  // Anonymous chatbot use (no user_id) is still allowed for public FAQ.
+  // ------------------------------------------------------------------
+  let verifiedUserId: string | undefined = undefined;
+  if (body.user_id) {
+    const authHeader = req.headers.get("authorization") ?? "";
+    if (authHeader.startsWith("Bearer ")) {
+      const jwt = authHeader.substring(7);
+      const supabaseAuth = createServiceClient();
+      const { data: authData } = await supabaseAuth.auth.getUser(jwt);
+      if (authData?.user?.id === body.user_id) {
+        verifiedUserId = body.user_id;
+      } else {
+        // JWT doesn't match user_id — ignore user_id to prevent spoofing
+        console.warn(`[chatbot] user_id mismatch: body=${body.user_id}, jwt=${authData?.user?.id ?? "none"}`);
+      }
+    }
+    // If no JWT provided but user_id was sent, ignore user_id
+  }
+
   try {
     if (!userMessage) {
       return jsonResponse(null, {
@@ -503,18 +525,18 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({
         conversation_id: body.conversation_id || crypto.randomUUID(),
         reply: "I'm here to help with LS Customs car rentals and mobile mechanic services. Would you like assistance with vehicle bookings, repair estimates, or our service rates?",
-        context_used: !!body.user_id,
+        context_used: !!verifiedUserId,
         model: "guardrail",
       }, null, 200);
     }
 
     // Handle ticket creation request
-    if (body.user_id && wantsToCreateTicket(userMessage)) {
+    if (verifiedUserId && wantsToCreateTicket(userMessage)) {
       const supabase = createServiceClient();
       const category = categorizeTicket(userMessage);
       const ticket = await createSupportTicket(
         supabase,
-        body.user_id,
+        verifiedUserId,
         "Support Request via Chatbot",
         userMessage,
         category,
@@ -537,7 +559,7 @@ Deno.serve(async (req: Request) => {
     const supabase = createServiceClient();
     const [liveData, bookings] = await Promise.all([
       getLiveSystemData(supabase),
-      body.user_id ? getUserContext(supabase, body.user_id) : Promise.resolve(null),
+      verifiedUserId ? getUserContext(supabase, verifiedUserId) : Promise.resolve(null),
     ]);
 
     const liveDataBlock = buildLiveDataBlock(liveData);
@@ -583,7 +605,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       conversation_id: body.conversation_id || crypto.randomUUID(),
       reply,
-      context_used: !!body.user_id,
+      context_used: !!verifiedUserId,
       model,
     }, null, 200);
   } catch (err) {
