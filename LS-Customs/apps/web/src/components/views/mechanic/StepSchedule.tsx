@@ -1,10 +1,10 @@
 /**
- * StepSchedule — pick a date and a time slot. Surfaces the service
- * duration so the user can plan accordingly. Next is disabled until
- * both date and time are set.
+ * StepSchedule — interactive calendar & time slot picker.
+ * Redesigned for supreme mobile usability, intuitive calendar navigation,
+ * quick date chips, and grouped time slots.
  */
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
-import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock3 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Sparkles, Sun, Sunset } from 'lucide-react'
 import type { Service } from '../../../types'
 
 interface StepScheduleProps {
@@ -16,19 +16,24 @@ interface StepScheduleProps {
   onNext: () => void
 }
 
-const TIME_SLOTS = [
+const MORNING_SLOTS = [
   '08:00', '08:30',
   '09:00', '09:30',
   '10:00', '10:30',
   '11:00', '11:30',
+]
+
+const AFTERNOON_SLOTS = [
   '13:00', '13:30',
   '14:00', '14:30',
   '15:00', '15:30',
   '16:00', '16:30',
 ]
 
+const ALL_SLOTS = [...MORNING_SLOTS, ...AFTERNOON_SLOTS]
+
 function isSlotDisabled(slot: string, selectedDate: string | null): boolean {
-  if (selectedDate === null) return false
+  if (!selectedDate) return false
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const selected = new Date(selectedDate + 'T00:00:00')
@@ -38,9 +43,8 @@ function isSlotDisabled(slot: string, selectedDate: string | null): boolean {
     const [slotHour, slotMinute] = slot.split(':').map(Number)
     const currentMinutes = now.getHours() * 60 + now.getMinutes()
     const slotMinutes = slotHour * 60 + slotMinute
-    return slotMinutes < currentMinutes
+    return slotMinutes <= currentMinutes
   }
-  // Future dates: all slots available
   return false
 }
 
@@ -55,19 +59,13 @@ function toDateString(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
-function shortLabel(d: Date): { day: string; date: string } {
-  return {
-    day: d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase(),
-    date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-  }
-}
-
 function fullDateLabel(iso: string): string {
   const [year, month, day] = iso.split('-').map(Number)
   return new Date(year, month - 1, day).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
+    weekday: 'short',
+    month: 'short',
     day: 'numeric',
+    year: 'numeric',
   })
 }
 
@@ -87,194 +85,299 @@ function getInitialTimeFormat(): TimeFormat {
   return new Intl.DateTimeFormat(undefined, { hour: 'numeric' }).resolvedOptions().hour12 ? '12h' : '24h'
 }
 
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
 export function StepSchedule({ service, date, time, onChange, onBack, onNext }: StepScheduleProps) {
-  const [carouselDirection, setCarouselDirection] = useState<'next' | 'previous'>('next')
   const [timeFormat, setTimeFormat] = useState<TimeFormat>(getInitialTimeFormat)
-  const dates = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    let totalForwardDays = 60
+
+  const today = useMemo(() => {
+    const t = new Date()
+    t.setHours(0, 0, 0, 0)
+    return t
+  }, [])
+  const todayIso = useMemo(() => toDateString(today), [today])
+
+  // Calendar view month & year
+  const [viewYear, setViewYear] = useState<number>(() => {
     if (date) {
-      const [y, m, d] = date.split('-').map(Number)
-      const selected = new Date(y, m - 1, d)
-      const diff = Math.ceil((selected.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-      if (diff + 14 > totalForwardDays) {
-        totalForwardDays = diff + 14
+      const [y] = date.split('-').map(Number)
+      if (!isNaN(y)) return y
+    }
+    return today.getFullYear()
+  })
+
+  const [viewMonth, setViewMonth] = useState<number>(() => {
+    if (date) {
+      const [, m] = date.split('-').map(Number)
+      if (!isNaN(m)) return m - 1
+    }
+    return today.getMonth()
+  })
+
+  // Synchronize calendar view if date changes externally
+  useEffect(() => {
+    if (date) {
+      const [y, m] = date.split('-').map(Number)
+      if (!isNaN(y) && !isNaN(m)) {
+        setViewYear(y)
+        setViewMonth(m - 1)
       }
     }
-    return Array.from({ length: totalForwardDays + 3 }, (_, i) => {
-      const d = new Date(today)
-      const offset = i - 3
-      d.setDate(today.getDate() + offset)
-      return {
-        iso: toDateString(d),
-        ...shortLabel(d),
-        isToday: offset === 0,
-        isAvailable: offset >= 0,
-      }
-    })
   }, [date])
-
-  const canProceed = date !== null && time !== null
-  const firstAvailableIndex = dates.findIndex((item) => item.isAvailable)
-  const lastAvailableIndex = dates.reduce((lastIndex, item, index) => item.isAvailable ? index : lastIndex, -1)
-  const activeDateIndex = date
-    ? Math.max(0, dates.findIndex((item) => item.iso === date))
-    : firstAvailableIndex
-  const selectedDate = date ? fullDateLabel(date) : 'Select a date'
-  const selectedAppointment = date && time
-    ? `${selectedDate} at ${formatTime(time, timeFormat)}`
-    : date
-    ? `${selectedDate} · Select your preferred time`
-    : 'Choose your appointment date & time'
 
   useEffect(() => {
     window.localStorage.setItem(TIME_FORMAT_STORAGE_KEY, timeFormat)
   }, [timeFormat])
 
-  function selectDate(nextDate: string, nextIndex: number) {
-    if (!dates[nextIndex]?.isAvailable) return
-    setCarouselDirection(nextIndex >= activeDateIndex ? 'next' : 'previous')
-    onChange(nextDate, time)
+  // Month navigation boundaries (cannot go into the past, max 3 months forward)
+  const canGoPrevMonth = viewYear > today.getFullYear() || (viewYear === today.getFullYear() && viewMonth > today.getMonth())
+  const maxViewDate = useMemo(() => new Date(today.getFullYear(), today.getMonth() + 3, 1), [today])
+  const canGoNextMonth = viewYear < maxViewDate.getFullYear() || (viewYear === maxViewDate.getFullYear() && viewMonth < maxViewDate.getMonth())
+
+  function handlePrevMonth() {
+    if (!canGoPrevMonth) return
+    if (viewMonth === 0) {
+      setViewYear((y) => y - 1)
+      setViewMonth(11)
+    } else {
+      setViewMonth((m) => m - 1)
+    }
   }
 
-  function moveDate(direction: 'next' | 'previous') {
-    const nextIndex = activeDateIndex + (direction === 'next' ? 1 : -1)
-    if (nextIndex < firstAvailableIndex || nextIndex > lastAvailableIndex) return
-    setCarouselDirection(direction)
-    onChange(dates[nextIndex].iso, time)
+  function handleNextMonth() {
+    if (!canGoNextMonth) return
+    if (viewMonth === 11) {
+      setViewYear((y) => y + 1)
+      setViewMonth(0)
+    } else {
+      setViewMonth((m) => m + 1)
+    }
   }
+
+  // Quick pick dates: Today, Tomorrow, Upcoming Saturday
+  const quickPicks = useMemo(() => {
+    const list = []
+
+    // 1. Today
+    list.push({
+      label: 'Today',
+      sub: today.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      iso: todayIso,
+    })
+
+    // 2. Tomorrow
+    const tom = new Date(today)
+    tom.setDate(today.getDate() + 1)
+    list.push({
+      label: 'Tomorrow',
+      sub: tom.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      iso: toDateString(tom),
+    })
+
+    // 3. Upcoming Saturday
+    const daysUntilSat = (6 - today.getDay() + 7) % 7 || 7
+    const sat = new Date(today)
+    sat.setDate(today.getDate() + daysUntilSat)
+    list.push({
+      label: 'This Saturday',
+      sub: sat.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      iso: toDateString(sat),
+    })
+
+    return list
+  }, [today, todayIso])
+
+  function selectDate(targetIso: string) {
+    const [y, m] = targetIso.split('-').map(Number)
+    if (!isNaN(y) && !isNaN(m)) {
+      setViewYear(y)
+      setViewMonth(m - 1)
+    }
+    // If selecting a new date causes the existing time slot to be invalid (e.g. past slot today), reset time
+    let nextTime = time
+    if (nextTime && isSlotDisabled(nextTime, targetIso)) {
+      nextTime = null
+    }
+    onChange(targetIso, nextTime)
+  }
+
+  // Generate calendar days for the current viewMonth
+  const calendarGrid = useMemo(() => {
+    const totalDays = new Date(viewYear, viewMonth + 1, 0).getDate()
+    const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay() // 0 = Sun ... 6 = Sat
+
+    const days: {
+      dayNumber: number
+      iso: string
+      isPast: boolean
+      isToday: boolean
+      isSelected: boolean
+    }[] = []
+
+    for (let day = 1; day <= totalDays; day++) {
+      const iso = `${viewYear}-${pad(viewMonth + 1)}-${pad(day)}`
+      const cellDate = new Date(viewYear, viewMonth, day)
+      cellDate.setHours(0, 0, 0, 0)
+      const isPast = cellDate.getTime() < today.getTime()
+      const isToday = iso === todayIso
+      const isSelected = iso === date
+
+      days.push({
+        dayNumber: day,
+        iso,
+        isPast,
+        isToday,
+        isSelected,
+      })
+    }
+
+    return {
+      firstDayIndex,
+      days,
+    }
+  }, [viewYear, viewMonth, today, todayIso, date])
+
+  const monthLabel = useMemo(() => {
+    return new Date(viewYear, viewMonth, 1).toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+    })
+  }, [viewYear, viewMonth])
+
+  const canProceed = Boolean(date && time)
+
+  const selectedSummary = useMemo(() => {
+    if (date && time) {
+      return `${fullDateLabel(date)} at ${formatTime(time, timeFormat)}`
+    }
+    if (date) {
+      return `${fullDateLabel(date)} · Please choose an available time slot`
+    }
+    return 'Select a date and time slot to book your mechanic'
+  }, [date, time, timeFormat])
 
   return (
     <section className="step-panel">
       <header className="step-panel-head">
         <button type="button" className="text-button step-back" onClick={onBack}>
-          <ChevronLeft size={15} /> Back
+          <ChevronLeft size={16} /> Back
         </button>
         <p className="eyebrow">STEP 3 OF 5</p>
         <h2>Pick a date & time</h2>
         <p className="muted schedule-intro">
-          {service ? `${service.name} · Est. ${service.duration}` : 'Choose a service first.'}
+          {service ? `${service.name} · Est. ${service.duration}` : 'Choose your preferred appointment schedule.'}
         </p>
       </header>
 
-      {date && (
-        <div
-          style={{
-            margin: '0 0 16px',
-            padding: '12px 16px',
-            background: '#edf7f0',
-            border: '1px solid #bbf7d0',
-            borderRadius: 12,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 12,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: '50%',
-                background: '#35684f',
-                color: '#ffffff',
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Check size={16} />
-            </div>
-            <div>
-              <strong style={{ fontSize: 13, color: '#14532d', display: 'block' }}>
-                Date set: {selectedDate}
-              </strong>
-              <span style={{ fontSize: 12, color: '#166534' }}>
-                {time
-                  ? `Time selected: ${formatTime(time, timeFormat)}`
-                  : 'Your date is already set from the calendar. Please select your time slot below.'}
-              </span>
-            </div>
-          </div>
-          <span
-            style={{
-              fontSize: 11,
-              color: '#2b6b47',
-              fontWeight: 600,
-              background: '#dcfce7',
-              padding: '4px 10px',
-              borderRadius: 20,
-            }}
-          >
-            Calendar Date
+      {/* Appointment Selection Bar */}
+      <div className={`schedule-selection-bar ${date && time ? 'has-selection' : ''}`} role="status">
+        <CalendarDays size={18} aria-hidden="true" />
+        <span className="selection-text">{selectedSummary}</span>
+        {date && time && (
+          <span className="selection-badge">
+            <Check size={14} /> Confirmed
           </span>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="schedule-picker">
-        <div className="schedule-selection-bar" role="status">
-          <CalendarDays size={16} aria-hidden="true" />
-          <span>{selectedAppointment}</span>
-          {date && time && <Check size={16} aria-label="Appointment selected" />}
-        </div>
-
         <div className="schedule-picker-body">
+          {/* LEFT: Calendar & Quick Picks */}
           <div className="schedule-block schedule-date-panel">
             <div className="schedule-section-heading">
               <div>
-                <p className="eyebrow">DATE</p>
-                <h3>{dates[Math.max(0, activeDateIndex)]?.date?.split(' ')[0] ?? dates[0].date.split(' ')[0]} {dates[Math.max(0, activeDateIndex)]?.iso?.slice(0, 4) ?? dates[0].iso.slice(0, 4)}</h3>
+                <p className="eyebrow">SELECT DATE</p>
+                <h3>{date ? fullDateLabel(date) : 'Choose date'}</h3>
               </div>
-              <span className="schedule-month-note">Select Date</span>
             </div>
-            <div className={`date-carousel is-${carouselDirection}`}>
-              <button
-                type="button"
-                className="date-carousel-button date-carousel-previous"
-                onClick={() => moveDate('previous')}
-                disabled={activeDateIndex === firstAvailableIndex}
-                aria-label="Show previous date"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <div className="schedule-row" role="radiogroup" aria-label="Date" style={{ '--active-date-index': activeDateIndex } as CSSProperties}>
-                {dates.map((d, index) => (
+
+            {/* Quick date chips */}
+            <div className="quick-date-row" role="group" aria-label="Quick date selection">
+              {quickPicks.map((pick) => {
+                const isActive = date === pick.iso
+                return (
                   <button
-                    key={d.iso}
+                    key={pick.iso}
                     type="button"
-                    className={`date-tile ${date === d.iso ? 'selected' : ''}`}
-                    onClick={() => selectDate(d.iso, index)}
-                    disabled={!d.isAvailable}
-                    role="radio"
-                    aria-checked={date === d.iso}
-                    aria-label={d.isToday ? `${fullDateLabel(d.iso)}, today` : fullDateLabel(d.iso)}
+                    className={`quick-date-chip ${isActive ? 'active' : ''}`}
+                    onClick={() => selectDate(pick.iso)}
                   >
-                    <small>{d.day}</small>
-                    <strong>{d.date}</strong>
-                    {d.isToday && <span className="date-tile-tag">Today</span>}
-                    {date === d.iso && <Check className="date-tile-check" size={14} aria-hidden="true" />}
+                    <Sparkles size={12} />
+                    <span>{pick.label}</span>
+                    <small style={{ opacity: 0.85 }}>({pick.sub})</small>
                   </button>
-                ))}
+                )
+              })}
+            </div>
+
+            {/* Calendar Month Header */}
+            <div className="calendar-month-bar">
+              <h4 className="calendar-month-title">{monthLabel}</h4>
+              <div className="calendar-nav-buttons">
+                <button
+                  type="button"
+                  className="calendar-nav-btn"
+                  onClick={handlePrevMonth}
+                  disabled={!canGoPrevMonth}
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <button
+                  type="button"
+                  className="calendar-nav-btn"
+                  onClick={handleNextMonth}
+                  disabled={!canGoNextMonth}
+                  aria-label="Next month"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
-              <button
-                type="button"
-                className="date-carousel-button date-carousel-next"
-                onClick={() => moveDate('next')}
-                disabled={activeDateIndex === lastAvailableIndex}
-                aria-label="Show next date"
-              >
-                <ChevronRight size={16} />
-              </button>
+            </div>
+
+            {/* Weekdays Row */}
+            <div className="calendar-weekdays" aria-hidden="true">
+              {WEEKDAYS.map((w) => (
+                <div key={w} className="calendar-weekday">
+                  {w}
+                </div>
+              ))}
+            </div>
+
+            {/* Days Grid */}
+            <div className="calendar-days-grid" role="grid" aria-label="Calendar">
+              {/* Blank cells for offset */}
+              {Array.from({ length: calendarGrid.firstDayIndex }).map((_, i) => (
+                <div key={`blank-${i}`} className="calendar-day-cell is-empty" aria-hidden="true" />
+              ))}
+
+              {/* Day cells */}
+              {calendarGrid.days.map((item) => {
+                const dayLabel = `${item.dayNumber}, ${item.isToday ? 'Today' : ''}`
+                return (
+                  <button
+                    key={item.iso}
+                    type="button"
+                    className={`calendar-day-cell ${item.isSelected ? 'is-selected' : ''} ${item.isToday ? 'is-today' : ''} ${item.isPast ? 'is-disabled' : ''}`}
+                    disabled={item.isPast}
+                    onClick={() => selectDate(item.iso)}
+                    aria-label={dayLabel}
+                    aria-selected={item.isSelected}
+                    role="gridcell"
+                  >
+                    <span>{item.dayNumber}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
+          {/* RIGHT: Time Slots */}
           <div className="schedule-block schedule-time-panel">
             <div className="schedule-section-heading">
               <div>
-                <p className="eyebrow">TIME</p>
-                <h3>{time ? formatTime(time, timeFormat) : 'Choose a time'}</h3>
+                <p className="eyebrow">SELECT TIME</p>
+                <h3>{time ? formatTime(time, timeFormat) : 'Choose slot'}</h3>
               </div>
               <div className="time-format-control" role="group" aria-label="Time format">
                 <button
@@ -291,42 +394,87 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
                   onClick={() => setTimeFormat('24h')}
                   aria-pressed={timeFormat === '24h'}
                 >
-                  24-hour
+                  24h
                 </button>
               </div>
             </div>
-            <div className="time-grid" role="radiogroup" aria-label="Time">
-              {TIME_SLOTS.map((slot) => {
-                const disabled = isSlotDisabled(slot, date)
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    className={`time-tile ${time === slot ? 'selected' : ''}`}
-                    onClick={() => !disabled && onChange(date, slot)}
-                    disabled={disabled}
-                    role="radio"
-                    aria-checked={time === slot}
-                    aria-label={`${formatTime(slot, timeFormat)} ${Number(slot.slice(0, 2)) < 12 ? 'morning' : 'afternoon'}`}
-                  >
-                    <span>{formatTime(slot, timeFormat)}</span>
-                    {time === slot && <Check size={14} aria-hidden="true" />}
-                  </button>
-                )
-              })}
+
+            {/* Morning Slots */}
+            <div>
+              <div className="time-group-label">
+                <Sun size={14} /> Morning (8:00 AM – 11:30 AM)
+              </div>
+              <div className="time-slots-grid" role="radiogroup" aria-label="Morning time slots">
+                {MORNING_SLOTS.map((slot) => {
+                  const disabled = isSlotDisabled(slot, date)
+                  const isSelected = time === slot
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      className={`time-slot-btn ${isSelected ? 'is-selected' : ''}`}
+                      disabled={disabled}
+                      onClick={() => onChange(date, slot)}
+                      role="radio"
+                      aria-checked={isSelected}
+                    >
+                      <span>{formatTime(slot, timeFormat)}</span>
+                      {isSelected && <Check size={14} />}
+                      {disabled && <span className="slot-past-tag">Past</span>}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
+
+            {/* Afternoon Slots */}
+            <div>
+              <div className="time-group-label">
+                <Sunset size={14} /> Afternoon (1:00 PM – 4:30 PM)
+              </div>
+              <div className="time-slots-grid" role="radiogroup" aria-label="Afternoon time slots">
+                {AFTERNOON_SLOTS.map((slot) => {
+                  const disabled = isSlotDisabled(slot, date)
+                  const isSelected = time === slot
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      className={`time-slot-btn ${isSelected ? 'is-selected' : ''}`}
+                      disabled={disabled}
+                      onClick={() => onChange(date, slot)}
+                      role="radio"
+                      aria-checked={isSelected}
+                    >
+                      <span>{formatTime(slot, timeFormat)}</span>
+                      {isSelected && <Check size={14} />}
+                      {disabled && <span className="slot-past-tag">Past</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Service Duration Hint */}
             {service?.durationMinutes && (
-              <p className="form-helper">
-                <Clock3 size={12} /> Service takes about {service.durationMinutes} minutes
-              </p>
+              <div className="service-duration-hint">
+                <Clock3 size={15} />
+                <span>Estimated service duration: ~{service.durationMinutes} minutes</span>
+              </div>
             )}
           </div>
         </div>
       </div>
 
+      {/* Action Footer */}
       <div className="step-actions">
-        <button type="button" className="button dark-button" disabled={!canProceed} onClick={onNext}>
-          Continue
+        <button
+          type="button"
+          className="button dark-button"
+          disabled={!canProceed}
+          onClick={onNext}
+        >
+          {canProceed ? 'Continue to Location' : 'Select Date & Time to Continue'}
         </button>
       </div>
     </section>
