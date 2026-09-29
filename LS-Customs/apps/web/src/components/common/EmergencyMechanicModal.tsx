@@ -340,27 +340,30 @@ export function EmergencyMechanicModal({
         <div className="emergency-modal-header">
           <div className="emergency-header-title">
             <div className="emergency-pulse-icon">
-              <IonIcon icon={shieldCheckmarkOutline} style={{ fontSize: '22px' }} />
+              <IonIcon icon={shieldCheckmarkOutline} style={{ fontSize: '20px' }} />
             </div>
             <div>
-              <h2>LS Customs Roadside SOS</h2>
-              <span className="emergency-header-badge">
-                <span className="pulse-dot-red" />
-                24/7 RAPID RESPONSE DISPATCH • PHILIPPINES
-              </span>
+              <div className="emergency-brand-row">
+                <h2>LS Customs Roadside SOS</h2>
+                <span className="emergency-live-pill">
+                  <span className="live-dot" />
+                  LIVE READY
+                </span>
+              </div>
+              <p className="emergency-subtitle">24/7 Rapid Response Dispatch • Metro Manila & Luzon</p>
             </div>
           </div>
           <div className="emergency-header-actions">
             <button
-              className="emergency-sound-toggle"
+              className={`emergency-sound-toggle ${soundEnabled ? 'is-active' : ''}`}
               onClick={() => setSoundEnabled(!soundEnabled)}
               title={soundEnabled ? 'Mute radar sounds' : 'Enable radar sounds'}
               aria-label="Toggle sound"
             >
-              <IonIcon icon={soundEnabled ? volumeHighOutline : volumeMuteOutline} style={{ fontSize: '18px' }} />
+              <IonIcon icon={soundEnabled ? volumeHighOutline : volumeMuteOutline} style={{ fontSize: '17px' }} />
             </button>
             <button className="emergency-modal-close" onClick={onClose} aria-label="Close emergency modal">
-              <IonIcon icon={closeOutline} style={{ fontSize: '22px' }} />
+              <IonIcon icon={closeOutline} style={{ fontSize: '20px' }} />
             </button>
           </div>
         </div>
@@ -526,13 +529,19 @@ export function EmergencyMechanicModal({
         ) : (
           /* ── Triage & SOS Request Form (Light Mode) ──────────────── */
           <div className="emergency-modal-content">
-            {/* GPS Banner */}
+            {/* GPS Telemetry Bar */}
             <div className="emergency-gps-strip">
               <div className="gps-indicator-group">
-                <span className={`gps-status-dot ${gpsStatus}`} />
-                <div>
-                  <strong>Your Roadside GPS Location:</strong>
-                  <p>{locationLabel}</p>
+                <div className={`gps-status-indicator ${gpsStatus}`}>
+                  <span className="gps-pulse-ring" />
+                  <span className="gps-core-dot" />
+                </div>
+                <div className="gps-text-meta">
+                  <div className="gps-meta-header">
+                    <span className="gps-meta-label">LIVE SATELLITE GPS</span>
+                    <span className="gps-meta-tag">Location Calibrated</span>
+                  </div>
+                  <p className="gps-meta-location">{locationLabel}</p>
                 </div>
               </div>
               <button
@@ -541,15 +550,24 @@ export function EmergencyMechanicModal({
                 onClick={locateUser}
                 disabled={gpsStatus === 'locating'}
               >
-                <IonIcon icon={navigateOutline} style={{ fontSize: '13px' }} />
-                <span>{gpsStatus === 'locating' ? 'Locating...' : 'Re-scan GPS'}</span>
+                <IonIcon
+                  icon={navigateOutline}
+                  className={gpsStatus === 'locating' ? 'icon-spin-fast' : ''}
+                  style={{ fontSize: '13px' }}
+                />
+                <span>{gpsStatus === 'locating' ? 'Scanning...' : 'Re-scan GPS'}</span>
               </button>
             </div>
 
             {/* Scenario Selection */}
-            <div className="emergency-section-title">
-              <span>1</span> SELECT EMERGENCY SERVICE:
+            <div className="emergency-section-header">
+              <div className="section-label-group">
+                <span className="section-index-badge">01</span>
+                <h3>Select Emergency Service</h3>
+              </div>
+              <span className="section-meta-hint">Priority roadside dispatch</span>
             </div>
+
             <div className="emergency-scenarios-grid">
               {EMERGENCY_SCENARIOS.map((sc) => {
                 const isSelected = sc.id === selectedIssueId
@@ -562,25 +580,27 @@ export function EmergencyMechanicModal({
                       setSelectedIssueId(sc.id)
                       if (soundEnabled) playTacticalBeep(750, 0.05)
                     }}
+                    aria-pressed={isSelected}
                   >
-                    <div className="scenario-icon" style={{ color: sc.color, background: `${sc.color}16` }}>
-                      <IonIcon icon={sc.ionicIcon} style={{ fontSize: '20px' }} />
+                    <div className="scenario-card-header">
+                      <div className="scenario-icon-wrapper" style={{ color: sc.color, background: `${sc.color}14` }}>
+                        <IonIcon icon={sc.ionicIcon} style={{ fontSize: '19px' }} />
+                      </div>
+                      <div className={`scenario-radio-ring ${isSelected ? 'is-checked' : ''}`}>
+                        {isSelected && <IonIcon icon={checkmark} style={{ fontSize: '11px' }} />}
+                      </div>
                     </div>
                     <div className="scenario-info">
                       <h4>{sc.label}</h4>
                       <p>{sc.description}</p>
                     </div>
-                    <div className="scenario-meta">
-                      <span className="scenario-eta">
-                        <IonIcon icon={timeOutline} style={{ fontSize: '12px' }} /> {sc.avgEta}
+                    <div className="scenario-card-footer">
+                      <span className="scenario-eta-pill">
+                        <IonIcon icon={timeOutline} style={{ fontSize: '12px' }} />
+                        <span>{sc.avgEta}</span>
                       </span>
                       <strong className="scenario-price">{formatPeso(sc.cost)}</strong>
                     </div>
-                    {isSelected && (
-                      <div className="scenario-check-badge">
-                        <IonIcon icon={checkmark} style={{ fontSize: '10px' }} />
-                      </div>
-                    )}
                   </button>
                 )
               })}
@@ -588,8 +608,12 @@ export function EmergencyMechanicModal({
 
             {/* Vehicle Details Field */}
             <div className="emergency-vehicle-box">
-              <div className="emergency-section-title">
-                <span>2</span> VEHICLE & LOCATION NOTES (OPTIONAL):
+              <div className="emergency-section-header">
+                <div className="section-label-group">
+                  <span className="section-index-badge">02</span>
+                  <h3>Vehicle & Location Notes</h3>
+                </div>
+                <span className="section-meta-hint">Optional</span>
               </div>
               <div className="vehicle-input-wrapper">
                 <span className="input-icon">
@@ -607,9 +631,9 @@ export function EmergencyMechanicModal({
             {/* Dispatch Footer */}
             <div className="emergency-submit-footer">
               <div className="emergency-pricing-preview">
-                <span>Estimated Emergency Fee:</span>
-                <strong>{formatPeso(selectedScenario.cost)}</strong>
-                <small>No advance payment required. Cash or GCash upon arrival</small>
+                <span className="pricing-title">ESTIMATED DISPATCH FEE</span>
+                <strong className="pricing-value">{formatPeso(selectedScenario.cost)}</strong>
+                <small className="pricing-note">No advance charge · Pay upon arrival via Cash or GCash</small>
               </div>
 
               <button
@@ -618,15 +642,19 @@ export function EmergencyMechanicModal({
                 onClick={handleStartDispatch}
               >
                 <div className="btn-beacon-glow" />
-                <IonIcon icon={warningOutline} style={{ fontSize: '19px' }} />
-                <span>DISPATCH EMERGENCY MECHANIC NOW</span>
-                <IonIcon icon={chevronForwardOutline} style={{ fontSize: '19px' }} />
+                <IonIcon icon={warningOutline} style={{ fontSize: '18px' }} />
+                <span>DISPATCH EMERGENCY MECHANIC</span>
+                <IonIcon icon={chevronForwardOutline} style={{ fontSize: '18px' }} />
               </button>
 
               <div className="emergency-tollfree-strip">
-                <span>24/7 Roadside Assistance Hotline:</span>
+                <span>24/7 Roadside Hotline:</span>
                 <a href="tel:0288880199" className="tollfree-link">
-                  <IonIcon icon={callOutline} style={{ fontSize: '14px' }} /> (02) 8888-0199 / 0917-555-0199
+                  <IonIcon icon={callOutline} style={{ fontSize: '13px' }} /> (02) 8888-0199
+                </a>
+                <span className="hotline-dot">•</span>
+                <a href="tel:09175550199" className="tollfree-link">
+                  0917-555-0199
                 </a>
               </div>
             </div>
