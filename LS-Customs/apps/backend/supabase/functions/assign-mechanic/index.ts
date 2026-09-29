@@ -300,7 +300,7 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({
       service_booking_id: bookingId,
       mechanic_id: nearest.id,
-      mechanic_name: (nearest.profiles as { full_name: string } | null | undefined)?.full_name ?? null,
+      mechanic_name: (nearest.profiles as unknown as { full_name: string } | null | undefined)?.full_name ?? null,
       status: "assigned",
     } as AssignMechanicResponse, null, 200);
 

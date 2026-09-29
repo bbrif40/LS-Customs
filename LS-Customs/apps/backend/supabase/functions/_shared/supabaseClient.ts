@@ -42,10 +42,14 @@ export function createServiceClient() {
  */
 export function createUserClient(jwt: string) {
   return createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+    global: {
+      headers: {
+        Authorization: `Bearer ${jwt}`,
+      },
+    },
     auth: {
       persistSession: false,
       autoRefreshToken: false,
-      jwtToken: jwt,
     },
   });
 }
