@@ -1,6 +1,6 @@
 /**
  * WorkspaceFooter — sleek multi-column typographic footer with subtle line icons.
- * Replaces heavy graphics/cards with clean text columns matching reference aesthetics.
+ * Clean, modern light-mode design matching LS Customs theme.
  */
 
 import { Mail, MapPin, Phone, Clock, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react'
@@ -20,10 +20,10 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
       style={{
         display: 'block',
         width: '100%',
-        padding: '54px 6% 36px',
-        background: '#0b0f14',
-        color: '#94a3b8',
-        borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+        padding: '52px 6% 32px',
+        background: '#ffffff',
+        color: '#64748b',
+        borderTop: '1px solid #e2e8f0',
         boxSizing: 'border-box',
         fontFamily: 'inherit',
       }}
@@ -57,10 +57,10 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             />
             <span
               style={{
-                fontSize: 18,
+                fontSize: 17,
                 fontWeight: 800,
-                letterSpacing: '0.06em',
-                color: '#ffffff',
+                letterSpacing: '0.04em',
+                color: '#0f172a',
                 textTransform: 'uppercase',
               }}
             >
@@ -71,7 +71,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             style={{
               fontSize: 13,
               lineHeight: 1.65,
-              color: '#94a3b8',
+              color: '#64748b',
               margin: 0,
             }}
           >
@@ -84,11 +84,11 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
         <div>
           <h4
             style={{
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 700,
-              color: '#ffffff',
+              color: '#0f172a',
               margin: '0 0 16px',
-              letterSpacing: '0.02em',
+              letterSpacing: '0.01em',
             }}
           >
             Navigation
@@ -107,9 +107,9 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             <li>
               <span
                 onClick={() => navigateTo('/')}
-                style={{ cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Home
               </span>
@@ -117,9 +117,9 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             <li>
               <span
                 onClick={() => navigateTo('/services')}
-                style={{ cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Book Service
               </span>
@@ -127,9 +127,9 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             <li>
               <span
                 onClick={() => navigateTo('/tracker')}
-                style={{ cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Live Repair Tracker
               </span>
@@ -137,9 +137,9 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             <li>
               <span
                 onClick={() => navigateTo('/promos')}
-                style={{ cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Vouchers & Promos
               </span>
@@ -147,9 +147,9 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             <li>
               <span
                 onClick={() => navigateTo('/contact')}
-                style={{ cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Contact Us
               </span>
@@ -161,11 +161,11 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
         <div>
           <h4
             style={{
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 700,
-              color: '#ffffff',
+              color: '#0f172a',
               margin: '0 0 16px',
-              letterSpacing: '0.02em',
+              letterSpacing: '0.01em',
             }}
           >
             Services
@@ -184,9 +184,9 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             <li>
               <span
                 onClick={() => navigateTo('/services')}
-                style={{ cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Performance & ECU Tuning
               </span>
@@ -194,9 +194,9 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             <li>
               <span
                 onClick={() => navigateTo('/services')}
-                style={{ cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Custom Bodywork & Paint
               </span>
@@ -204,9 +204,9 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             <li>
               <span
                 onClick={() => navigateTo('/services')}
-                style={{ cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Suspension & Precision Alignment
               </span>
@@ -214,9 +214,9 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             <li>
               <span
                 onClick={() => navigateTo('/services')}
-                style={{ cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Advanced Diagnostics & Electrical
               </span>
@@ -224,9 +224,9 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             <li>
               <span
                 onClick={() => navigateTo('/services')}
-                style={{ cursor: 'pointer', color: '#94a3b8', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 24/7 Roadside Concierge Dispatch
               </span>
@@ -238,11 +238,11 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
         <div>
           <h4
             style={{
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: 700,
-              color: '#ffffff',
+              color: '#0f172a',
               margin: '0 0 16px',
-              letterSpacing: '0.02em',
+              letterSpacing: '0.01em',
             }}
           >
             Get in touch
@@ -250,17 +250,17 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: 13 }}>
             {/* Email with subtle icon */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <Mail size={16} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 2 }} />
+              <Mail size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
               <a
                 href={`mailto:${settings.supportEmail || 'concierge@lscustoms.com'}`}
                 style={{
-                  color: '#94a3b8',
+                  color: '#475569',
                   textDecoration: 'none',
                   wordBreak: 'break-all',
                   transition: 'color 0.2s',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
               >
                 {settings.supportEmail || 'concierge@lscustoms.com'}
               </a>
@@ -268,16 +268,16 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
 
             {/* Phone with subtle icon */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <Phone size={16} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 2 }} />
+              <Phone size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
               <a
                 href={`tel:${settings.supportPhone || '+63 (02) 8888-5700'}`}
                 style={{
-                  color: '#94a3b8',
+                  color: '#475569',
                   textDecoration: 'none',
                   transition: 'color 0.2s',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
               >
                 {settings.supportPhone || '+63 (02) 8888-5700'}
               </a>
@@ -285,16 +285,16 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
 
             {/* Address with subtle icon */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <MapPin size={16} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 2 }} />
-              <span style={{ color: '#94a3b8', lineHeight: 1.5 }}>
+              <MapPin size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
+              <span style={{ color: '#475569', lineHeight: 1.5 }}>
                 {settings.address || '100 Portola Drive, Rockford Hills, Los Santos'}
               </span>
             </div>
 
             {/* Hours with subtle icon */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <Clock size={16} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 2 }} />
-              <span style={{ color: '#94a3b8', lineHeight: 1.5, fontSize: 12 }}>
+              <Clock size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
+              <span style={{ color: '#475569', lineHeight: 1.5, fontSize: 12 }}>
                 {settings.workingHours || 'Open 24/7 for Emergency Dispatch · Showroom 8AM – 9PM'}
               </span>
             </div>
@@ -308,7 +308,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
           maxWidth: 1280,
           margin: '36px auto 20px',
           height: 1,
-          background: 'rgba(255, 255, 255, 0.08)',
+          background: '#e2e8f0',
         }}
       />
 
@@ -323,14 +323,14 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
           justifyContent: 'space-between',
           gap: 14,
           fontSize: 12,
-          color: '#64748b',
+          color: '#94a3b8',
         }}
       >
         <span>
           © 2026 {settings.companyName || 'LS Customs'}. All rights reserved.
         </span>
 
-        {/* Social Icons matching Polywick bottom right */}
+        {/* Social Icons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <a
             href="https://facebook.com"
@@ -338,12 +338,12 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             rel="noopener noreferrer"
             aria-label="Facebook"
             style={{
-              color: '#94a3b8',
+              color: '#64748b',
               transition: 'color 0.2s',
               display: 'inline-flex',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
           >
             <Facebook size={16} />
           </a>
@@ -353,12 +353,12 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             rel="noopener noreferrer"
             aria-label="Twitter"
             style={{
-              color: '#94a3b8',
+              color: '#64748b',
               transition: 'color 0.2s',
               display: 'inline-flex',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
           >
             <Twitter size={16} />
           </a>
@@ -368,12 +368,12 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             rel="noopener noreferrer"
             aria-label="LinkedIn"
             style={{
-              color: '#94a3b8',
+              color: '#64748b',
               transition: 'color 0.2s',
               display: 'inline-flex',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
           >
             <Linkedin size={16} />
           </a>
@@ -383,12 +383,12 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             rel="noopener noreferrer"
             aria-label="Instagram"
             style={{
-              color: '#94a3b8',
+              color: '#64748b',
               transition: 'color 0.2s',
               display: 'inline-flex',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#94a3b8')}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
           >
             <Instagram size={16} />
           </a>
@@ -397,4 +397,3 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
     </footer>
   )
 }
-

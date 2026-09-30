@@ -1177,9 +1177,10 @@ export function AdminCustomerUIEditor() {
                 style={{
                   marginTop: 28,
                   padding: '36px 28px 24px',
-                  background: '#0b0f14',
-                  color: '#94a3b8',
+                  background: '#ffffff',
+                  color: '#64748b',
                   borderRadius: 12,
+                  border: '1px solid #e2e8f0',
                   position: 'relative',
                   outline: studioMode === 'paint' ? '1px dashed rgba(232, 168, 56, 0.4)' : 'none',
                   boxSizing: 'border-box',
@@ -1220,7 +1221,7 @@ export function AdminCustomerUIEditor() {
                           fontSize: 15,
                           fontWeight: 800,
                           letterSpacing: '0.04em',
-                          color: '#ffffff',
+                          color: '#0f172a',
                           textTransform: 'uppercase',
                           cursor: studioMode === 'paint' ? 'pointer' : 'default',
                         }}
@@ -1233,7 +1234,7 @@ export function AdminCustomerUIEditor() {
                       style={{
                         fontSize: 11,
                         lineHeight: 1.5,
-                        color: '#94a3b8',
+                        color: '#64748b',
                         margin: 0,
                         cursor: studioMode === 'paint' ? 'pointer' : 'default',
                       }}
@@ -1244,8 +1245,8 @@ export function AdminCustomerUIEditor() {
 
                   {/* Column 2: Navigation */}
                   <div>
-                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', margin: '0 0 12px' }}>Navigation</h5>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11, color: '#94a3b8' }}>
+                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', margin: '0 0 12px' }}>Navigation</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11, color: '#64748b' }}>
                       <span>Home</span>
                       <span>Book Service</span>
                       <span>Live Tracker</span>
@@ -1256,8 +1257,8 @@ export function AdminCustomerUIEditor() {
 
                   {/* Column 3: Services */}
                   <div>
-                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', margin: '0 0 12px' }}>Services</h5>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11, color: '#94a3b8' }}>
+                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', margin: '0 0 12px' }}>Services</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11, color: '#64748b' }}>
                       <span>Performance & ECU Tuning</span>
                       <span>Custom Bodywork & Paint</span>
                       <span>Suspension & Alignment</span>
@@ -1268,43 +1269,43 @@ export function AdminCustomerUIEditor() {
 
                   {/* Column 4: Get in touch */}
                   <div>
-                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', margin: '0 0 12px' }}>Get in touch</h5>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 11, color: '#94a3b8' }}>
+                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', margin: '0 0 12px' }}>Get in touch</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 11, color: '#64748b' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <Mail size={14} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 1 }} />
+                        <Mail size={14} style={{ color: '#0284c7', flexShrink: 0, marginTop: 1 }} />
                         <span
                           onClick={() => studioMode === 'paint' && setEditingField('supportEmail')}
-                          style={{ color: '#94a3b8', cursor: studioMode === 'paint' ? 'pointer' : 'default', wordBreak: 'break-all' }}
+                          style={{ color: '#475569', cursor: studioMode === 'paint' ? 'pointer' : 'default', wordBreak: 'break-all' }}
                         >
                           {form.supportEmail}
                         </span>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <Phone size={14} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 1 }} />
+                        <Phone size={14} style={{ color: '#0284c7', flexShrink: 0, marginTop: 1 }} />
                         <span
                           onClick={() => studioMode === 'paint' && setEditingField('supportPhone')}
-                          style={{ color: '#94a3b8', cursor: studioMode === 'paint' ? 'pointer' : 'default' }}
+                          style={{ color: '#475569', cursor: studioMode === 'paint' ? 'pointer' : 'default' }}
                         >
                           {form.supportPhone}
                         </span>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <MapPin size={14} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 1 }} />
+                        <MapPin size={14} style={{ color: '#0284c7', flexShrink: 0, marginTop: 1 }} />
                         <span
                           onClick={() => studioMode === 'paint' && setEditingField('address')}
-                          style={{ color: '#94a3b8', cursor: studioMode === 'paint' ? 'pointer' : 'default', lineHeight: 1.4 }}
+                          style={{ color: '#475569', cursor: studioMode === 'paint' ? 'pointer' : 'default', lineHeight: 1.4 }}
                         >
                           {form.address}
                         </span>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <Clock size={14} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 1 }} />
+                        <Clock size={14} style={{ color: '#0284c7', flexShrink: 0, marginTop: 1 }} />
                         <span
                           onClick={() => studioMode === 'paint' && setEditingField('workingHours')}
-                          style={{ color: '#94a3b8', cursor: studioMode === 'paint' ? 'pointer' : 'default', lineHeight: 1.4 }}
+                          style={{ color: '#475569', cursor: studioMode === 'paint' ? 'pointer' : 'default', lineHeight: 1.4 }}
                         >
                           {form.workingHours}
                         </span>
@@ -1314,12 +1315,12 @@ export function AdminCustomerUIEditor() {
                 </div>
 
                 {/* Subtle Divider Line */}
-                <div style={{ width: '100%', height: 1, background: 'rgba(255, 255, 255, 0.08)', margin: '24px 0 16px' }} />
+                <div style={{ width: '100%', height: 1, background: '#e2e8f0', margin: '24px 0 16px' }} />
 
                 {/* Bottom Row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#64748b', flexWrap: 'wrap', gap: 10 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#94a3b8', flexWrap: 'wrap', gap: 10 }}>
                   <span>© 2026 {form.companyName}. All rights reserved.</span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#64748b' }}>
                     <Facebook size={14} />
                     <Twitter size={14} />
                     <Linkedin size={14} />
