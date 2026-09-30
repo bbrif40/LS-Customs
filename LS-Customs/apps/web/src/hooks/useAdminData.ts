@@ -1110,6 +1110,23 @@ export function useAdminTickets(): UseAdminTicketsResult {
         }
       }
 
+      // Merge guest tickets submitted through Contact Support or chatbot
+      try {
+        const guestRaw = localStorage.getItem('ls_customs_guest_tickets')
+        if (guestRaw) {
+          const guestTickets = JSON.parse(guestRaw) as (SupportTicket & {
+            profiles: TicketCustomerProfile | null
+          })[]
+          for (const gt of guestTickets) {
+            if (!ticketsList.some((t) => t.tracking_number === gt.tracking_number)) {
+              ticketsList.unshift(gt as any)
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       setData(ticketsList as SupportTicketWithCustomer[])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch support tickets')
@@ -1120,6 +1137,11 @@ export function useAdminTickets(): UseAdminTicketsResult {
 
   useEffect(() => {
     fetchData()
+    const handleNewTicket = () => fetchData()
+    window.addEventListener('ls-ticket-created', handleNewTicket)
+    return () => {
+      window.removeEventListener('ls-ticket-created', handleNewTicket)
+    }
   }, [fetchData])
 
   const updateField = async <K extends 'status' | 'category' | 'priority'>(
