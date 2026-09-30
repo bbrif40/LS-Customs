@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag, CreditCard, Check, Ban, CalendarX, BookOpen, ChevronLeft, ChevronRight } from 'lucide-react'
+import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag, CreditCard, Check, Ban, CalendarX, BookOpen, ChevronLeft, ChevronRight, Ticket } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import { usePaymentStatus } from '../../hooks/usePaymentStatus'
 import { PaymentForm } from '../common/PaymentForm'
@@ -11,6 +11,7 @@ import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { useCustomerBookings, type CustomerServiceBooking, type CustomerVehicleBooking } from '../../hooks/useCustomerBookings'
 import { BookingCalendar } from '../bookings/BookingCalendar'
 import { BookingGridSkeleton, CalendarSkeleton } from '../common/Skeleton'
+import { parsePromoFromText } from '../../utils/promoHelper'
 
 interface BookingsProps {
   userId: string | undefined
@@ -366,6 +367,11 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
               {isAssigned && mechName && <DetailRow icon={UserCircle2} label="Mechanic" value={mechName} />}
               {isAssigned && mechPhone && <DetailRow icon={Phone} label="Mechanic phone" value={mechPhone} />}
               {serviceNames && <DetailRow icon={Tag} label="Services" value={serviceNames} />}
+              {(() => {
+                const promo = parsePromoFromText(details.booking.notes)
+                if (!promo) return null
+                return <DetailRow icon={Ticket} label="Voucher / Promo" value={`${promo.code} (${promo.discount})`} />
+              })()}
               <DetailRow icon={Tag} label="Total" value={`₱${Number(shared.total_price).toLocaleString()}`} />
               <DetailRow icon={Calendar} label="Booked on" value={new Date(shared.created_at).toLocaleString()} />
             </>
@@ -374,6 +380,11 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
               <DetailRow icon={Calendar} label="Pickup window" value={`${details.booking.start_date} → ${details.booking.end_date}`} />
               <DetailRow icon={MapPin} label="Pickup location" value={details.booking.pickup_location ?? 'Pickup location to be confirmed'} />
               {details.booking.vehicles?.image_url && <DetailRow icon={CarFront} label="Vehicle" value={details.booking.vehicles.name} />}
+              {(() => {
+                const promo = parsePromoFromText(details.booking.pickup_location)
+                if (!promo) return null
+                return <DetailRow icon={Ticket} label="Voucher / Promo" value={`${promo.code} (${promo.discount})`} />
+              })()}
               <DetailRow icon={Tag} label="Total" value={`₱${Number(shared.total_price).toLocaleString()}`} />
               <DetailRow icon={Calendar} label="Booked on" value={new Date(shared.created_at).toLocaleString()} />
             </>

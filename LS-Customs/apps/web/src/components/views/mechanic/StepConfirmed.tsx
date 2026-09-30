@@ -2,12 +2,14 @@
  * StepConfirmed — final success state. Shown after the orchestrator
  * resolves a booking. Offers "Book another" and "Back to home" actions.
  */
-import { Check, Home, Wrench } from 'lucide-react'
+import { Check, Home, Wrench, Ticket } from 'lucide-react'
 import type { ServiceBooking } from '../../../types'
 import { SummaryRow } from './SummaryRow'
 
 interface StepConfirmedProps {
   booking: ServiceBooking
+  promoCode?: string | null
+  promoDiscount?: string | null
   onBookAnother: () => void
   onBackToHome?: () => void
 }
@@ -28,7 +30,7 @@ function prettyStatus(s: ServiceBooking['status']): string {
   return s.replace('_', ' ')
 }
 
-export function StepConfirmed({ booking, onBookAnother, onBackToHome }: StepConfirmedProps) {
+export function StepConfirmed({ booking, promoCode, promoDiscount, onBookAnother, onBackToHome }: StepConfirmedProps) {
   return (
     <article className="confirmation-card">
       <div className="confirmation-check" aria-hidden="true">
@@ -60,6 +62,17 @@ export function StepConfirmed({ booking, onBookAnother, onBackToHome }: StepConf
           }
           action={null}
         />
+        {promoCode && (
+          <SummaryRow
+            label="Voucher"
+            value={
+              <span style={{ color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Ticket size={13} /> {promoCode} ({promoDiscount || 'Discount Applied'})
+              </span>
+            }
+            action={null}
+          />
+        )}
         <SummaryRow
           label="Total"
           value={<strong>{booking.servicePrice}</strong>}

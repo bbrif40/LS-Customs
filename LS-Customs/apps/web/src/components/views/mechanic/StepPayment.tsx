@@ -21,6 +21,7 @@ import {
   User,
   Phone,
   Wrench,
+  Ticket,
 } from 'lucide-react'
 import { usePaymentIntent } from '../../../hooks/usePaymentIntent'
 import { usePaymentStatus } from '../../../hooks/usePaymentStatus'
@@ -29,6 +30,7 @@ import { PaymentForm } from '../../common/PaymentForm'
 import { PaymentMethodBadges } from '../../common/PaymentMethodBadges'
 import { SummaryRow } from './SummaryRow'
 import type { ServiceBooking } from '../../../types'
+import type { PromoVoucher } from '../../common/AvailableVouchersPromos'
 
 interface StepPaymentProps {
   /** The service booking that was just created. */
@@ -38,6 +40,8 @@ interface StepPaymentProps {
   baseServicePrice?: string
   distanceFee?: string
   distanceKm?: string
+  promo?: PromoVoucher | null
+  promoDiscount?: string
   scheduledAt: string
   addressLabel: string
   addressCity: string
@@ -69,6 +73,8 @@ export function StepPayment({
   baseServicePrice,
   distanceFee,
   distanceKm,
+  promo,
+  promoDiscount,
   scheduledAt,
   addressLabel,
   addressCity,
@@ -219,6 +225,17 @@ export function StepPayment({
           )}
           <SummaryRow label="When" value={formatDateTime(scheduledAt)} action={null} />
           <SummaryRow label="Where" value={`${addressLabel}, ${addressCity}`} action={null} />
+          {promo && (
+            <SummaryRow
+              label="Voucher / Promo"
+              value={
+                <span style={{ color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Ticket size={13} /> {promo.code} ({promoDiscount || promo.discount})
+                </span>
+              }
+              action={null}
+            />
+          )}
           <SummaryRow label="Total" value={<strong className="review-total-highlight">{servicePrice}</strong>} action={null} />
         </div>
 

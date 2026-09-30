@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { ArrowLeft, CheckCircle2, CreditCard, Fuel, Gauge, Loader2, LockKeyhole, MapPin, Settings2, Star, Users, Zap, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, CreditCard, Fuel, Gauge, Loader2, LockKeyhole, MapPin, Settings2, Star, Users, Zap, AlertTriangle, Ticket } from 'lucide-react'
 import { useProfile } from '../../hooks/useProfile'
 import { usePaymentIntent } from '../../hooks/usePaymentIntent'
 import { usePaymentStatus } from '../../hooks/usePaymentStatus'
@@ -8,6 +8,7 @@ import { PaymentForm } from '../common/PaymentForm'
 import { PaymentMethodBadges } from '../common/PaymentMethodBadges'
 import type { Vehicle } from '../../types'
 import type { PaymentIntentResult } from '../../hooks/usePaymentIntent'
+import type { PromoVoucher } from '../common/AvailableVouchersPromos'
 
 interface RentalPaymentProps {
   vehicle: Vehicle
@@ -15,12 +16,15 @@ interface RentalPaymentProps {
   startDate: string
   endDate: string
   total: number
+  originalTotal?: number
+  discountAmount?: number
+  promo?: PromoVoucher | null
   userId: string | undefined
   onBack: () => void
   onNotify: (message: string) => void
 }
 
-export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, userId, onBack, onNotify }: RentalPaymentProps) {
+export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, originalTotal, discountAmount, promo, userId, onBack, onNotify }: RentalPaymentProps) {
   const [payment, setPayment] = useState<PaymentIntentResult | null>(null)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [formStatus, setFormStatus] = useState<'idle' | 'processing' | 'succeeded' | 'failed' | 'refunded'>('idle')
@@ -114,10 +118,36 @@ export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, u
           <ul className="detail-rules">{rules.map((rule) => <li key={rule}><LockKeyhole size={15} /> {rule}</li>)}</ul>
         </section>
         <aside className="rental-booking-panel">
-          <h2>Car rental price</h2>
-          <strong>₱{total.toLocaleString()}</strong><span> total</span>
+          <h2>Car rental price & receipt</h2>
+          {originalTotal && discountAmount && discountAmount > 0 ? (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#9ba8a2', marginBottom: 4 }}>
+                <span>Subtotal ({Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))} days)</span>
+                <span style={{ textDecoration: 'line-through' }}>₱{originalTotal.toLocaleString()}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: '#10b981', fontWeight: 600, marginBottom: 8, background: 'rgba(16, 185, 129, 0.1)', padding: '4px 8px', borderRadius: 6 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Ticket size={13} /> Voucher: <strong>{promo?.code}</strong>
+                </span>
+                <span>-₱{discountAmount.toLocaleString()} ({promo?.discount})</span>
+              </div>
+              <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <strong style={{ fontSize: 24, color: '#e8a838' }}>₱{total.toLocaleString()}</strong>
+                <span style={{ fontSize: 12, color: '#9ba8a2' }}>final total</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <strong>₱{total.toLocaleString()}</strong><span> total</span>
+            </>
+          )}
           <div className="booking-summary-dates"><span>{startDate}</span><span>{endDate}</span></div>
           <p className="booking-reference">Booking reference: <code>booking-{bookingId.slice(0, 8)}</code></p>
+          {promo && (
+            <p style={{ fontSize: 11, color: '#10b981', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <Ticket size={12} /> Voucher <strong>{promo.code}</strong> applied to this reservation
+            </p>
+          )}
           {intentError && <p className="form-helper review-error">{intentError}</p>}
 
           {payment && formStatus === 'succeeded' ? (

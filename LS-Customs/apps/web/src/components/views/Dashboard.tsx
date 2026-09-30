@@ -12,6 +12,7 @@ import { useCustomerSiteSettings } from '../../hooks/useCustomerSiteSettings'
 import { VehicleCard } from '../common/VehicleCard'
 import { ServiceMini } from '../common/ServiceMini'
 import { LocationCard } from '../common/LocationCard'
+import { AvailableVouchersPromos } from '../common/AvailableVouchersPromos'
 import { Skeleton, VehicleCardSkeleton } from '../common/Skeleton'
 import type { View } from '../../types'
 
@@ -73,54 +74,17 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
 
   return (
     <div className={`page dashboard-page ${scrollRef.className}`} ref={scrollRef.ref}>
-      {/* ── Top Announcement & Promo Banner ─────────────────────── */}
+      {/* ── Redesigned Promos & Available Vouchers Section ─────── */}
       {settings.showBanner && (
-        <div
-          className="customer-announcement-banner"
-          style={{
-            background: settings.bannerBg,
-            color: settings.bannerTextColor,
-            borderRadius: 12,
-            padding: '12px 18px',
-            marginBottom: 20,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 16,
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
-            fontWeight: 600,
-            fontSize: 13,
-            transition: 'all 0.3s ease',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
-            <Sparkles size={16} style={{ flexShrink: 0 }} />
-            <span>{settings.bannerText}</span>
-          </div>
-          {settings.bannerLinkView !== 'none' && settings.bannerLinkText && (
-            <button
-              type="button"
-              onClick={() => onView(settings.bannerLinkView as View)}
-              style={{
-                background: settings.bannerTextColor === '#000000' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.2)',
-                color: settings.bannerTextColor,
-                border: 'none',
-                padding: '6px 14px',
-                borderRadius: 6,
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              {settings.bannerLinkText}
-              <ChevronRight size={14} />
-            </button>
-          )}
-        </div>
+        <AvailableVouchersPromos
+          onView={onView}
+          onNotify={onNotify}
+          bannerText={settings.bannerText}
+          bannerBg={settings.bannerBg}
+          bannerTextColor={settings.bannerTextColor}
+          bannerLinkText={settings.bannerLinkText}
+          bannerLinkView={settings.bannerLinkView}
+        />
       )}
 
       <section className="welcome-row">

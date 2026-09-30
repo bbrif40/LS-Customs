@@ -10,10 +10,11 @@
  * no new dependencies.
  */
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react'
-import { X, MapPin, Clock, User, Wrench, Calendar, Hash, Phone, Navigation } from 'lucide-react'
+import { X, MapPin, Clock, User, Wrench, Calendar, Hash, Phone, Navigation, Ticket } from 'lucide-react'
 import { MapView, type MapPin as MapPinData } from '../common/map'
 import { VirtualMechanicTracker } from '../common/VirtualMechanicTracker'
 import { RecordAuditTrail } from './RecordAuditTrail'
+import { parsePromoFromText } from '../../utils/promoHelper'
 
 // Statuses for which the customer streams live GPS. Mirrors the
 // ACTIVE_STATUSES list in useLiveLocationForActiveBooking.
@@ -334,6 +335,31 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
             <p style={{ marginTop: 6, color: '#9ca3af', fontSize: 12 }}>
               Total: <strong style={{ color: '#e8a838' }}>₱{booking.total_price.toLocaleString()}</strong>
             </p>
+            {(() => {
+              const promo = parsePromoFromText(booking.notes)
+              if (!promo) return null
+              return (
+                <div
+                  style={{
+                    marginTop: 8,
+                    padding: '8px 12px',
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Ticket size={14} style={{ color: '#34d399', flexShrink: 0 }} />
+                  <div>
+                    <span style={{ color: '#34d399', fontWeight: 700 }}>Voucher Used: {promo.code}</span>
+                    <span style={{ color: '#94a3b8', marginLeft: 6 }}>({promo.discount})</span>
+                  </div>
+                </div>
+              )
+            })()}
           </section>
 
           {/* En Route Virtual Mechanic Live Road Simulation */}

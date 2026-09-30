@@ -4,7 +4,7 @@
  * Admin can update status via existing RLS policy (unrestricted for admins).
  */
 import { useEffect, useState } from 'react'
-import { Search, Filter, Truck, Wrench, X, Loader2, ChevronLeft, ChevronRight, AlertTriangle, CreditCard } from 'lucide-react'
+import { Search, Filter, Truck, Wrench, X, Loader2, ChevronLeft, ChevronRight, AlertTriangle, CreditCard, Ticket } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { closeOutline, star } from 'ionicons/icons'
 import {
@@ -16,6 +16,7 @@ import { MapView, type MapPin } from '../common/map'
 import { AdminBookingDetail } from './AdminBookingDetail'
 import { AdminTransactions } from './AdminTransactions'
 import { AdminTableSkeleton } from '../common/Skeleton'
+import { parsePromoFromText } from '../../utils/promoHelper'
 import type { VehicleBooking, ServiceBooking, Profile, Vehicle, Address, MechanicProfile, MechanicService } from '@ls-customs/shared-types'
 
 interface AvailableMechanic {
@@ -704,6 +705,7 @@ export function AdminBookings() {
                       <th>Address / Pin</th>
                     </>
                   )}
+                  <th>Voucher / Promo</th>
                   <th>Total (₱)</th>
                   <th>Status</th>
                   <th>Actions</th>
@@ -770,6 +772,38 @@ export function AdminBookings() {
                         })()}
                       </>
                     )}
+                    <td>
+                      {(() => {
+                        const rawText = isServiceRow
+                          ? (booking as ServiceBookingWithDetails).notes
+                          : (booking as VehicleBooking).pickup_location
+                        const promo = parsePromoFromText(rawText)
+                        if (!promo) {
+                          return <span style={{ color: '#64748b', fontSize: 12 }}>—</span>
+                        }
+                        return (
+                          <span
+                            style={{
+                              background: 'rgba(16, 185, 129, 0.15)',
+                              color: '#34d399',
+                              border: '1px solid rgba(16, 185, 129, 0.35)',
+                              padding: '3px 8px',
+                              borderRadius: 6,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                              whiteSpace: 'nowrap',
+                            }}
+                            title={`Customer used voucher: ${promo.code} (${promo.discount})`}
+                          >
+                            <Ticket size={12} />
+                            {promo.code}
+                          </span>
+                        )
+                      })()}
+                    </td>
                     <td style={{ fontWeight: 600, color: '#e8a838' }}>
                       {booking.total_price.toLocaleString()}
                     </td>

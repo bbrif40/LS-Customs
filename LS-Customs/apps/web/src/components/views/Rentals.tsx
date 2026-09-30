@@ -15,6 +15,7 @@ import { VehicleCard } from '../common/VehicleCard'
 import { PageHeading } from '../common/PageHeading'
 import { FleetTickerBanner } from '../common/FleetTickerBanner'
 import { RentalPayment } from './RentalPayment'
+import { getActivePromo, calculatePromoDiscount } from '../../utils/promoHelper'
 
 interface RentalsProps {
   userId?: string
@@ -138,18 +139,32 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
   const safePage = Math.min(currentPage, totalPages)
   const paginatedVehicles = filteredVehicles.slice((safePage - 1) * pageSize, safePage * pageSize)
 
+  const activePromo = getActivePromo()
+
   if (selectedVehicle && bookingId) {
     const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
-    return <RentalPayment vehicle={selectedVehicle} bookingId={bookingId} startDate={startDate} endDate={endDate} total={days * selectedVehicle.pricePerDay} userId={userId} onBack={() => { setBookingId(null); setSelectedVehicle(null) }} onNotify={onNotify} />
+    const baseTotal = days * selectedVehicle.pricePerDay
+    const { discountAmount, finalTotal } = calculatePromoDiscount(baseTotal, activePromo, 'rentals')
+
+    return (
+      <RentalPayment
+        vehicle={selectedVehicle}
+        bookingId={bookingId}
+        startDate={startDate}
+        endDate={endDate}
+        total={finalTotal}
+        originalTotal={baseTotal}
+        discountAmount={discountAmount}
+        promo={discountAmount > 0 ? activePromo : null}
+        userId={userId}
+        onBack={() => { setBookingId(null); setSelectedVehicle(null) }}
+        onNotify={onNotify}
+      />
+    )
   }
 
   const chooseVehicle = async (vehicle: typeof vehicles[number]) => {
     if (!startDate || !endDate || endDate <= startDate) { setBookingError('Select a valid pickup and return date first.'); return }
-    // Last-mile guard: the card might have been rendered as
-    // "available" using a slightly older snapshot of the RPC result,
-    // and a different customer could have taken the slot in the
-    // meantime. Re-check before INSERT so we surface a friendly
-    // message instead of the raw constraint text.
     setBookingError(null)
     if (unavailableIds.has(vehicle.id)) {
       setBookingError(`${vehicle.name} is already booked for those dates. Try a different vehicle or shift your dates.`)
@@ -157,10 +172,27 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
     }
     const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
     if (!userId) { onNotify('Please sign in before booking a rental.'); return }
-    const { data, error: insertError } = await supabase.from('vehicle_bookings').insert({ vehicle_id: vehicle.id, customer_id: userId, start_date: startDate, end_date: endDate, total_price: days * vehicle.pricePerDay, status: 'pending' }).select('id').single()
+
+    const baseTotal = days * vehicle.pricePerDay
+    const { discountAmount, finalTotal } = calculatePromoDiscount(baseTotal, activePromo, 'rentals')
+    const pickupLocationWithPromo = activePromo && discountAmount > 0
+      ? `Showroom Pickup | Voucher: ${activePromo.code} (${activePromo.discount})`
+      : 'Showroom Pickup'
+
+    const { data, error: insertError } = await supabase
+      .from('vehicle_bookings')
+      .insert({
+        vehicle_id: vehicle.id,
+        customer_id: userId,
+        start_date: startDate,
+        end_date: endDate,
+        total_price: finalTotal,
+        pickup_location: pickupLocationWithPromo,
+        status: 'pending',
+      })
+      .select('id')
+      .single()
     if (insertError || !data) {
-      // Map the exclusion-constraint text to a human message; fall
-      // back to the raw error for anything else.
       const msg = insertError?.message ?? 'Booking could not be created.'
       if (msg.toLowerCase().includes('no_overlapping_bookings') || msg.toLowerCase().includes('conflicting key')) {
         setBookingError(`${vehicle.name} is already booked for those dates. Try a different vehicle or shift your dates.`)

@@ -23,6 +23,8 @@ import { StepReview } from './StepReview'
 import { StepConfirmed } from './StepConfirmed'
 import { StepPayment } from './StepPayment'
 import { preloadMap } from '../../common/map/preload'
+import { getActivePromo, calculatePromoDiscount } from '../../../utils/promoHelper'
+import type { PromoVoucher } from '../../common/AvailableVouchersPromos'
 import type { Service, ServiceBooking } from '../../../types'
 
 export interface ChosenAddress {
@@ -90,6 +92,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     customerPhone: string
     mechanicName?: string | null
     mechanicPhone?: string | null
+    promo?: PromoVoucher | null
+    promoDiscount?: string
   } | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
@@ -107,11 +111,13 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     formattedDistance,
   } = useMechanicDistance(customerLat, customerLng)
 
+  const activePromo = getActivePromo()
   const basePriceCents = service?.priceCents ?? 0
-  const totalPriceCents = basePriceCents + distanceFeeCents
-  const totalPricePesos = totalPriceCents / 100
+  const grossPricePesos = (basePriceCents + distanceFeeCents) / 100
+  const { discountAmount: promoDiscountPesos, finalTotal: totalPricePesos } = calculatePromoDiscount(grossPricePesos, activePromo, 'services')
   const formattedTotalPrice = `₱${totalPricePesos.toFixed(2)}`
   const formattedBasePrice = `₱${(basePriceCents / 100).toFixed(2)}`
+  const promoNote = activePromo && promoDiscountPesos > 0 ? ` | Promo Voucher: ${activePromo.code} (${activePromo.discount})` : ''
 
   const goTo = useCallback((target: Step) => {
     setStep(target)
@@ -187,7 +193,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
           scheduled_at: scheduledAt,
           status: 'pending',
           total_price: totalPricePesos,
-          notes: `Address: ${address.line1}, ${address.city} | Base: ${formattedBasePrice} + Distance Fee: ${formattedDistanceFee} (${distanceKm.toFixed(1)} km)`,
+          notes: `Address: ${address.line1}, ${address.city} | Base: ${formattedBasePrice} + Distance Fee: ${formattedDistanceFee} (${distanceKm.toFixed(1)} km)${promoNote}`,
           pin_lat: hasPin ? address.pin_lat : null,
           pin_lng: hasPin ? address.pin_lng : null,
         })
@@ -239,6 +245,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
       customerPhone: custPhone,
       mechanicName: null,
       mechanicPhone: null,
+      promo: promoDiscountPesos > 0 ? activePromo : null,
+      promoDiscount: promoDiscountPesos > 0 ? `-₱${promoDiscountPesos.toFixed(2)}` : undefined,
     })
     setSubmitting(false)
     goTo('payment')
@@ -274,6 +282,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
         />
         <StepConfirmed
           booking={confirmedBooking}
+          promoCode={activePromo?.code ?? null}
+          promoDiscount={activePromo?.discount ?? null}
           onBookAnother={reset}
           onBackToHome={onBackToHome}
         />
@@ -359,6 +369,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
           distanceFeePesos={distanceFeePesos}
           formattedDistanceFee={formattedDistanceFee}
           totalPricePesos={totalPricePesos}
+          promo={activePromo}
+          promoDiscountPesos={promoDiscountPesos}
           submitting={submitting}
           submitError={submitError}
           onBack={goBack}
@@ -375,6 +387,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
           baseServicePrice={pendingPayment.baseServicePrice}
           distanceFee={pendingPayment.distanceFee}
           distanceKm={pendingPayment.distanceKm}
+          promo={pendingPayment.promo}
+          promoDiscount={pendingPayment.promoDiscount}
           scheduledAt={pendingPayment.scheduledAt}
           addressLabel={pendingPayment.addressLabel}
           addressCity={pendingPayment.addressCity}

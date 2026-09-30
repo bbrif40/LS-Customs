@@ -3,12 +3,13 @@
  * including base service price, assigned driver, distance from mechanic,
  * distance fee (every 5km is ₱85), and calculated total price.
  */
-import { ChevronLeft } from 'lucide-react'
+import { ChevronLeft, Ticket } from 'lucide-react'
 import type { Service } from '../../../types'
 import type { ChosenAddress } from './MechanicBookingFlow'
 import type { DispatchMechanic } from '../../../hooks/useMechanicDistance'
 import { SummaryRow } from './SummaryRow'
 import type { Step } from './steps'
+import type { PromoVoucher } from '../../common/AvailableVouchersPromos'
 
 interface StepReviewProps {
   service: Service | null
@@ -20,6 +21,8 @@ interface StepReviewProps {
   distanceFeePesos?: number
   formattedDistanceFee?: string
   totalPricePesos?: number
+  promo?: PromoVoucher | null
+  promoDiscountPesos?: number
   submitting: boolean
   submitError: string | null
   onBack: () => void
@@ -50,6 +53,8 @@ export function StepReview({
   distanceFeePesos = 85,
   formattedDistanceFee = '₱85.00',
   totalPricePesos,
+  promo,
+  promoDiscountPesos = 0,
   submitting,
   submitError,
   onBack,
@@ -64,7 +69,8 @@ export function StepReview({
   const isIncomplete = missing.length > 0
 
   const basePriceNum = service?.priceCents != null ? service.priceCents / 100 : 0
-  const finalTotal = totalPricePesos ?? (basePriceNum + distanceFeePesos)
+  const grossTotal = basePriceNum + distanceFeePesos
+  const finalTotal = totalPricePesos ?? Math.max(0, grossTotal - promoDiscountPesos)
 
   return (
     <section className="step-panel">
@@ -128,6 +134,17 @@ export function StepReview({
             }
             action={null}
           />
+          {promo && promoDiscountPesos > 0 && (
+            <SummaryRow
+              label="Voucher / Promo"
+              value={
+                <span style={{ color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <Ticket size={13} /> {promo.code} (-₱{promoDiscountPesos.toFixed(2)})
+                </span>
+              }
+              action={null}
+            />
+          )}
           <SummaryRow
             label="Total Price"
             value={
