@@ -41,6 +41,10 @@ import {
   Clock,
   Phone,
   Mail,
+  Facebook,
+  Twitter,
+  Linkedin,
+  Instagram,
 } from 'lucide-react'
 
 const COLOR_PRESETS = [
@@ -1168,27 +1172,25 @@ export function AdminCustomerUIEditor() {
                 </div>
               </section>
 
-              {/* 7. CUSTOMER FOOTER WITH INTEGRATED CONCIERGE SUPPORT BAR */}
+              {/* 7. CUSTOMER FOOTER WITH INTEGRATED MULTI-COLUMN DESIGN & SUBTLE ICONS */}
               <footer
                 style={{
-                  marginTop: 24,
-                  paddingTop: 18,
-                  borderTop: '1px solid #e2ebe4',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 16,
+                  marginTop: 28,
+                  padding: '36px 28px 24px',
+                  background: '#0b0f14',
+                  color: '#94a3b8',
+                  borderRadius: 12,
                   position: 'relative',
                   outline: studioMode === 'paint' ? '1px dashed rgba(232, 168, 56, 0.4)' : 'none',
-                  borderRadius: 10,
-                  padding: 8,
+                  boxSizing: 'border-box',
                 }}
               >
                 {studioMode === 'paint' && (
                   <div
                     style={{
                       position: 'absolute',
-                      top: 4,
-                      right: 12,
+                      top: 10,
+                      right: 14,
                       fontSize: 10,
                       color: form.accentColor,
                       fontWeight: 700,
@@ -1200,92 +1202,129 @@ export function AdminCustomerUIEditor() {
                   </div>
                 )}
 
-                {/* Showroom & Concierge Support Bar inside Footer */}
                 <div
                   style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2ebe4',
-                    borderRadius: 14,
-                    padding: '16px 20px',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 16,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+                    gap: 28,
+                    alignItems: 'start',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <div
+                  {/* Column 1: Brand & Tagline */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 260 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <img src="/logo.png" alt={form.companyName} style={{ width: 22, height: 22, objectFit: 'contain' }} />
+                      <span
+                        onClick={() => studioMode === 'paint' && setEditingField('companyName')}
+                        style={{
+                          fontSize: 15,
+                          fontWeight: 800,
+                          letterSpacing: '0.04em',
+                          color: '#ffffff',
+                          textTransform: 'uppercase',
+                          cursor: studioMode === 'paint' ? 'pointer' : 'default',
+                        }}
+                      >
+                        {form.companyName}
+                      </span>
+                    </div>
+                    <p
+                      onClick={() => studioMode === 'paint' && setEditingField('heroSubtitle')}
                       style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 10,
-                        background: form.accentColor,
-                        display: 'grid',
-                        placeItems: 'center',
-                        color: '#000000',
-                        fontWeight: 800,
-                        fontSize: 14,
+                        fontSize: 11,
+                        lineHeight: 1.5,
+                        color: '#94a3b8',
+                        margin: 0,
+                        cursor: studioMode === 'paint' ? 'pointer' : 'default',
                       }}
                     >
-                      LS
-                    </div>
-                    <div>
-                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', textTransform: 'uppercase' }}>
-                        Showroom & Concierge Support
-                      </span>
-                      <div
-                        onClick={() => studioMode === 'paint' && setEditingField('supportPhone')}
-                        style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', margin: '2px 0', cursor: studioMode === 'paint' ? 'pointer' : 'default' }}
-                      >
-                        {form.supportPhone}
-                      </div>
-                      <div style={{ fontSize: 12, color: '#64748b' }}>
-                        <span onClick={() => studioMode === 'paint' && setEditingField('address')} style={{ cursor: studioMode === 'paint' ? 'pointer' : 'default' }}>
-                          {form.address}
-                        </span>
-                        {' · '}
-                        <span onClick={() => studioMode === 'paint' && setEditingField('supportEmail')} style={{ cursor: studioMode === 'paint' ? 'pointer' : 'default' }}>
-                          {form.supportEmail}
-                        </span>
-                      </div>
+                      {form.heroSubtitle || 'Elevate your automotive experience with LS Customs, your premier gateway to bespoke vehicle tuning and concierge care.'}
+                    </p>
+                  </div>
+
+                  {/* Column 2: Navigation */}
+                  <div>
+                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', margin: '0 0 12px' }}>Navigation</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11, color: '#94a3b8' }}>
+                      <span>Home</span>
+                      <span>Book Service</span>
+                      <span>Live Tracker</span>
+                      <span>Vouchers & Promos</span>
+                      <span>Contact Us</span>
                     </div>
                   </div>
 
-                  <div style={{ textAlign: 'right' }}>
-                    <div
-                      style={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 5,
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: '#16a34a',
-                        background: '#dcfce7',
-                        padding: '3px 8px',
-                        borderRadius: 999,
-                      }}
-                    >
-                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a' }} />
-                      AVAILABLE NOW
+                  {/* Column 3: Services */}
+                  <div>
+                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', margin: '0 0 12px' }}>Services</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 11, color: '#94a3b8' }}>
+                      <span>Performance & ECU Tuning</span>
+                      <span>Custom Bodywork & Paint</span>
+                      <span>Suspension & Alignment</span>
+                      <span>Advanced Diagnostics</span>
+                      <span>24/7 Concierge Dispatch</span>
                     </div>
-                    <div
-                      onClick={() => studioMode === 'paint' && setEditingField('workingHours')}
-                      style={{ fontSize: 11, color: '#64748b', marginTop: 4, cursor: studioMode === 'paint' ? 'pointer' : 'default' }}
-                    >
-                      {form.workingHours}
+                  </div>
+
+                  {/* Column 4: Get in touch */}
+                  <div>
+                    <h5 style={{ fontSize: 13, fontWeight: 700, color: '#ffffff', margin: '0 0 12px' }}>Get in touch</h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, fontSize: 11, color: '#94a3b8' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <Mail size={14} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 1 }} />
+                        <span
+                          onClick={() => studioMode === 'paint' && setEditingField('supportEmail')}
+                          style={{ color: '#94a3b8', cursor: studioMode === 'paint' ? 'pointer' : 'default', wordBreak: 'break-all' }}
+                        >
+                          {form.supportEmail}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <Phone size={14} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 1 }} />
+                        <span
+                          onClick={() => studioMode === 'paint' && setEditingField('supportPhone')}
+                          style={{ color: '#94a3b8', cursor: studioMode === 'paint' ? 'pointer' : 'default' }}
+                        >
+                          {form.supportPhone}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <MapPin size={14} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 1 }} />
+                        <span
+                          onClick={() => studioMode === 'paint' && setEditingField('address')}
+                          style={{ color: '#94a3b8', cursor: studioMode === 'paint' ? 'pointer' : 'default', lineHeight: 1.4 }}
+                        >
+                          {form.address}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <Clock size={14} style={{ color: '#38bdf8', flexShrink: 0, marginTop: 1 }} />
+                        <span
+                          onClick={() => studioMode === 'paint' && setEditingField('workingHours')}
+                          style={{ color: '#94a3b8', cursor: studioMode === 'paint' ? 'pointer' : 'default', lineHeight: 1.4 }}
+                        >
+                          {form.workingHours}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                {/* Footer Brand & Legal Row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#94a3b8', flexWrap: 'wrap', gap: 10, paddingTop: 4 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <strong style={{ color: '#0f172a' }}>{form.companyName}</strong>
-                    <span>· Premier automotive solutions</span>
-                  </div>
+                {/* Subtle Divider Line */}
+                <div style={{ width: '100%', height: 1, background: 'rgba(255, 255, 255, 0.08)', margin: '24px 0 16px' }} />
+
+                {/* Bottom Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#64748b', flexWrap: 'wrap', gap: 10 }}>
                   <span>© 2026 {form.companyName}. All rights reserved.</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#94a3b8' }}>
+                    <Facebook size={14} />
+                    <Twitter size={14} />
+                    <Linkedin size={14} />
+                    <Instagram size={14} />
+                  </div>
                 </div>
               </footer>
 
