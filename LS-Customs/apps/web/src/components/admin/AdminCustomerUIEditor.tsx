@@ -9,6 +9,7 @@ import {
   DEFAULT_SITE_SETTINGS,
   type CustomerSiteSettings,
 } from '../../hooks/useCustomerSiteSettings'
+import { AvailableVouchersPromos } from '../common/AvailableVouchersPromos'
 import {
   Save,
   RotateCcw,
@@ -21,6 +22,9 @@ import {
   ExternalLink,
   ChevronRight,
   Eye,
+  Zap,
+  Monitor,
+  Smartphone,
 } from 'lucide-react'
 
 const COLOR_PRESETS = [
@@ -38,9 +42,17 @@ export function AdminCustomerUIEditor() {
   const [form, setForm] = useState<CustomerSiteSettings>(settings)
   const [activeTab, setActiveTab] = useState<'banner' | 'hero' | 'business' | 'theme'>('banner')
   const [savedSuccess, setSavedSuccess] = useState(false)
+  const [instantSync, setInstantSync] = useState(true)
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop')
 
   const handleChange = <K extends keyof CustomerSiteSettings>(key: K, value: CustomerSiteSettings[K]) => {
-    setForm((prev) => ({ ...prev, [key]: value }))
+    setForm((prev) => {
+      const next = { ...prev, [key]: value }
+      if (instantSync) {
+        saveSettings(next)
+      }
+      return next
+    })
   }
 
   const handleSave = () => {
@@ -67,7 +79,51 @@ export function AdminCustomerUIEditor() {
           <h1>Customer UI Editor</h1>
           <p>Tailor the customer experience, broadcast promotional banners, and edit storefront copy.</p>
         </div>
-        <div className="admin-revenue-actions">
+        <div className="admin-revenue-actions" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          {/* Live Sync Toggle */}
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              cursor: 'pointer',
+              fontSize: 12,
+              fontWeight: 600,
+              color: instantSync ? '#10b981' : '#94a3b8',
+              background: instantSync ? 'rgba(16, 185, 129, 0.12)' : 'rgba(255,255,255,0.05)',
+              padding: '6px 12px',
+              borderRadius: 8,
+              border: `1px solid ${instantSync ? 'rgba(16, 185, 129, 0.3)' : 'rgba(255,255,255,0.1)'}`,
+              userSelect: 'none',
+              transition: 'all 0.15s ease',
+            }}
+            title="When active, changes synchronize live to the customer portal as you type"
+          >
+            <input
+              type="checkbox"
+              checked={instantSync}
+              onChange={(e) => {
+                const checked = e.target.checked
+                setInstantSync(checked)
+                if (checked) saveSettings(form)
+              }}
+              style={{ accentColor: '#10b981', cursor: 'pointer', margin: 0 }}
+            />
+            <Zap size={13} fill={instantSync ? '#10b981' : 'none'} />
+            <span>Live Sync {instantSync ? 'Active' : 'Paused'}</span>
+          </label>
+
+          <button
+            type="button"
+            className="admin-date-range"
+            onClick={() => window.open('/', '_blank')}
+            title="Open customer portal in a new tab to see changes live"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <ExternalLink size={14} />
+            Open Customer View
+          </button>
+
           <button
             type="button"
             className="admin-date-range"
@@ -90,7 +146,7 @@ export function AdminCustomerUIEditor() {
             {savedSuccess ? (
               <>
                 <CheckCircle2 size={15} />
-                Saved & Published!
+                Saved & Synchronized!
               </>
             ) : (
               <>
@@ -633,19 +689,68 @@ export function AdminCustomerUIEditor() {
                 Customer Live Preview
               </span>
             </div>
-            <span style={{ fontSize: 11, background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '3px 8px', borderRadius: 12, fontWeight: 600 }}>
-              ● Synchronized
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {/* Device Toggle */}
+              <div style={{ display: 'flex', background: 'rgba(255,255,255,0.06)', borderRadius: 6, padding: 2, border: '1px solid rgba(255,255,255,0.1)' }}>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('desktop')}
+                  title="Desktop View"
+                  style={{
+                    background: previewDevice === 'desktop' ? 'var(--admin-accent, #e8a838)' : 'transparent',
+                    color: previewDevice === 'desktop' ? '#000000' : '#94a3b8',
+                    border: 'none',
+                    borderRadius: 4,
+                    padding: '3px 8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontSize: 11,
+                    fontWeight: 600,
+                  }}
+                >
+                  <Monitor size={12} /> Desktop
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewDevice('mobile')}
+                  title="Mobile View"
+                  style={{
+                    background: previewDevice === 'mobile' ? 'var(--admin-accent, #e8a838)' : 'transparent',
+                    color: previewDevice === 'mobile' ? '#000000' : '#94a3b8',
+                    border: 'none',
+                    borderRadius: 4,
+                    padding: '3px 8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 4,
+                    fontSize: 11,
+                    fontWeight: 600,
+                  }}
+                >
+                  <Smartphone size={12} /> Mobile
+                </button>
+              </div>
+
+              <span style={{ fontSize: 11, background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '3px 8px', borderRadius: 12, fontWeight: 600 }}>
+                ● Synchronized
+              </span>
+            </div>
           </div>
 
           {/* Browser / Device Shell Mockup */}
           <div
             style={{
-              background: '#0d1117',
+              background: '#ffffff',
               border: '1px solid #30363d',
               borderRadius: 14,
               overflow: 'hidden',
               boxShadow: '0 20px 50px rgba(0,0,0,0.6)',
+              maxWidth: previewDevice === 'mobile' ? 390 : '100%',
+              margin: previewDevice === 'mobile' ? '0 auto' : undefined,
+              transition: 'max-width 0.25s ease',
             }}
           >
             {/* Mockup Header Bar */}
@@ -653,64 +758,56 @@ export function AdminCustomerUIEditor() {
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }} />
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b' }} />
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981' }} />
-              <div style={{ flex: 1, textAlign: 'center', margin: '0 16px' }}>
+              <div style={{ flex: 1, textAlign: 'center', margin: '0 12px' }}>
                 <div style={{ background: '#0d1117', borderRadius: 6, padding: '2px 10px', fontSize: 11, color: '#8b949e', display: 'inline-block' }}>
                   https://ls-customs-web.vercel.app
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={() => window.open('/', '_blank')}
+                title="Open live customer portal in a new tab"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#8b949e',
+                  cursor: 'pointer',
+                  padding: 2,
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <ExternalLink size={13} />
+              </button>
             </div>
 
-            {/* Mockup Content Body */}
-            <div style={{ padding: 16, background: '#090d14', minHeight: 460 }}>
+            {/* Mockup Content Body — Light-Mode Customer Aesthetic */}
+            <div style={{ padding: 16, background: '#f8faf8', minHeight: 460, color: '#0f172a' }}>
               
-              {/* 1. Live Announcement Banner */}
+              {/* 1. Live Interactive Announcement Banner + Available Vouchers */}
               {form.showBanner && (
-                <div
-                  style={{
-                    background: form.bannerBg,
-                    color: form.bannerTextColor,
-                    borderRadius: 8,
-                    padding: '8px 14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    marginBottom: 16,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, lineHeight: 1.3 }}>
-                    <Sparkles size={14} style={{ flexShrink: 0 }} />
-                    <span>{form.bannerText || 'Add your announcement text here'}</span>
-                  </div>
-                  {form.bannerLinkView !== 'none' && form.bannerLinkText && (
-                    <span
-                      style={{
-                        background: form.bannerTextColor === '#000000' ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.2)',
-                        padding: '4px 10px',
-                        borderRadius: 6,
-                        fontSize: 11,
-                        whiteSpace: 'nowrap',
-                        fontWeight: 700,
-                      }}
-                    >
-                      {form.bannerLinkText} →
-                    </span>
-                  )}
+                <div style={{ marginBottom: 16 }}>
+                  <AvailableVouchersPromos
+                    onView={() => {}}
+                    onNotify={() => {}}
+                    bannerText={form.bannerText}
+                    bannerBg={form.bannerBg}
+                    bannerTextColor={form.bannerTextColor}
+                    bannerLinkText={form.bannerLinkText}
+                    bannerLinkView={form.bannerLinkView}
+                  />
                 </div>
               )}
 
               {/* 2. Customer Navigation Header Bar Mockup */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 16, borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 14, borderBottom: '1px solid #e2ebe4', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: 6, background: form.accentColor, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 900, color: '#000' }}>
+                  <div style={{ width: 26, height: 26, borderRadius: 7, background: form.accentColor, display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 900, color: '#000000' }}>
                     LS
                   </div>
-                  <strong style={{ fontSize: 13, color: '#fff' }}>{form.companyName}</strong>
+                  <strong style={{ fontSize: 13, color: '#0f172a', fontWeight: 800 }}>{form.companyName}</strong>
                 </div>
-                <div style={{ display: 'flex', gap: 14, fontSize: 11, color: '#94a3b8' }}>
+                <div style={{ display: 'flex', gap: 12, fontSize: 11, color: '#64748b', fontWeight: 600 }}>
                   <span>Rentals</span>
                   <span>Mechanics</span>
                   <span>Bookings</span>
@@ -719,13 +816,13 @@ export function AdminCustomerUIEditor() {
 
               {/* 3. Welcome Section */}
               <div style={{ marginBottom: 16 }}>
-                <p style={{ fontSize: 10, textTransform: 'uppercase', color: form.accentColor, letterSpacing: '0.08em', margin: '0 0 4px', fontWeight: 700 }}>
+                <p style={{ fontSize: 10, textTransform: 'uppercase', color: form.accentColor, letterSpacing: '0.08em', margin: '0 0 3px', fontWeight: 800 }}>
                   SATURDAY, 23 SEPTEMBER 2026
                 </p>
-                <h4 style={{ fontSize: 17, margin: '0 0 4px', color: '#fff', fontWeight: 800 }}>
+                <h4 style={{ fontSize: 18, margin: '0 0 4px', color: '#0f172a', fontWeight: 800 }}>
                   Good afternoon, Alex ✦
                 </h4>
-                <p style={{ fontSize: 11, color: '#94a3b8', margin: 0 }}>
+                <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>
                   {form.welcomeSubtitle}
                 </p>
               </div>
@@ -733,13 +830,14 @@ export function AdminCustomerUIEditor() {
               {/* 4. Hero Card Preview */}
               <div
                 style={{
-                  background: 'linear-gradient(135deg, rgba(26, 32, 44, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'linear-gradient(135deg, #18221c 0%, #0d1410 100%)',
+                  border: '1px solid #28372d',
                   borderRadius: 12,
                   padding: 18,
                   position: 'relative',
                   overflow: 'hidden',
                   marginBottom: 16,
+                  color: '#ffffff',
                 }}
               >
                 {/* Glow accent */}
@@ -753,25 +851,25 @@ export function AdminCustomerUIEditor() {
                     borderRadius: '50%',
                     background: form.accentColor,
                     filter: 'blur(40px)',
-                    opacity: 0.25,
+                    opacity: 0.3,
                   }}
                 />
 
                 <p style={{ fontSize: 9, letterSpacing: '0.1em', color: form.accentColor, textTransform: 'uppercase', margin: '0 0 6px', fontWeight: 800 }}>
                   {form.heroEyebrow}
                 </p>
-                <h3 style={{ fontSize: 16, margin: '0 0 6px', color: '#fff', fontWeight: 800, lineHeight: 1.2 }}>
+                <h3 style={{ fontSize: 16, margin: '0 0 6px', color: '#ffffff', fontWeight: 800, lineHeight: 1.25 }}>
                   {form.heroHeadline}{' '}
                   <em style={{ color: form.accentColor, fontStyle: 'italic' }}>{form.heroHeadlineEm}</em>
                 </h3>
                 <p style={{ fontSize: 11, color: '#cbd5e1', margin: '0 0 14px', lineHeight: 1.4 }}>
                   {form.heroSubtitle}
                 </p>
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                   <div
                     style={{
                       background: form.accentColor,
-                      color: '#000',
+                      color: '#000000',
                       padding: '6px 12px',
                       borderRadius: 6,
                       fontSize: 11,
@@ -787,8 +885,8 @@ export function AdminCustomerUIEditor() {
                   <div
                     style={{
                       background: 'rgba(255,255,255,0.08)',
-                      color: '#fff',
-                      border: '1px solid rgba(255,255,255,0.15)',
+                      color: '#ffffff',
+                      border: '1px solid rgba(255,255,255,0.2)',
                       padding: '6px 12px',
                       borderRadius: 6,
                       fontSize: 11,
@@ -801,15 +899,31 @@ export function AdminCustomerUIEditor() {
               </div>
 
               {/* 5. Business Contact Snippet Mockup */}
-              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2ebe4',
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                  flexWrap: 'wrap',
+                  gap: 10,
+                }}
+              >
                 <div>
-                  <div style={{ fontSize: 10, color: 'var(--admin-muted)', textTransform: 'uppercase', fontWeight: 700 }}>Showroom & Support</div>
-                  <div style={{ fontSize: 11, color: '#fff', fontWeight: 600 }}>{form.supportPhone}</div>
-                  <div style={{ fontSize: 10, color: '#94a3b8' }}>{form.address}</div>
+                  <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.06em' }}>Showroom & Support</div>
+                  <div style={{ fontSize: 12, color: '#0f172a', fontWeight: 800 }}>{form.supportPhone}</div>
+                  <div style={{ fontSize: 10, color: '#64748b' }}>{form.address} · {form.supportEmail}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 9, color: '#10b981', fontWeight: 700 }}>● AVAILABLE NOW</div>
-                  <div style={{ fontSize: 10, color: 'var(--admin-muted)' }}>{form.workingHours}</div>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 9, color: '#16a34a', background: '#dcfce7', padding: '2px 8px', borderRadius: 999, fontWeight: 700 }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a' }} />
+                    AVAILABLE NOW
+                  </div>
+                  <div style={{ fontSize: 10, color: '#64748b', marginTop: 2 }}>{form.workingHours}</div>
                 </div>
               </div>
 

@@ -236,6 +236,75 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
           ))
         )}
       </div>
+
+      {/* ── Concierge Showroom & Support Bar ──────────────────── */}
+      <section
+        style={{
+          marginTop: 36,
+          padding: '20px 24px',
+          borderRadius: 14,
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 20,
+          boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 12,
+              background: settings.accentColor || 'var(--brand-accent, #e8a838)',
+              display: 'grid',
+              placeItems: 'center',
+              color: '#000000',
+              fontWeight: 800,
+              fontSize: 16,
+              flexShrink: 0,
+            }}
+          >
+            LS
+          </div>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', textTransform: 'uppercase' }}>
+              Showroom & Concierge Support
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', margin: '2px 0' }}>
+              {settings.supportPhone}
+            </div>
+            <div style={{ fontSize: 13, color: '#64748b' }}>
+              {settings.address} · {settings.supportEmail}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ textAlign: 'right' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#16a34a',
+              background: '#dcfce7',
+              padding: '4px 10px',
+              borderRadius: 999,
+            }}
+          >
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a' }} />
+            AVAILABLE NOW
+          </div>
+          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
+            {settings.workingHours}
+          </div>
+        </div>
+      </section>
     </div>
   )
 }

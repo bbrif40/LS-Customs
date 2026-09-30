@@ -7,6 +7,7 @@ import { CircleHelp, ChevronRight } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { sparkles, warningOutline, radioOutline } from 'ionicons/icons'
 import { navItems } from '../../data/navigation'
+import { useCustomerSiteSettings } from '../../hooks/useCustomerSiteSettings'
 import type { View } from '../../types'
 import { navigateTo } from '../../utils/navigation'
 import { EmergencyMechanicModal, type EmergencyDispatchData } from '../common/EmergencyMechanicModal'
@@ -40,6 +41,7 @@ export function Sidebar({
   activeDispatch: parentActiveDispatch,
   setActiveDispatch: parentSetActiveDispatch,
 }: SidebarProps) {
+  const { settings } = useCustomerSiteSettings()
   // Local fallback state if parent does not manage dispatch state directly
   const [internalModalOpen, setInternalModalOpen] = useState(false)
   const [internalActiveDispatch, setInternalActiveDispatch] = useState<EmergencyDispatchData | null>(null)
@@ -72,16 +74,16 @@ export function Sidebar({
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView('home') } }}
           role="button"
           tabIndex={0}
-          aria-label="LS Customs home"
+          aria-label={`${settings.companyName || 'LS Customs'} home`}
         >
           <img
             src="/logo.png"
-            alt="LS Customs"
+            alt={settings.companyName || 'LS Customs'}
             className="brand-logo-img"
             style={{ width: 34, height: 34, objectFit: 'contain', flexShrink: 0 }}
           />
           <div className="brand-copy">
-            <span className="brand-name">LS Customs</span>
+            <span className="brand-name">{settings.companyName || 'LS Customs'}</span>
             <span className="brand-tagline">AUTOMOTIVE & FLEET</span>
           </div>
         </div>

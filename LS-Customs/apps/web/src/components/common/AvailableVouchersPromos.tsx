@@ -103,6 +103,56 @@ interface AvailableVouchersPromosProps {
   bannerLinkView?: 'rentals' | 'services' | 'bookings' | 'none'
 }
 
+export function getPromosList(bannerText?: string): PromoVoucher[] {
+  let promoCode = 'ESCAPE20'
+  let discountStr = '20% OFF'
+  let discountVal = 20
+  let discountType: 'percent' | 'fixed' | 'free' = 'percent'
+  let title = 'Flash Sale: 20% Off Exotic Fleet'
+
+  if (bannerText) {
+    const codeMatch = bannerText.match(/Code:\s*([A-Za-z0-9_-]+)/i)
+    if (codeMatch && codeMatch[1]) {
+      promoCode = codeMatch[1].toUpperCase()
+    }
+    const percentMatch = bannerText.match(/(\d+)%\s*off/i)
+    if (percentMatch && percentMatch[1]) {
+      discountVal = parseInt(percentMatch[1], 10)
+      discountStr = `${discountVal}% OFF`
+      title = `Featured Promo: ${discountVal}% Off`
+    } else {
+      const fixedMatch = bannerText.match(/₱\s*(\d+)/i)
+      if (fixedMatch && fixedMatch[1]) {
+        discountVal = parseInt(fixedMatch[1], 10)
+        discountStr = `₱${discountVal} OFF`
+        discountType = 'fixed'
+        title = `Featured Promo: ₱${discountVal} Off`
+      }
+    }
+  }
+
+  const defaultPromo: PromoVoucher = {
+    id: `promo-${promoCode.toLowerCase()}`,
+    code: promoCode,
+    title,
+    discount: discountStr,
+    discountType,
+    discountValue: discountVal,
+    description: bannerText ? bannerText.replace(/^[^a-zA-Z0-9]+/, '') : 'Exclusive promotional discount on vehicle rentals and services.',
+    category: 'all',
+    badge: 'Featured Promo',
+    badgeBg: '#fef3c7',
+    badgeColor: '#92400e',
+    expires: 'Active Now',
+    isDefault: true,
+  }
+
+  return [
+    defaultPromo,
+    ...AVAILABLE_PROMOS.filter((p) => p.code !== promoCode && !p.isDefault),
+  ]
+}
+
 const STORAGE_KEY = 'ls_customs_active_promo'
 
 export function AvailableVouchersPromos({
@@ -119,6 +169,8 @@ export function AvailableVouchersPromos({
   const [activePromo, setActivePromo] = useState<PromoVoucher | null>(null)
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null)
+
+  const promosList = React.useMemo(() => getPromosList(bannerText), [bannerText])
 
   // Load active promo from storage on mount
   useEffect(() => {
@@ -162,7 +214,7 @@ export function AvailableVouchersPromos({
     }
 
     // Check if matches an existing voucher
-    const match = AVAILABLE_PROMOS.find((p) => p.code.toUpperCase() === trimmed)
+    const match = promosList.find((p) => p.code.toUpperCase() === trimmed)
     if (match) {
       saveActivePromo(match)
       setFeedback({
@@ -201,7 +253,7 @@ export function AvailableVouchersPromos({
 
   // System gives default promo if user doesn't know one
   const handleGetDefaultPromo = () => {
-    const defaultPromo = AVAILABLE_PROMOS.find((p) => p.isDefault) || AVAILABLE_PROMOS[0]
+    const defaultPromo = promosList.find((p) => p.isDefault) || promosList[0]
     saveActivePromo(defaultPromo)
     setFeedback({
       type: 'success',
@@ -694,7 +746,7 @@ export function AvailableVouchersPromos({
               gap: 12,
             }}
           >
-            {AVAILABLE_PROMOS.map((voucher) => {
+            {promosList.map((voucher) => {
               const isCurrent = activePromo?.code === voucher.code
               const isCopied = copiedCode === voucher.code
 

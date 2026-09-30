@@ -3,21 +3,23 @@
  */
 
 import { navigateTo } from '../../utils/navigation'
+import { useCustomerSiteSettings } from '../../hooks/useCustomerSiteSettings'
 
 interface WorkspaceFooterProps {
   onNotify?: (message: string) => void
 }
 
 export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
+  const { settings } = useCustomerSiteSettings()
   return (
     <footer className="workspace-footer">
       <div className="workspace-footer-brand">
         <img
           src="/logo.png"
-          alt="LS Customs"
+          alt={settings.companyName || 'LS Customs'}
           style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }}
         />
-        <strong>LS Customs</strong>
+        <strong>{settings.companyName || 'LS Customs'}</strong>
         <small>Professional automotive solutions.</small>
       </div>
       <div className="workspace-footer-links">
@@ -26,7 +28,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
         <button onClick={() => navigateTo('/terms')}>Terms of Service</button>
         <button onClick={() => navigateTo('/privacy')}>Privacy Policy</button>
       </div>
-      <small className="workspace-copyright">© 2024 LS Customs</small>
+      <small className="workspace-copyright">© 2024 {settings.companyName || 'LS Customs'}</small>
     </footer>
   )
 }
