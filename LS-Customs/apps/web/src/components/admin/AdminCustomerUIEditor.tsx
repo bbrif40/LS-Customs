@@ -1168,22 +1168,19 @@ export function AdminCustomerUIEditor() {
                 </div>
               </section>
 
-              {/* 7. SHOWROOM & CONCIERGE SUPPORT BAR */}
-              <section
+              {/* 7. CUSTOMER FOOTER WITH INTEGRATED CONCIERGE SUPPORT BAR */}
+              <footer
                 style={{
-                  background: '#ffffff',
-                  border: '1px solid #e2ebe4',
-                  borderRadius: 14,
-                  padding: '16px 20px',
+                  marginTop: 24,
+                  paddingTop: 18,
+                  borderTop: '1px solid #e2ebe4',
                   display: 'flex',
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
+                  flexDirection: 'column',
                   gap: 16,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
-                  marginBottom: 20,
                   position: 'relative',
                   outline: studioMode === 'paint' ? '1px dashed rgba(232, 168, 56, 0.4)' : 'none',
+                  borderRadius: 10,
+                  padding: 8,
                 }}
               >
                 {studioMode === 'paint' && (
@@ -1199,81 +1196,97 @@ export function AdminCustomerUIEditor() {
                     }}
                     onClick={() => openInspectorTo('business')}
                   >
-                    ✏️ Edit Concierge & Support Details
+                    ✏️ Edit Concierge & Footer
                   </div>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div
-                    style={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: 10,
-                      background: form.accentColor,
-                      display: 'grid',
-                      placeItems: 'center',
-                      color: '#000000',
-                      fontWeight: 800,
-                      fontSize: 14,
-                    }}
-                  >
-                    LS
-                  </div>
-                  <div>
-                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', textTransform: 'uppercase' }}>
-                      Showroom & Concierge Support
-                    </span>
+                {/* Showroom & Concierge Support Bar inside Footer */}
+                <div
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2ebe4',
+                    borderRadius: 14,
+                    padding: '16px 20px',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 16,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <div
-                      onClick={() => studioMode === 'paint' && setEditingField('supportPhone')}
-                      style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', margin: '2px 0', cursor: studioMode === 'paint' ? 'pointer' : 'default' }}
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: form.accentColor,
+                        display: 'grid',
+                        placeItems: 'center',
+                        color: '#000000',
+                        fontWeight: 800,
+                        fontSize: 14,
+                      }}
                     >
-                      {form.supportPhone}
+                      LS
                     </div>
-                    <div style={{ fontSize: 12, color: '#64748b' }}>
-                      <span onClick={() => studioMode === 'paint' && setEditingField('address')} style={{ cursor: studioMode === 'paint' ? 'pointer' : 'default' }}>
-                        {form.address}
+                    <div>
+                      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: '#64748b', textTransform: 'uppercase' }}>
+                        Showroom & Concierge Support
                       </span>
-                      {' · '}
-                      <span onClick={() => studioMode === 'paint' && setEditingField('supportEmail')} style={{ cursor: studioMode === 'paint' ? 'pointer' : 'default' }}>
-                        {form.supportEmail}
-                      </span>
+                      <div
+                        onClick={() => studioMode === 'paint' && setEditingField('supportPhone')}
+                        style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', margin: '2px 0', cursor: studioMode === 'paint' ? 'pointer' : 'default' }}
+                      >
+                        {form.supportPhone}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#64748b' }}>
+                        <span onClick={() => studioMode === 'paint' && setEditingField('address')} style={{ cursor: studioMode === 'paint' ? 'pointer' : 'default' }}>
+                          {form.address}
+                        </span>
+                        {' · '}
+                        <span onClick={() => studioMode === 'paint' && setEditingField('supportEmail')} style={{ cursor: studioMode === 'paint' ? 'pointer' : 'default' }}>
+                          {form.supportEmail}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 5,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: '#16a34a',
+                        background: '#dcfce7',
+                        padding: '3px 8px',
+                        borderRadius: 999,
+                      }}
+                    >
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a' }} />
+                      AVAILABLE NOW
+                    </div>
+                    <div
+                      onClick={() => studioMode === 'paint' && setEditingField('workingHours')}
+                      style={{ fontSize: 11, color: '#64748b', marginTop: 4, cursor: studioMode === 'paint' ? 'pointer' : 'default' }}
+                    >
+                      {form.workingHours}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ textAlign: 'right' }}>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: '#16a34a',
-                      background: '#dcfce7',
-                      padding: '3px 8px',
-                      borderRadius: 999,
-                    }}
-                  >
-                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#16a34a' }} />
-                    AVAILABLE NOW
+                {/* Footer Brand & Legal Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#94a3b8', flexWrap: 'wrap', gap: 10, paddingTop: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <strong style={{ color: '#0f172a' }}>{form.companyName}</strong>
+                    <span>· Premier automotive solutions</span>
                   </div>
-                  <div
-                    onClick={() => studioMode === 'paint' && setEditingField('workingHours')}
-                    style={{ fontSize: 11, color: '#64748b', marginTop: 4, cursor: studioMode === 'paint' ? 'pointer' : 'default' }}
-                  >
-                    {form.workingHours}
-                  </div>
+                  <span>© 2026 {form.companyName}. All rights reserved.</span>
                 </div>
-              </section>
-
-              {/* 8. CUSTOMER FOOTER */}
-              <footer style={{ padding: '16px 0 6px', borderTop: '1px solid #e2ebe4', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#94a3b8' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <strong style={{ color: '#0f172a' }}>{form.companyName}</strong>
-                  <span>· Premier automotive solutions</span>
-                </div>
-                <span>© 2026 {form.companyName}. All rights reserved.</span>
               </footer>
 
             </div>
