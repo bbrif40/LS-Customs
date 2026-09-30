@@ -1,18 +1,65 @@
 /**
  * WorkspaceFooter — sleek multi-column typographic footer with subtle line icons.
- * Clean, modern light-mode design matching LS Customs theme.
+ * Fully interactive and connected to customer-side navigation, active booking tracker,
+ * vouchers drawer, emergency roadside dispatch, and contact support.
  */
 
 import { Mail, MapPin, Phone, Clock, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react'
 import { navigateTo } from '../../utils/navigation'
 import { useCustomerSiteSettings } from '../../hooks/useCustomerSiteSettings'
+import type { View } from '../../types'
 
 interface WorkspaceFooterProps {
   onNotify?: (message: string) => void
+  onView?: (view: View) => void
+  onEmergencyClick?: () => void
 }
 
-export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
+export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: WorkspaceFooterProps) {
   const { settings } = useCustomerSiteSettings()
+
+  const handleNav = (targetView: View, action?: 'promos') => {
+    // If user is currently on a public page (/help, /contact, /terms, etc.), return to app frame
+    const path = window.location.pathname
+    if (path.startsWith('/help') || path.startsWith('/contact') || path.startsWith('/terms') || path.startsWith('/privacy') || path.startsWith('/faqs') || path.startsWith('/docs')) {
+      window.history.pushState({}, '', '/')
+      window.dispatchEvent(new PopStateEvent('popstate'))
+    }
+
+    if (action === 'promos') {
+      if (onView) {
+        onView('home')
+      } else {
+        navigateTo('/')
+      }
+      setTimeout(() => {
+        const promoEl = document.getElementById('available-vouchers-promos-section')
+        if (promoEl) {
+          promoEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+        window.dispatchEvent(new CustomEvent('ls-open-promos'))
+      }, 150)
+      return
+    }
+
+    if (onView) {
+      onView(targetView)
+      window.history.pushState({}, '', targetView === 'home' ? '/' : `/${targetView}`)
+    } else {
+      navigateTo(targetView === 'home' ? '/' : `/${targetView}`)
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleEmergency = () => {
+    if (onEmergencyClick) {
+      onEmergencyClick()
+    } else if (onView) {
+      onView('services')
+    } else {
+      navigateTo('/services')
+    }
+  }
 
   return (
     <footer
@@ -41,7 +88,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
         {/* ── Column 1: Brand & Tagline ─── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 300 }}>
           <div
-            onClick={() => navigateTo('/')}
+            onClick={() => handleNav('home')}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -80,7 +127,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
           </p>
         </div>
 
-        {/* ── Column 2: Navigation ─── */}
+        {/* ── Column 2: Navigation (100% Functional Customer Actions) ─── */}
         <div>
           <h4
             style={{
@@ -106,7 +153,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
           >
             <li>
               <span
-                onClick={() => navigateTo('/')}
+                onClick={() => handleNav('home')}
                 style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
@@ -116,7 +163,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             </li>
             <li>
               <span
-                onClick={() => navigateTo('/services')}
+                onClick={() => handleNav('services')}
                 style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
@@ -126,7 +173,17 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             </li>
             <li>
               <span
-                onClick={() => navigateTo('/tracker')}
+                onClick={() => handleNav('rentals')}
+                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+              >
+                Vehicle Rentals
+              </span>
+            </li>
+            <li>
+              <span
+                onClick={() => handleNav('bookings')}
                 style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
@@ -136,7 +193,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             </li>
             <li>
               <span
-                onClick={() => navigateTo('/promos')}
+                onClick={() => handleNav('home', 'promos')}
                 style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
@@ -146,7 +203,10 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             </li>
             <li>
               <span
-                onClick={() => navigateTo('/contact')}
+                onClick={() => {
+                  navigateTo('/contact')
+                  window.scrollTo({ top: 0, behavior: 'smooth' })
+                }}
                 style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
@@ -157,7 +217,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
           </ul>
         </div>
 
-        {/* ── Column 3: Services / Specialties ─── */}
+        {/* ── Column 3: Services (Functional Booking & SOS Triggers) ─── */}
         <div>
           <h4
             style={{
@@ -183,7 +243,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
           >
             <li>
               <span
-                onClick={() => navigateTo('/services')}
+                onClick={() => handleNav('services')}
                 style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
@@ -193,7 +253,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             </li>
             <li>
               <span
-                onClick={() => navigateTo('/services')}
+                onClick={() => handleNav('services')}
                 style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
@@ -203,7 +263,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             </li>
             <li>
               <span
-                onClick={() => navigateTo('/services')}
+                onClick={() => handleNav('services')}
                 style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
@@ -213,7 +273,7 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             </li>
             <li>
               <span
-                onClick={() => navigateTo('/services')}
+                onClick={() => handleNav('services')}
                 style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
@@ -223,18 +283,18 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
             </li>
             <li>
               <span
-                onClick={() => navigateTo('/services')}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
+                onClick={handleEmergency}
+                style={{ cursor: 'pointer', color: '#16a34a', fontWeight: 600, transition: 'color 0.2s' }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#15803d')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#16a34a')}
               >
-                24/7 Roadside Concierge Dispatch
+                24/7 Roadside Concierge Dispatch (SOS)
               </span>
             </li>
           </ul>
         </div>
 
-        {/* ── Column 4: Get in touch (with subtle line icons) ─── */}
+        {/* ── Column 4: Get in touch (with subtle line icons & clickable links) ─── */}
         <div>
           <h4
             style={{
@@ -283,18 +343,34 @@ export function WorkspaceFooter({ onNotify: _onNotify }: WorkspaceFooterProps) {
               </a>
             </div>
 
-            {/* Address with subtle icon */}
+            {/* Address with subtle icon (Opens Google Maps) */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <MapPin size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
-              <span style={{ color: '#475569', lineHeight: 1.5 }}>
+              <a
+                href={`https://maps.google.com/?q=${encodeURIComponent(settings.address || '100 Portola Drive, Rockford Hills, Los Santos')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: '#475569',
+                  textDecoration: 'none',
+                  lineHeight: 1.5,
+                  transition: 'color 0.2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
+              >
                 {settings.address || '100 Portola Drive, Rockford Hills, Los Santos'}
-              </span>
+              </a>
             </div>
 
             {/* Hours with subtle icon */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <Clock size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
-              <span style={{ color: '#475569', lineHeight: 1.5, fontSize: 12 }}>
+              <span
+                onClick={() => onNotify?.(settings.workingHours || 'Showroom 8AM – 9PM · Roadside dispatch is available 24/7.')}
+                style={{ color: '#475569', lineHeight: 1.5, fontSize: 12, cursor: 'pointer' }}
+                title="Click for schedule info"
+              >
                 {settings.workingHours || 'Open 24/7 for Emergency Dispatch · Showroom 8AM – 9PM'}
               </span>
             </div>

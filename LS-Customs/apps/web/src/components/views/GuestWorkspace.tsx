@@ -169,7 +169,11 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
           <MechanicServices cartCount={0} onAdd={() => onOpenAuth('sign-in')} onNotify={() => onOpenAuth('sign-in')} />
         )}
 
-        <WorkspaceFooter onNotify={() => onOpenAuth('sign-in')} />
+        <WorkspaceFooter
+          onView={navigateGuest}
+          onEmergencyClick={onEmergencyClick}
+          onNotify={() => onOpenAuth('sign-in')}
+        />
       </main>
 
       <nav className="mobile-nav">

@@ -161,7 +161,14 @@ export function App() {
 
   const [publicView, setPublicView] = useState<PublicView>(() => resolvePublicView(window.location.pathname) ?? 'help')
 
-  const [view, setView] = useState<View>('home')
+  const [view, setView] = useState<View>(() => {
+    const path = window.location.pathname
+    if (path === '/services' || path.startsWith('/services')) return 'services'
+    if (path === '/rentals' || path.startsWith('/rentals')) return 'rentals'
+    if (path === '/bookings' || path === '/tracker' || path.startsWith('/bookings')) return 'bookings'
+    if (path === '/profile' || path.startsWith('/profile')) return 'profile'
+    return 'home'
+  })
   const [menuOpen, setMenuOpen] = useState(false)
   const [toast, setToast] = useState('')
   const [confirmSignOut, setConfirmSignOut] = useState(false)
@@ -176,7 +183,7 @@ export function App() {
   const [activeEmergencyDispatch, setActiveEmergencyDispatch] = useState<EmergencyDispatchData | null>(null)
   const [preselectedBookingDate, setPreselectedBookingDate] = useState<string | null>(null)
 
-  // Listen to browser forward/back buttons
+  // Listen to browser forward/back buttons and deep links
   useEffect(() => {
     const handleLocationChange = () => {
       const path = window.location.pathname
@@ -189,6 +196,17 @@ export function App() {
         setPublicView(resolvePublicView(path) ?? 'help')
       } else {
         setAppMode('customer')
+        if (path === '/services' || path.startsWith('/services')) {
+          setView('services')
+        } else if (path === '/rentals' || path.startsWith('/rentals')) {
+          setView('rentals')
+        } else if (path === '/bookings' || path === '/tracker' || path.startsWith('/bookings')) {
+          setView('bookings')
+        } else if (path === '/profile' || path.startsWith('/profile')) {
+          setView('profile')
+        } else if (path === '/' || path === '/home') {
+          setView('home')
+        }
       }
     }
 
@@ -410,7 +428,11 @@ export function App() {
               />
             )}
 
-            <WorkspaceFooter onNotify={notify} />
+            <WorkspaceFooter
+              onView={setView}
+              onNotify={notify}
+              onEmergencyClick={() => setEmergencyModalOpen(true)}
+            />
           </main>
 
           <nav className="mobile-nav">

@@ -185,6 +185,13 @@ export function AvailableVouchersPromos({
     }
   }, [])
 
+  // Listen for programmatic open requests (e.g. from footer navigation)
+  useEffect(() => {
+    const handleOpen = () => setIsExpanded(true)
+    window.addEventListener('ls-open-promos', handleOpen)
+    return () => window.removeEventListener('ls-open-promos', handleOpen)
+  }, [])
+
   const saveActivePromo = (promo: PromoVoucher | null) => {
     setActivePromo(promo)
     try {
@@ -287,6 +294,7 @@ export function AvailableVouchersPromos({
 
   return (
     <section
+      id="available-vouchers-promos-section"
       className="available-vouchers-promos-section"
       aria-label="Available Vouchers and Promotions"
       style={{
