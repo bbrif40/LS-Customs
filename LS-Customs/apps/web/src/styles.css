@@ -4789,7 +4789,7 @@ html { scroll-behavior: smooth; }
 }
 
 .available-vouchers-promos-section:hover {
-  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 20px rgba(35, 70, 49, 0.09);
 }
 
 @media (max-width: 640px) {
@@ -4797,7 +4797,7 @@ html { scroll-behavior: smooth; }
     margin-bottom: 16px;
   }
   .available-vouchers-promos-section .vouchers-expanded-panel {
-    padding: 16px 12px !important;
+    padding: 16px 14px !important;
   }
 }
 

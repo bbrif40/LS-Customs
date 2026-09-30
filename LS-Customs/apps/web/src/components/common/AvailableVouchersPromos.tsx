@@ -43,9 +43,9 @@ export const AVAILABLE_PROMOS: PromoVoucher[] = [
     discountValue: 20,
     description: 'Get 20% discount on all exotic and luxury vehicle rentals across Los Santos.',
     category: 'rentals',
-    badge: 'FLASH SALE',
-    badgeBg: '#e8a838',
-    badgeColor: '#000000',
+    badge: 'Flash Sale',
+    badgeBg: '#fef3c7',
+    badgeColor: '#92400e',
     expires: 'Valid this weekend',
     isDefault: true,
   },
@@ -58,9 +58,9 @@ export const AVAILABLE_PROMOS: PromoVoucher[] = [
     discountValue: 500,
     description: 'Save ₱500 on routine maintenance, brake inspection, or diagnostics at your location.',
     category: 'services',
-    badge: 'POPULAR SERVICE',
-    badgeBg: '#10b981',
-    badgeColor: '#ffffff',
+    badge: 'Popular',
+    badgeBg: '#edf7f1',
+    badgeColor: '#166534',
     expires: 'Valid for 14 days',
   },
   {
@@ -72,9 +72,9 @@ export const AVAILABLE_PROMOS: PromoVoucher[] = [
     discountValue: 15,
     description: 'Exclusive luxury discount on premium sports cars, SUVs, and executive sedans.',
     category: 'rentals',
-    badge: 'VIP EXCLUSIVE',
-    badgeBg: '#8b5cf6',
-    badgeColor: '#ffffff',
+    badge: 'VIP Club',
+    badgeBg: '#f3e8ff',
+    badgeColor: '#6b21a8',
     expires: 'Valid all month',
   },
   {
@@ -86,9 +86,9 @@ export const AVAILABLE_PROMOS: PromoVoucher[] = [
     discountValue: 100,
     description: 'Free multi-point engine, fluid, tire, and brake safety check with any appointment.',
     category: 'services',
-    badge: 'COMPLIMENTARY',
-    badgeBg: '#06b6d4',
-    badgeColor: '#000000',
+    badge: 'Complimentary',
+    badgeBg: '#e0f2fe',
+    badgeColor: '#0369a1',
     expires: 'Always available',
   },
 ]
@@ -156,7 +156,7 @@ export function AvailableVouchersPromos({
     if (!trimmed) {
       setFeedback({
         type: 'info',
-        message: 'Please enter a promo code, or click "Get Default Promo" below!',
+        message: 'Please enter a promo code or choose a voucher below.',
       })
       return
     }
@@ -174,27 +174,26 @@ export function AvailableVouchersPromos({
       return
     }
 
-    // If custom code is entered that doesn't match default list,
-    // give a default system bonus promo as requested by the prompt!
+    // If custom code is entered, system grants default 15% promo
     const customPromo: PromoVoucher = {
       id: `custom-${trimmed.toLowerCase()}`,
       code: trimmed,
-      title: `Special Promo: ${trimmed}`,
+      title: `Promo: ${trimmed}`,
       discount: '15% OFF',
       discountType: 'percent',
       discountValue: 15,
-      description: `Custom promo code ${trimmed} activated! System granted 15% VIP discount.`,
+      description: `Custom promo code ${trimmed} activated with 15% discount.`,
       category: 'all',
-      badge: 'CUSTOM PROMO',
-      badgeBg: '#10b981',
-      badgeColor: '#ffffff',
+      badge: 'Custom',
+      badgeBg: '#edf7f1',
+      badgeColor: '#166534',
       expires: 'Valid today',
     }
 
     saveActivePromo(customPromo)
     setFeedback({
       type: 'success',
-      message: `Code "${trimmed}" applied! The system granted 15% off for this promo.`,
+      message: `Code "${trimmed}" applied! 15% discount granted.`,
     })
     onNotify(`Code ${trimmed} applied! 15% discount activated.`)
     setInputCode('')
@@ -202,12 +201,11 @@ export function AvailableVouchersPromos({
 
   // System gives default promo if user doesn't know one
   const handleGetDefaultPromo = () => {
-    // Pick system default promo (ESCAPE20)
     const defaultPromo = AVAILABLE_PROMOS.find((p) => p.isDefault) || AVAILABLE_PROMOS[0]
     saveActivePromo(defaultPromo)
     setFeedback({
       type: 'success',
-      message: `System default promo "${defaultPromo.code}" applied! ${defaultPromo.discount} active.`,
+      message: `Default promo "${defaultPromo.code}" applied (${defaultPromo.discount})!`,
     })
     onNotify(`System default promo "${defaultPromo.code}" applied!`)
   }
@@ -240,48 +238,48 @@ export function AvailableVouchersPromos({
       className="available-vouchers-promos-section"
       aria-label="Available Vouchers and Promotions"
       style={{
-        marginBottom: 24,
-        borderRadius: 14,
+        marginBottom: 20,
+        borderRadius: 12,
         overflow: 'hidden',
-        border: '1px solid rgba(232, 168, 56, 0.25)',
-        background: '#131b19',
-        boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
-        transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+        border: '1px solid #dce8df',
+        background: '#ffffff',
+        boxShadow: '0 3px 12px rgba(35, 70, 49, 0.05)',
+        transition: 'all 0.25s ease',
       }}
     >
-      {/* ── Promos Section Top Bar / Trigger ───────────────────────────── */}
+      {/* ── Top Announcement Banner Bar ──────────────────────────────── */}
       <div
         style={{
           background: bannerBg,
           color: bannerTextColor,
-          padding: '12px 18px',
+          padding: '10px 16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 14,
+          gap: 12,
           flexWrap: 'wrap',
           fontWeight: 600,
           fontSize: 13,
         }}
       >
-        {/* Left: Banner Announcement text & active status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 280px' }}>
+        {/* Left: Announcement text */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 260px' }}>
           <span
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: 28,
-              height: 28,
-              borderRadius: 8,
+              width: 26,
+              height: 26,
+              borderRadius: 6,
               background: bannerTextColor === '#000000' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.2)',
               flexShrink: 0,
             }}
           >
-            <Sparkles size={16} />
+            <Sparkles size={15} />
           </span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ lineHeight: 1.3 }}>{bannerText}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ lineHeight: 1.35 }}>{bannerText}</span>
             {activePromo && (
               <span
                 style={{
@@ -290,17 +288,17 @@ export function AvailableVouchersPromos({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 4,
-                  opacity: 0.9,
+                  opacity: 0.95,
                 }}
               >
-                <Tag size={12} /> Active Voucher: <strong>{activePromo.code}</strong> ({activePromo.discount})
+                <Tag size={11} /> Active: <strong>{activePromo.code}</strong> ({activePromo.discount})
               </span>
             )}
           </div>
         </div>
 
-        {/* Right: The prominent "Available Vouchers / Promos" Clickable Trigger */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        {/* Right: Clean, cohesive action buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           {bannerLinkView !== 'none' && bannerLinkText && !isExpanded && (
             <button
               type="button"
@@ -309,8 +307,8 @@ export function AvailableVouchersPromos({
                 background: bannerTextColor === '#000000' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.18)',
                 color: bannerTextColor,
                 border: 'none',
-                padding: '7px 12px',
-                borderRadius: 8,
+                padding: '6px 12px',
+                borderRadius: 6,
                 fontWeight: 700,
                 fontSize: 12,
                 cursor: 'pointer',
@@ -318,7 +316,6 @@ export function AvailableVouchersPromos({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 4,
-                transition: 'opacity 0.2s',
               }}
             >
               {bannerLinkText}
@@ -326,119 +323,123 @@ export function AvailableVouchersPromos({
             </button>
           )}
 
-          {/* MAIN TARGET: Button explicitly labeled "Available Vouchers/Promos" */}
+          {/* Available Vouchers / Promos Trigger */}
           <button
             type="button"
             id="available-vouchers-promos-btn"
             onClick={() => setIsExpanded((prev) => !prev)}
             aria-expanded={isExpanded}
             style={{
-              background: bannerTextColor === '#000000' ? '#0d1613' : '#ffffff',
-              color: bannerTextColor === '#000000' ? '#e8a838' : '#0d1613',
-              border: 'none',
-              padding: '8px 16px',
-              borderRadius: 8,
-              fontWeight: 800,
+              background: bannerTextColor === '#000000' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.2)',
+              color: bannerTextColor,
+              border: bannerTextColor === '#000000' ? '1px solid rgba(0, 0, 0, 0.12)' : '1px solid rgba(255, 255, 255, 0.25)',
+              padding: '6px 12px',
+              borderRadius: 6,
+              fontWeight: 700,
               fontSize: 12,
-              letterSpacing: '0.02em',
               cursor: 'pointer',
               whiteSpace: 'nowrap',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 8,
-              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-1px)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)'
+              gap: 6,
+              transition: 'background 0.15s ease',
             }}
           >
-            <Ticket size={15} style={{ color: '#e8a838' }} />
+            <Ticket size={14} />
             <span>Available Vouchers / Promos</span>
             <span
               style={{
-                background: '#e8a838',
-                color: '#0d1613',
+                background: bannerTextColor === '#000000' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.25)',
+                color: bannerTextColor,
                 fontSize: 10,
-                padding: '1px 6px',
+                padding: '1px 5px',
                 borderRadius: 10,
-                fontWeight: 900,
+                fontWeight: 800,
               }}
             >
               {AVAILABLE_PROMOS.length}
             </span>
-            {isExpanded ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         </div>
       </div>
 
-      {/* ── EXPANDED SECTION: Promos & Vouchers Displayed ─────────────── */}
+      {/* ── EXPANDED LIGHT MODE PANEL: Clean, cohesive concierge style ─ */}
       {isExpanded && (
         <div
           className="vouchers-expanded-panel"
           style={{
-            padding: '22px 20px',
-            background: 'linear-gradient(180deg, #131b19 0%, #0d1412 100%)',
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-            animation: 'fadeInPromo 0.25s ease-out',
+            padding: '20px 22px',
+            background: '#ffffff',
+            borderTop: '1px solid #e5ede7',
+            animation: 'fadeInPromo 0.2s ease-out',
           }}
         >
-          {/* Header Row */}
+          {/* Header */}
           <div
             style={{
               display: 'flex',
-              alignItems: 'flex-start',
+              alignItems: 'center',
               justifyContent: 'space-between',
-              gap: 16,
-              marginBottom: 18,
+              gap: 12,
+              marginBottom: 16,
               flexWrap: 'wrap',
             }}
           >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                <Ticket size={20} style={{ color: '#e8a838' }} />
-                <h3
-                  style={{
-                    margin: 0,
-                    fontSize: 18,
-                    fontWeight: 800,
-                    color: '#ffffff',
-                    letterSpacing: '-0.01em',
-                  }}
-                >
-                  Available Vouchers & Promos
-                </h3>
-                <span
-                  style={{
-                    background: 'rgba(232, 168, 56, 0.15)',
-                    color: '#e8a838',
-                    border: '1px solid rgba(232, 168, 56, 0.3)',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 12,
-                  }}
-                >
-                  Exclusive Perks
-                </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span
+                style={{
+                  display: 'grid',
+                  placeItems: 'center',
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  background: '#edf6f0',
+                  color: '#244d3b',
+                }}
+              >
+                <Ticket size={16} />
+              </span>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <h3
+                    style={{
+                      margin: 0,
+                      fontSize: 16,
+                      fontWeight: 700,
+                      color: '#1a2e24',
+                    }}
+                  >
+                    Available Vouchers & Promos
+                  </h3>
+                  <span
+                    style={{
+                      background: '#edf6f0',
+                      color: '#244d3b',
+                      fontSize: 11,
+                      fontWeight: 700,
+                      padding: '2px 7px',
+                      borderRadius: 10,
+                    }}
+                  >
+                    {AVAILABLE_PROMOS.length} Active Deals
+                  </span>
+                </div>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#668072' }}>
+                  Input a promo code or select from the available discounts below.
+                </p>
               </div>
-              <p style={{ margin: 0, fontSize: 13, color: '#9ba8a2', maxWidth: 640 }}>
-                Input your promo code below, or let the system assign a default promo to instantly save on car rentals and mobile mechanic services.
-              </p>
             </div>
 
             <button
               type="button"
               onClick={() => setIsExpanded(false)}
               style={{
-                background: 'rgba(255, 255, 255, 0.06)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#9ba8a2',
-                borderRadius: 8,
-                padding: '6px 12px',
+                background: '#f4f7f5',
+                border: '1px solid #dbe6df',
+                color: '#52695c',
+                borderRadius: 6,
+                padding: '5px 10px',
                 fontSize: 12,
                 cursor: 'pointer',
                 display: 'inline-flex',
@@ -447,11 +448,11 @@ export function AvailableVouchersPromos({
               }}
             >
               <span>Close</span>
-              <X size={14} />
+              <X size={13} />
             </button>
           </div>
 
-          {/* ── Active Promo Banner (if one is currently applied) ───────── */}
+          {/* Active Promo Notification */}
           {activePromo && (
             <div
               style={{
@@ -459,59 +460,54 @@ export function AvailableVouchersPromos({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 gap: 12,
-                padding: '12px 16px',
-                borderRadius: 10,
-                background: 'rgba(16, 185, 129, 0.12)',
-                border: '1px solid rgba(16, 185, 129, 0.35)',
-                color: '#d1fae5',
-                marginBottom: 20,
+                padding: '10px 14px',
+                borderRadius: 8,
+                background: '#edf7f1',
+                border: '1px solid #bce2cb',
+                color: '#1b4332',
+                marginBottom: 16,
                 flexWrap: 'wrap',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span
                   style={{
                     display: 'grid',
                     placeItems: 'center',
-                    width: 26,
-                    height: 26,
-                    borderRadius: 6,
-                    background: '#10b981',
-                    color: '#064e3b',
+                    width: 22,
+                    height: 22,
+                    borderRadius: 5,
+                    background: '#244d3b',
+                    color: '#ffffff',
                   }}
                 >
-                  <Check size={16} strokeWidth={3} />
+                  <Check size={13} strokeWidth={3} />
                 </span>
-                <div>
-                  <strong style={{ color: '#fff', fontSize: 13 }}>
-                    Active Promo: {activePromo.code} ({activePromo.discount})
-                  </strong>
-                  <div style={{ fontSize: 12, color: '#a7f3d0' }}>
-                    {activePromo.title} — ready to apply on checkout!
-                  </div>
-                </div>
+                <span style={{ fontSize: 13 }}>
+                  Active voucher: <strong>{activePromo.code}</strong> ({activePromo.discount}) — applied to your booking.
+                </span>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 {activePromo.category !== 'services' && (
                   <button
                     type="button"
                     onClick={() => onView('rentals')}
                     style={{
-                      background: '#10b981',
-                      color: '#064e3b',
+                      background: '#244d3b',
+                      color: '#ffffff',
                       border: 'none',
-                      borderRadius: 6,
-                      padding: '6px 12px',
+                      borderRadius: 5,
+                      padding: '5px 10px',
                       fontSize: 11,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
                     }}
                   >
-                    <Car size={13} /> Rent Fleet
+                    <Car size={12} /> Rent Fleet
                   </button>
                 )}
                 {activePromo.category !== 'rentals' && (
@@ -519,20 +515,20 @@ export function AvailableVouchersPromos({
                     type="button"
                     onClick={() => onView('services')}
                     style={{
-                      background: '#10b981',
-                      color: '#064e3b',
+                      background: '#244d3b',
+                      color: '#ffffff',
                       border: 'none',
-                      borderRadius: 6,
-                      padding: '6px 12px',
+                      borderRadius: 5,
+                      padding: '5px 10px',
                       fontSize: 11,
-                      fontWeight: 700,
+                      fontWeight: 600,
                       cursor: 'pointer',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: 4,
                     }}
                   >
-                    <Wrench size={13} /> Book Mechanic
+                    <Wrench size={12} /> Book Mechanic
                   </button>
                 )}
                 <button
@@ -540,10 +536,10 @@ export function AvailableVouchersPromos({
                   onClick={handleRemovePromo}
                   style={{
                     background: 'transparent',
-                    border: '1px solid rgba(239, 68, 68, 0.4)',
-                    color: '#f87171',
-                    borderRadius: 6,
-                    padding: '5px 10px',
+                    border: '1px solid #cbdcd1',
+                    color: '#b91c1c',
+                    borderRadius: 5,
+                    padding: '5px 8px',
                     fontSize: 11,
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -555,27 +551,22 @@ export function AvailableVouchersPromos({
             </div>
           )}
 
-          {/* ── Input Promo Code & Default Promo Generator ──────────────── */}
+          {/* Clean Input Bar */}
           <div
             style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderRadius: 12,
-              padding: '16px 18px',
-              marginBottom: 20,
+              background: '#f8faf8',
+              border: '1px solid #e2ebe4',
+              borderRadius: 8,
+              padding: '12px 14px',
+              marginBottom: 16,
             }}
           >
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#e5e7eb', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Tag size={14} style={{ color: '#e8a838' }} />
-              <span>Input a Promo Code or Let the System Give a Default Promo:</span>
-            </div>
-
             <form
               onSubmit={handleApplyInputCode}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
+                gap: 8,
                 flexWrap: 'wrap',
               }}
             >
@@ -583,15 +574,15 @@ export function AvailableVouchersPromos({
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  background: 'rgba(0, 0, 0, 0.45)',
-                  border: '1px solid rgba(255, 255, 255, 0.16)',
-                  borderRadius: 8,
-                  padding: '2px 12px',
-                  flex: '1 1 260px',
-                  minHeight: 40,
+                  background: '#ffffff',
+                  border: '1px solid #ccdcd2',
+                  borderRadius: 6,
+                  padding: '4px 10px',
+                  flex: '1 1 240px',
+                  minHeight: 36,
                 }}
               >
-                <Tag size={15} style={{ color: '#9ba8a2', marginRight: 8 }} />
+                <Tag size={14} style={{ color: '#7a9688', marginRight: 6 }} />
                 <input
                   type="text"
                   value={inputCode}
@@ -601,11 +592,11 @@ export function AvailableVouchersPromos({
                     background: 'transparent',
                     border: 'none',
                     outline: 'none',
-                    color: '#ffffff',
+                    color: '#1a2e24',
                     fontSize: 13,
                     fontWeight: 600,
                     width: '100%',
-                    letterSpacing: '0.04em',
+                    letterSpacing: '0.02em',
                   }}
                 />
                 {inputCode && (
@@ -615,98 +606,92 @@ export function AvailableVouchersPromos({
                     style={{
                       background: 'transparent',
                       border: 'none',
-                      color: '#9ba8a2',
+                      color: '#7a9688',
                       cursor: 'pointer',
                       padding: 2,
                     }}
                   >
-                    <X size={14} />
+                    <X size={13} />
                   </button>
                 )}
               </div>
 
-              {/* Apply Inputted Code button */}
               <button
                 type="submit"
                 style={{
-                  background: '#e8a838',
-                  color: '#0d1613',
+                  background: '#244d3b',
+                  color: '#ffffff',
                   border: 'none',
-                  borderRadius: 8,
-                  padding: '10px 18px',
-                  fontWeight: 700,
+                  borderRadius: 6,
+                  padding: '8px 14px',
+                  fontWeight: 600,
                   fontSize: 12,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 6,
-                  transition: 'opacity 0.2s',
-                  minHeight: 40,
+                  gap: 5,
+                  minHeight: 36,
                 }}
               >
-                <Check size={14} />
+                <Check size={13} />
                 <span>Apply Code</span>
               </button>
 
-              {/* System Gives Default Promo button */}
               <button
                 type="button"
                 onClick={handleGetDefaultPromo}
                 style={{
-                  background: 'rgba(232, 168, 56, 0.12)',
-                  color: '#e8a838',
-                  border: '1px solid rgba(232, 168, 56, 0.4)',
-                  borderRadius: 8,
-                  padding: '10px 16px',
-                  fontWeight: 700,
+                  background: '#ffffff',
+                  color: '#244d3b',
+                  border: '1px solid #ccdcd2',
+                  borderRadius: 6,
+                  padding: '8px 12px',
+                  fontWeight: 600,
                   fontSize: 12,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: 6,
-                  transition: 'background 0.2s',
-                  minHeight: 40,
+                  gap: 5,
+                  minHeight: 36,
                 }}
-                title="Don't have a code? Click here to let the system give you our top default promo!"
               >
-                <Gift size={14} />
-                <span>⚡ Get Default Promo</span>
+                <Gift size={13} />
+                <span>Get Default Promo</span>
               </button>
             </form>
 
-            {/* Feedback alert if any */}
             {feedback && (
               <div
                 style={{
-                  marginTop: 10,
+                  marginTop: 8,
                   fontSize: 12,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 6,
+                  gap: 5,
                   color:
                     feedback.type === 'success'
-                      ? '#34d399'
+                      ? '#15803d'
                       : feedback.type === 'error'
-                      ? '#f87171'
-                      : '#93c5fd',
+                      ? '#b91c1c'
+                      : '#1e40af',
                 }}
               >
                 {feedback.type === 'success' ? (
-                  <Check size={14} />
+                  <Check size={13} />
                 ) : (
-                  <AlertCircle size={14} />
+                  <AlertCircle size={13} />
                 )}
                 <span>{feedback.message}</span>
               </div>
             )}
           </div>
 
-          {/* ── Vouchers & Promos Grid ─────────────────────────────────── */}
+          {/* Clean Vouchers Cards Grid */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-              gap: 14,
+              gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+              gap: 12,
             }}
           >
             {AVAILABLE_PROMOS.map((voucher) => {
@@ -717,31 +702,25 @@ export function AvailableVouchersPromos({
                 <div
                   key={voucher.id}
                   style={{
-                    background: isCurrent
-                      ? 'linear-gradient(135deg, rgba(232, 168, 56, 0.14) 0%, rgba(16, 185, 129, 0.08) 100%)'
-                      : 'rgba(255, 255, 255, 0.03)',
-                    border: isCurrent
-                      ? '1px solid #e8a838'
-                      : '1px solid rgba(255, 255, 255, 0.08)',
-                    borderRadius: 12,
-                    padding: 16,
+                    background: isCurrent ? '#f4faf6' : '#ffffff',
+                    border: isCurrent ? '1.5px solid #244d3b' : '1px solid #dce8df',
+                    borderRadius: 10,
+                    padding: '14px',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'space-between',
-                    position: 'relative',
-                    transition: 'all 0.2s ease',
-                    boxShadow: isCurrent ? '0 4px 20px rgba(232, 168, 56, 0.15)' : 'none',
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   <div>
-                    {/* Top Row: Badge & Category */}
+                    {/* Top Row: Tag & Category */}
                     <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        gap: 8,
-                        marginBottom: 10,
+                        gap: 6,
+                        marginBottom: 8,
                       }}
                     >
                       <span
@@ -749,10 +728,9 @@ export function AvailableVouchersPromos({
                           background: voucher.badgeBg,
                           color: voucher.badgeColor,
                           fontSize: 10,
-                          fontWeight: 800,
-                          padding: '2px 8px',
+                          fontWeight: 700,
+                          padding: '2px 6px',
                           borderRadius: 4,
-                          letterSpacing: '0.04em',
                           textTransform: 'uppercase',
                         }}
                       >
@@ -761,43 +739,42 @@ export function AvailableVouchersPromos({
                       <span
                         style={{
                           fontSize: 11,
-                          color: '#9ba8a2',
+                          color: '#6b887a',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: 4,
+                          gap: 3,
                         }}
                       >
-                        {voucher.category === 'rentals' && <Car size={12} />}
-                        {voucher.category === 'services' && <Wrench size={12} />}
-                        {voucher.category === 'all' && <Percent size={12} />}
+                        {voucher.category === 'rentals' && <Car size={11} />}
+                        {voucher.category === 'services' && <Wrench size={11} />}
+                        {voucher.category === 'all' && <Percent size={11} />}
                         {voucher.category === 'rentals'
                           ? 'Rentals'
                           : voucher.category === 'services'
                           ? 'Mechanic'
-                          : 'All Services'}
+                          : 'All'}
                       </span>
                     </div>
 
                     {/* Discount Headline */}
                     <div
                       style={{
-                        fontSize: 22,
-                        fontWeight: 900,
-                        color: isCurrent ? '#e8a838' : '#ffffff',
-                        letterSpacing: '-0.02em',
-                        marginBottom: 4,
+                        fontSize: 19,
+                        fontWeight: 800,
+                        color: '#1a2e24',
+                        marginBottom: 2,
                       }}
                     >
                       {voucher.discount}
                     </div>
 
-                    {/* Voucher Title */}
+                    {/* Title */}
                     <h4
                       style={{
-                        margin: '0 0 6px',
-                        fontSize: 14,
+                        margin: '0 0 4px',
+                        fontSize: 13,
                         fontWeight: 700,
-                        color: '#f3f4f6',
+                        color: '#2d3d34',
                       }}
                     >
                       {voucher.title}
@@ -806,67 +783,61 @@ export function AvailableVouchersPromos({
                     {/* Description */}
                     <p
                       style={{
-                        margin: '0 0 14px',
+                        margin: '0 0 12px',
                         fontSize: 12,
-                        color: '#9ca3af',
-                        lineHeight: 1.4,
+                        color: '#6b887a',
+                        lineHeight: 1.35,
                       }}
                     >
                       {voucher.description}
                     </p>
                   </div>
 
-                  {/* Bottom: Code Pill + Action Buttons */}
+                  {/* Code Box & Apply */}
                   <div>
                     <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        background: 'rgba(0, 0, 0, 0.4)',
-                        border: '1px dashed rgba(255, 255, 255, 0.18)',
-                        borderRadius: 8,
-                        padding: '6px 10px',
-                        marginBottom: 10,
+                        background: '#f8faf8',
+                        border: '1px dashed #c9d8ce',
+                        borderRadius: 6,
+                        padding: '5px 8px',
+                        marginBottom: 8,
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Ticket size={14} style={{ color: '#e8a838' }} />
-                        <code
-                          style={{
-                            fontWeight: 800,
-                            fontSize: 13,
-                            color: '#ffffff',
-                            letterSpacing: '0.06em',
-                          }}
-                        >
-                          {voucher.code}
-                        </code>
-                      </div>
+                      <code
+                        style={{
+                          fontWeight: 700,
+                          fontSize: 12,
+                          color: '#1a2e24',
+                          letterSpacing: '0.04em',
+                        }}
+                      >
+                        {voucher.code}
+                      </code>
                       <button
                         type="button"
                         onClick={() => handleCopyCode(voucher.code)}
                         style={{
                           background: 'transparent',
                           border: 'none',
-                          color: isCopied ? '#34d399' : '#9ba8a2',
+                          color: isCopied ? '#166534' : '#52695c',
                           cursor: 'pointer',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: 4,
+                          gap: 3,
                           fontSize: 11,
                           fontWeight: 600,
-                          padding: '2px 6px',
-                          borderRadius: 4,
+                          padding: '1px 4px',
                         }}
-                        title="Copy promo code"
                       >
-                        {isCopied ? <Check size={13} /> : <Copy size={13} />}
+                        {isCopied ? <Check size={12} /> : <Copy size={12} />}
                         <span>{isCopied ? 'Copied' : 'Copy'}</span>
                       </button>
                     </div>
 
-                    {/* Apply / Applied Button */}
                     <button
                       type="button"
                       onClick={() => {
@@ -879,33 +850,28 @@ export function AvailableVouchersPromos({
                       }}
                       style={{
                         width: '100%',
-                        background: isCurrent ? '#10b981' : 'rgba(232, 168, 56, 0.15)',
-                        color: isCurrent ? '#042f2e' : '#e8a838',
-                        border: isCurrent
-                          ? '1px solid #10b981'
-                          : '1px solid rgba(232, 168, 56, 0.4)',
-                        borderRadius: 8,
-                        padding: '8px 12px',
+                        background: isCurrent ? '#244d3b' : '#f0f7f3',
+                        color: isCurrent ? '#ffffff' : '#244d3b',
+                        border: isCurrent ? '1px solid #244d3b' : '1px solid #d2e4d9',
+                        borderRadius: 6,
+                        padding: '7px 10px',
                         fontSize: 12,
-                        fontWeight: 700,
+                        fontWeight: 600,
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: 6,
+                        gap: 5,
                         transition: 'all 0.15s ease',
                       }}
                     >
                       {isCurrent ? (
                         <>
-                          <Check size={14} strokeWidth={3} />
-                          <span>Applied ✓</span>
+                          <Check size={13} strokeWidth={3} />
+                          <span>Applied</span>
                         </>
                       ) : (
-                        <>
-                          <span>Apply Voucher</span>
-                          <ArrowRight size={13} />
-                        </>
+                        <span>Apply Voucher</span>
                       )}
                     </button>
                   </div>
