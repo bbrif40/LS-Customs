@@ -4662,17 +4662,17 @@ html { scroll-behavior: smooth; }
 .fleet-ticker-banner {
   position: relative;
   width: 100%;
-  height: 48px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  height: 38px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   overflow: hidden;
   display: flex;
   align-items: center;
-  margin: 6px 0 20px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
-  mask-image: linear-gradient(90deg, transparent 0%, #000 40px, #000 calc(100% - 40px), transparent 100%);
-  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 40px, #000 calc(100% - 40px), transparent 100%);
+  margin: 2px 0 16px;
+  box-shadow: none;
+  mask-image: linear-gradient(90deg, transparent 0%, #000 48px, #000 calc(100% - 48px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 48px, #000 calc(100% - 48px), transparent 100%);
   user-select: none;
   pointer-events: none;
 }
@@ -4705,45 +4705,42 @@ html { scroll-behavior: smooth; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 24px;
+  padding: 6px 22px;
   color: #94a3b8; /* Pure monochromatic gray */
+  opacity: 0.85;
   cursor: default;
 }
 
 .fleet-ticker-logo-svg {
-  height: 22px;
-  width: auto;
-  max-width: 48px;
+  height: 20px;
+  width: 28px;
+  max-width: 44px;
   display: block;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.65;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+  fill: currentColor;
 }
 
 .fleet-ticker-sep {
   color: #cbd5e1;
-  font-size: 10px;
-  padding: 0 6px;
-  opacity: 0.6;
+  font-size: 8px;
+  padding: 0 4px;
+  opacity: 0.5;
 }
 
 @media (max-width: 768px) {
   .fleet-ticker-banner {
-    height: 40px;
-    margin: 4px 0 14px;
+    height: 32px;
+    margin: 2px 0 12px;
   }
   .fleet-ticker-logo-item {
-    padding: 6px 14px;
+    padding: 4px 14px;
   }
   .fleet-ticker-logo-svg {
-    height: 18px;
-    max-width: 38px;
+    height: 16px;
+    width: 22px;
   }
   .fleet-ticker-sep {
-    font-size: 8px;
-    padding: 0 3px;
+    font-size: 6px;
+    padding: 0 2px;
   }
 }
 
