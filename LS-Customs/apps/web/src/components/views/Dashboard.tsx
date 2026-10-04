@@ -3,7 +3,7 @@
  * Both featured rentals and trending services come from Supabase.
  */
 import { useEffect, useState } from 'react'
-import { ChevronRight, Car, Wrench, CalendarDays, Sparkles } from 'lucide-react'
+import { ChevronRight, Car, Wrench, CalendarDays, Sparkles, CircleDashed, Zap, Activity, Lightbulb, Wind, Droplet, Settings } from 'lucide-react'
 import { useCustomerVehicles } from '../../hooks/useCustomerVehicles'
 import { useTrendingServices } from '../../hooks/useTrendingServices'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
@@ -16,15 +16,15 @@ import { AvailableVouchersPromos } from '../common/AvailableVouchersPromos'
 import { Skeleton, VehicleCardSkeleton } from '../common/Skeleton'
 import type { View } from '../../types'
 
-function iconForCategory(raw: string): string {
-  const lower = raw.toLowerCase()
-  if (lower.includes('tire') || lower.includes('wheel') || lower.includes('brake') || lower.includes('suspension')) return '◉'
-  if (lower.includes('electric') || lower.includes('battery')) return '⚡'
-  if (lower.includes('diagnostic') || lower.includes('engine')) return '⌁'
-  if (lower.includes('light') || lower.includes('headlight') || lower.includes('visibility')) return '✧'
-  if (lower.includes('quick') || lower.includes('wiper')) return '⌒'
-  if (lower.includes('routine') || lower.includes('fluid') || lower.includes('oil')) return '◒'
-  return '✳'
+function IconForCategory({ category, size = 20 }: { category: string, size?: number }) {
+  const lower = category.toLowerCase()
+  if (lower.includes('tire') || lower.includes('wheel') || lower.includes('brake') || lower.includes('suspension')) return <CircleDashed size={size} />
+  if (lower.includes('electric') || lower.includes('battery')) return <Zap size={size} />
+  if (lower.includes('diagnostic') || lower.includes('engine')) return <Activity size={size} />
+  if (lower.includes('light') || lower.includes('headlight') || lower.includes('visibility')) return <Lightbulb size={size} />
+  if (lower.includes('quick') || lower.includes('wiper')) return <Wind size={size} />
+  if (lower.includes('routine') || lower.includes('fluid') || lower.includes('oil')) return <Droplet size={size} />
+  return <Settings size={size} />
 }
 
 interface DashboardProps {
@@ -231,7 +231,7 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
               title={service.name}
               detail={service.description ?? 'Professional service performed at your location.'}
               price={`STARTS AT ₱${service.basePrice.toFixed(0)}`}
-              icon={<span aria-hidden="true">{iconForCategory(service.category)}</span>}
+              icon={<IconForCategory category={service.category} size={20} />}
             />
           ))
         )}
