@@ -110,7 +110,7 @@ export function AdminRevenue() {
   const shouldShowLabel = (i: number) => i === 0 || i === labelCount - 1 || i % labelStep === 0
 
   // Pagination for transactions table
-  const PAGE_SIZE = 20
+  const PAGE_SIZE = 10
   const [page, setPage] = useState(1)
   const totalPages = Math.ceil(filteredTx.length / PAGE_SIZE)
   const startIndex = (page - 1) * PAGE_SIZE + 1
@@ -473,6 +473,9 @@ export function AdminRevenue() {
                 >
                   <ChevronLeft size={14} />
                 </button>
+                <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px', color: 'var(--admin-muted)' }}>
+                  Page {page} of {totalPages}
+                </span>
                 <button
                   className="admin-pagination-btn"
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}

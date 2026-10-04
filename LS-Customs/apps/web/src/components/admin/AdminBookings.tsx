@@ -4,7 +4,7 @@
  * Admin can update status via existing RLS policy (unrestricted for admins).
  */
 import { useEffect, useState } from 'react'
-import { Search, Filter, Truck, Wrench, X, Loader2, ChevronLeft, ChevronRight, AlertTriangle, CreditCard, Ticket } from 'lucide-react'
+import { Search, Filter, Truck, Wrench, X, Loader2, ChevronLeft, ChevronRight, AlertTriangle, CreditCard, Ticket, Eye, Edit, Check, UserPlus } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { closeOutline, star } from 'ionicons/icons'
 import {
@@ -808,57 +808,89 @@ export function AdminBookings() {
                       {booking.total_price.toLocaleString()}
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <span
+                      <select
+                        value={booking.status}
+                        onChange={(e) => {
+                          e.stopPropagation()
+                          void handleStatusChange(booking, e.target.value as BookingStatus)
+                        }}
+                        onClick={(e) => e.stopPropagation()}
                         className="admin-status-badge"
                         style={{
                           background: `${statusColors[booking.status]}20`,
                           color: statusColors[booking.status],
                           border: `1px solid ${statusColors[booking.status]}40`,
+                          cursor: 'pointer',
+                          appearance: 'none',
+                          outline: 'none',
                         }}
                       >
-                        {statusLabels[booking.status]}
-                      </span>
+                        {['pending', 'confirmed', 'assigned', 'en_route', 'in_progress', 'completed', 'cancelled'].map((s) => (
+                          <option key={s} value={s} style={{ background: '#1a1f2e', color: '#fff' }}>
+                            {statusLabels[s as BookingStatus]}
+                          </option>
+                        ))}
+                      </select>
                     </td>
                     <td>
-                      <div style={{ display: 'flex', gap: 4 }}>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <button
+                          title="View"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                          }}
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                        >
+                          <Eye size={14} />
+                        </button>
+                        <button
+                          title="Edit"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                          }}
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                        >
+                          <Edit size={14} />
+                        </button>
+
                         {(['pending', 'confirmed', 'assigned', 'en_route', 'in_progress'] as BookingStatus[]).includes(booking.status) && (
                           <>
                             {booking.status !== 'completed' && (
                               <button
-                                className="admin-vehicle-btn secondary"
+                                title="Complete"
                                 onClick={(event) => {
                                   event.stopPropagation()
                                   openCompletionModal(booking)
                                 }}
-                                style={{ padding: '4px 8px', fontSize: 11 }}
+                                style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                               >
-                                Complete
+                                <Check size={14} />
                               </button>
                             )}
                             {booking.status !== 'cancelled' && (
                               <button
-                                className="admin-vehicle-btn secondary"
+                                title="Cancel"
                                 onClick={(event) => {
                                   event.stopPropagation()
                                   void handleStatusChange(booking, 'cancelled')
                                 }}
-                                style={{ padding: '4px 8px', fontSize: 11, borderColor: '#ef4444', color: '#ef4444' }}
+                                style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                               >
-                                Cancel
+                                <X size={14} />
                               </button>
                             )}
                             {booking.status === 'pending' && activeTab === 'services' && (
                               <div style={{ position: 'relative', display: 'inline-block' }}>
                                 <button
-                                  className="admin-vehicle-btn secondary"
+                                  title="Assign Mechanic"
                                   onClick={(event) => {
                                     event.stopPropagation()
                                     setAssignOpenFor((cur) => (cur === booking.id ? null : booking.id))
                                   }}
-                                  style={{ padding: '4px 8px', fontSize: 11 }}
+                                  style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', color: '#3b82f6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                                   disabled={assigning}
                                 >
-                                  Assign ▾
+                                  <UserPlus size={14} />
                                 </button>
                                 {assignOpenFor === booking.id && (
                                   <div
@@ -908,24 +940,6 @@ export function AdminBookings() {
                                   </div>
                                 )}
                               </div>
-                            )}
-                            {booking.status === 'assigned' && activeTab === 'services' && (
-                              <button
-                                className="admin-vehicle-btn secondary"
-                                onClick={() => handleStatusChange(booking, 'en_route')}
-                                style={{ padding: '4px 8px', fontSize: 11 }}
-                              >
-                                En Route
-                              </button>
-                            )}
-                            {booking.status === 'en_route' && activeTab === 'services' && (
-                              <button
-                                className="admin-vehicle-btn secondary"
-                                onClick={() => handleStatusChange(booking, 'in_progress')}
-                                style={{ padding: '4px 8px', fontSize: 11 }}
-                              >
-                                Start
-                              </button>
                             )}
                           </>
                         )}

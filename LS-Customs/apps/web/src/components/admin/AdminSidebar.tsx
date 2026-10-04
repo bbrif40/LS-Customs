@@ -15,6 +15,8 @@ import {
   TicketPlus,
   Palette,
   ShieldCheck,
+  Settings,
+  ExternalLink,
 } from 'lucide-react'
 
 export type AdminView =
@@ -26,7 +28,7 @@ export type AdminView =
   | 'bookings'
   | 'revenue'
   | 'tickets'
-  | 'ui-editor'
+  | 'settings'
   | 'audit-logs'
 
 interface AdminSidebarProps {
@@ -47,7 +49,7 @@ const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[]
   { id: 'bookings',      label: 'Bookings',          icon: FileBarChart },
   { id: 'tickets',       label: 'Ticket Requests',   icon: TicketPlus },
   { id: 'revenue',       label: 'Revenue',           icon: DollarSign },
-  { id: 'ui-editor',     label: 'Customer UI',       icon: Palette },
+  { id: 'settings',      label: 'Settings',          icon: Settings },
   { id: 'audit-logs',    label: 'Audit Logs',        icon: ShieldCheck },
 ]
 
@@ -106,6 +108,16 @@ export function AdminSidebar({
 
       {/* Bottom */}
       <div className="admin-sidebar-bottom">
+        <a 
+          href="/" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="admin-nav-item" 
+          style={{ textDecoration: 'none', marginBottom: 12, display: 'flex', alignItems: 'center' }}
+        >
+          <span className="admin-nav-icon"><ExternalLink size={18} /></span>
+          <span className="admin-nav-label">View Website</span>
+        </a>
         <button className="admin-sidebar-signout" onClick={onSignOut}>
           <LogOut size={16} />
           Sign Out

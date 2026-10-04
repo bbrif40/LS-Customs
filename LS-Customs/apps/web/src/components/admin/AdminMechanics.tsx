@@ -22,6 +22,10 @@ import {
   ShieldAlert,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  Edit,
+  Trash2,
+  UserCheck,
 } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { constructOutline, checkmarkCircleOutline, warningOutline } from 'ionicons/icons'
@@ -403,14 +407,32 @@ export function AdminMechanics() {
                         </div>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                           <button
-                            className="admin-vehicle-btn secondary"
-                            onClick={() => handleDeactivate(mechanic)}
-                            disabled={!mechanic.is_available}
-                            style={{ padding: '6px 10px', fontSize: 11, opacity: mechanic.is_available ? 1 : 0.5 }}
+                            title="View"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                           >
-                            <UserX size={12} /> Deactivate
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            title="Edit"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                          >
+                            <Edit size={14} />
+                          </button>
+                          <button
+                            title={mechanic.is_available ? "Deactivate" : "Activate"}
+                            onClick={() => handleDeactivate(mechanic)}
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: mechanic.is_available ? '#f59e0b' : '#10b981', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                          >
+                            {mechanic.is_available ? <UserX size={14} /> : <UserCheck size={14} />}
+                          </button>
+                          <button
+                            title="Delete"
+                            onClick={() => { if(window.confirm('Are you sure you want to delete this mechanic?')) { /* TODO */ } }}
+                            style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                          >
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>

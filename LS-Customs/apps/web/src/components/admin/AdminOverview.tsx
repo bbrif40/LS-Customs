@@ -3,7 +3,7 @@
  * Shows live stats, service map, technician status, and recent bookings.
  * Matches the "Admin Command Center" Figma screen exactly.
  */
-import { ChevronRight, Calendar, Star, MapPin as MapPinIcon, Loader2 } from 'lucide-react'
+import { ChevronRight, Calendar, Star, MapPin as MapPinIcon, Loader2, Bell } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { carOutline, constructOutline, statsChartOutline } from 'ionicons/icons'
 import { useAdminOverviewStats } from '../../hooks/useAdminOverviewStats'
@@ -47,10 +47,25 @@ export function AdminOverview({ onViewChange }: AdminOverviewProps) {
           <h1>Overview</h1>
           <p>Live operational metrics and service status.</p>
         </div>
-        <div className="admin-topbar-right">
+        <div className="admin-topbar-right" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <div className="admin-live-badge">
             <span className="admin-live-dot" />
             LIVE SYSTEM ACTIVE
+          </div>
+          
+          <div style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+            <div style={{ 
+              width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', 
+              display: 'flex', alignItems: 'center', justifyContent: 'center' 
+            }}>
+              <Bell size={18} style={{ color: '#d4d9e6' }} />
+            </div>
+            <span style={{ 
+              position: 'absolute', top: -2, right: -2, background: '#ef4444', color: '#fff', 
+              fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 10, border: '2px solid #0f1320'
+            }}>
+              3
+            </span>
           </div>
         </div>
       </div>

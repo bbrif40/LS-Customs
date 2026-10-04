@@ -1,8 +1,5 @@
-/**
- * AuthModal — sign-in dialog with Google OAuth only.
- */
-import { useState } from 'react'
-import { X } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { X, Eye, EyeOff, Check, ArrowRight } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import type { AuthMode } from '../../types'
 
@@ -16,6 +13,17 @@ interface AuthModalProps {
 export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: AuthModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+
+  // Password requirements
+  const hasMinLength = password.length >= 8
+  const hasNumber = /\d/.test(password)
+  const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password)
+  const isPasswordStrong = hasMinLength && hasNumber && hasSpecialChar
+  const passwordsMatch = password === confirmPassword
 
   const handleGoogleSignIn = async () => {
     setLoading(true)
@@ -31,6 +39,56 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Google Sign-in is unavailable.'
       setError(message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+
+    try {
+      if (mode === 'create-account') {
+        if (!isPasswordStrong) {
+          throw new Error('Please meet all password requirements.')
+        }
+        if (!passwordsMatch) {
+          throw new Error('Passwords do not match.')
+        }
+        
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+        })
+        
+        if (signUpError) {
+          if (signUpError.message.toLowerCase().includes('already registered') || signUpError.message.toLowerCase().includes('user already exists')) {
+            throw new Error('An account with this email already exists.')
+          }
+          throw signUpError
+        }
+        
+        if (data.user) {
+          onAuthenticated()
+        }
+      } else {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        })
+        
+        if (signInError) {
+          throw signInError
+        }
+        
+        if (data.session) {
+          onAuthenticated()
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred.')
     } finally {
       setLoading(false)
     }
@@ -61,6 +119,85 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
           </p>
         )}
 
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <input
+              type="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+            />
+          </div>
+          
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: 4 }}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+
+          {mode === 'create-account' && (
+            <>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: `1px solid ${confirmPassword && !passwordsMatch ? '#ef4444' : '#d1d5db'}`, fontSize: 13 }}
+                />
+              </div>
+
+              {/* Password Checklist */}
+              <div style={{ fontSize: 11, display: 'flex', flexDirection: 'column', gap: 4, marginTop: -6, marginBottom: 4 }}>
+                <div style={{ color: hasMinLength ? '#10b981' : '#9ca3af', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Check size={12} /> At least 8 characters
+                </div>
+                <div style={{ color: hasNumber ? '#10b981' : '#9ca3af', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Check size={12} /> Contains a number
+                </div>
+                <div style={{ color: hasSpecialChar ? '#10b981' : '#9ca3af', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Check size={12} /> Contains a special character
+                </div>
+              </div>
+            </>
+          )}
+
+          <button
+            className="auth-submit-btn"
+            type="submit"
+            disabled={loading || (mode === 'create-account' && (!isPasswordStrong || !passwordsMatch))}
+            style={{ 
+              background: '#0f172a', color: '#fff', border: 'none', borderRadius: 6, padding: '10px 16px', 
+              fontSize: 13, fontWeight: 600, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, cursor: 'pointer',
+              opacity: (loading || (mode === 'create-account' && (!isPasswordStrong || !passwordsMatch))) ? 0.6 : 1
+            }}
+          >
+            {loading ? 'Please wait...' : mode === 'create-account' ? 'Create Account' : 'Sign In'}
+            {!loading && <ArrowRight size={14} />}
+          </button>
+        </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', margin: '16px 0', color: '#9ca3af', fontSize: 11 }}>
+          <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+          <span style={{ padding: '0 10px' }}>OR</span>
+          <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+        </div>
+
         <button
           className="google-sign-in"
           onClick={handleGoogleSignIn}
@@ -71,10 +208,24 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         </button>
 
         <p className="auth-switch" style={{ fontSize: '12px', color: '#64748b', textAlign: 'center', marginTop: '14px', lineHeight: '1.5' }}>
-          New to LS Customs? Signing in with Google automatically creates your account with no additional setup needed.
+          {mode === 'sign-in' ? (
+            <>
+              Don't have an account?{' '}
+              <button type="button" onClick={() => onModeChange('create-account')} style={{ background: 'none', border: 'none', color: '#0f172a', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                Sign up
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{' '}
+              <button type="button" onClick={() => onModeChange('sign-in')} style={{ background: 'none', border: 'none', color: '#0f172a', fontWeight: 600, cursor: 'pointer', padding: 0 }}>
+                Sign in
+              </button>
+            </>
+          )}
         </p>
 
-        <small className="auth-legal">
+        <small className="auth-legal" style={{ display: 'block', textAlign: 'center', marginTop: '16px', fontSize: 10, color: '#9ca3af' }}>
           By continuing, you agree to our Terms of Service and Privacy Policy.
         </small>
       </section>

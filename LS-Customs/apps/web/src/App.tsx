@@ -214,6 +214,18 @@ export function App() {
     return () => window.removeEventListener('popstate', handleLocationChange)
   }, [])
 
+  // Redirect admin users to the admin dashboard automatically
+  useEffect(() => {
+    if (signedIn && identity.role === 'admin' && appMode !== 'admin') {
+      navigateTo('admin')
+      if (authOpen) setAuthOpen(false)
+    } else if (signedIn && identity.role && identity.role !== 'admin' && (appMode === 'admin' || appMode === 'admin-login')) {
+      // Prevent non-admins from accessing admin routes
+      navigateTo('customer')
+      notify('Access denied. Admin privileges required.')
+    }
+  }, [signedIn, identity.role, appMode, authOpen, setAuthOpen])
+
   const navigateTo = (mode: AppMode) => {
     setAppMode(mode)
     if (mode === 'admin') {
@@ -243,6 +255,13 @@ export function App() {
 
   // ── Render Admin Portal ───────────────────────────────────────
   if (appMode === 'admin-login' || (appMode === 'admin' && !adminAuth.isAuthenticated)) {
+    if (adminAuth.isLoading) {
+      return (
+        <RootErrorBoundary>
+          <div className="auth-loading">Loading Command Center...</div>
+        </RootErrorBoundary>
+      )
+    }
     return (
       <RootErrorBoundary>
         <AdminLogin

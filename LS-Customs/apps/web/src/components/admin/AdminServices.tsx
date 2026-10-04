@@ -238,48 +238,52 @@ export function AdminServices() {
       </div>
 
       {/* ── Services List ────────────────────────────────────── */}
-      <div className="admin-vehicle-grid" style={{ gridTemplateColumns: '1fr' }}>
+      <div className="admin-vehicle-grid">
         {filteredServices.length === 0 ? (
           <div className="admin-empty-state" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 40, color: 'var(--admin-muted)' }}>
             No services found. <button onClick={openCreateModal} style={{ color: '#e8a838', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Add the first service</button>
           </div>
         ) : (
           paginatedServices.map((service) => (
-            <div className="admin-vehicle-card" key={service.id} style={{ display: 'grid', gridTemplateColumns: '1fr', padding: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                      <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{service.name}</h3>
-                      <span className={`admin-status-badge ${service.is_active ? 'active' : 'inactive'}`} style={{ fontSize: 11, padding: '2px 8px' }}>
-                        {service.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                      <span className="admin-filter-btn" style={{ background: '#374151', fontSize: 11, padding: '2px 8px', cursor: 'default' }}>
-                        {categoryLabels[service.main_category] || service.main_category}
-                      </span>
-                    </div>
-                    {service.description && (
-                      <p style={{ margin: '4px 0 0', color: 'var(--admin-muted)', fontSize: 13 }}>{service.description}</p>
-                    )}
+            <div className="admin-vehicle-card" key={service.id}>
+              {/* Service Info */}
+              <div className="admin-vehicle-info" style={{ padding: '16px' }}>
+                <div className="admin-vehicle-name-row">
+                  <span className="admin-vehicle-name">{service.name}</span>
+                  <span className="admin-vehicle-plate">{categoryLabels[service.main_category] || service.main_category}</span>
+                </div>
+                <div className="admin-vehicle-type" style={{ marginBottom: 12 }}>
+                  <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {service.description || 'No description provided.'}
+                  </span>
+                </div>
+
+                <div className="admin-vehicle-details">
+                  <div className="admin-vehicle-detail">
+                    <label>Base Price</label>
+                    <span>₱{service.base_price.toLocaleString()}</span>
                   </div>
-                  <div style={{ textAlign: 'right', minWidth: 120 }}>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: '#e8a838' }}>
-                      ₱{service.base_price.toLocaleString()}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--admin-muted)', marginTop: 2 }}>
-                      ~{service.estimated_duration_minutes} min
-                    </div>
+                  <div className="admin-vehicle-detail">
+                    <label>Status</label>
+                    <span style={{ color: service.is_active ? '#22c55e' : '#ef4444', fontWeight: 600 }}>
+                      {service.is_active ? 'Active' : 'Inactive'}
+                    </span>
+                  </div>
+                  <div className="admin-vehicle-detail">
+                    <label>Duration</label>
+                    <span>~{service.estimated_duration_minutes} min</span>
                   </div>
                 </div>
-                <div className="admin-vehicle-actions" style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                  <button className="admin-vehicle-btn primary" onClick={() => openEditModal(service)} style={{ padding: '8px 16px' }}>
+
+                <div className="admin-vehicle-actions">
+                  <button className="admin-vehicle-btn primary" onClick={() => openEditModal(service)}>
                     <Edit size={13} /> Edit
                   </button>
                   <button
                     className="admin-vehicle-btn secondary danger"
                     onClick={() => handleDeactivate(service)}
                     disabled={!service.is_active}
-                    style={{ opacity: service.is_active ? 1 : 0.5, padding: '8px 16px' }}
+                    style={{ opacity: service.is_active ? 1 : 0.5 }}
                   >
                     <Trash2 size={13} /> Deactivate
                   </button>

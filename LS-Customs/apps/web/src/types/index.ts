@@ -162,6 +162,7 @@ export interface UserIdentity {
   displayEmail: string
   initials: string
   avatarUrl: string | null
+  role?: string | null
 }
 
 export interface PageHeadingProps {

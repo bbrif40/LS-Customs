@@ -8,7 +8,7 @@
  * RLS via is_admin() gates all writes.
  */
 import { useMemo, useState } from 'react'
-import { Search, TicketPlus, Loader2, ChevronLeft, ChevronRight, RefreshCw, Copy, Check } from 'lucide-react'
+import { Search, TicketPlus, Loader2, ChevronLeft, ChevronRight, RefreshCw, Copy, Check, Eye, MessageSquare, Trash2 } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { personOutline, callOutline, fingerPrintOutline, checkmarkCircleOutline, lockClosedOutline } from 'ionicons/icons'
 import {
@@ -389,15 +389,18 @@ function TicketRow({
   onFieldChange,
 }: TicketRowProps) {
   const selectStyle: React.CSSProperties = {
-    background: '#1a1f2e',
+    background: 'rgba(255,255,255,0.02)',
     color: '#d4d9e6',
     border: '1px solid #2d3748',
-    borderRadius: 6,
-    padding: '4px 6px',
+    borderRadius: 12,
+    padding: '4px 24px 4px 10px',
     fontSize: 12,
+    fontWeight: 500,
     fontFamily: 'DM Sans, sans-serif',
     cursor: 'pointer',
     width: '100%',
+    appearance: 'none',
+    outline: 'none',
   }
 
   return (
@@ -431,37 +434,41 @@ function TicketRow({
           </button>
         </td>
         <td style={{ fontWeight: 500 }}>{customerName}</td>
-        <td onClick={(e) => e.stopPropagation()}>
+        <td onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
           <select
             value={ticket.category}
             disabled={busyKey === `${ticket.id}:category`}
             onChange={(e) => onFieldChange(ticket, 'category', e.target.value as TicketCategory)}
             style={{
               ...selectStyle,
-              borderColor: `${categoryColors[ticket.category]}60`,
+              borderColor: `${categoryColors[ticket.category]}40`,
               color: categoryColors[ticket.category],
+              background: `${categoryColors[ticket.category]}10`,
             }}
           >
             {ALL_CATEGORIES.map((c) => (
-              <option key={c} value={c}>{categoryLabels[c]}</option>
+              <option key={c} value={c} style={{ background: '#1a1f2e', color: '#fff' }}>{categoryLabels[c]}</option>
             ))}
           </select>
+          <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 10, color: categoryColors[ticket.category] }}>▼</div>
         </td>
-        <td onClick={(e) => e.stopPropagation()}>
+        <td onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
           <select
             value={ticket.priority}
             disabled={busyKey === `${ticket.id}:priority`}
             onChange={(e) => onFieldChange(ticket, 'priority', e.target.value as TicketPriority)}
             style={{
               ...selectStyle,
-              borderColor: `${priorityColors[ticket.priority]}60`,
+              borderColor: `${priorityColors[ticket.priority]}40`,
               color: priorityColors[ticket.priority],
+              background: `${priorityColors[ticket.priority]}10`,
             }}
           >
             {ALL_PRIORITIES.map((p) => (
-              <option key={p} value={p}>{p}</option>
+              <option key={p} value={p} style={{ background: '#1a1f2e', color: '#fff' }}>{p}</option>
             ))}
           </select>
+          <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 10, color: priorityColors[ticket.priority] }}>▼</div>
         </td>
         <td style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {ticket.subject}
@@ -487,21 +494,52 @@ function TicketRow({
           })}
         </td>
         <td onClick={(e) => e.stopPropagation()}>
-          <select
-            value={ticket.status}
-            disabled={busyKey === `${ticket.id}:status`}
-            onChange={(e) => onFieldChange(ticket, 'status', e.target.value as TicketStatus)}
-            style={{
-              ...selectStyle,
-              borderColor: `${statusColors[ticket.status]}60`,
-              color: statusColors[ticket.status],
-              fontWeight: 600,
-            }}
-          >
-            {ALL_STATUSES.map((s) => (
-              <option key={s} value={s}>{statusLabels[s]}</option>
-            ))}
-          </select>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button
+              title="View Ticket"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpand();
+              }}
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+            >
+              <Eye size={14} />
+            </button>
+            <button
+              title="Reply"
+              onClick={(e) => {
+                e.stopPropagation();
+                if(!isExpanded) onToggleExpand();
+              }}
+              style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', color: '#3b82f6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+            >
+              <MessageSquare size={14} />
+            </button>
+            {ticket.status !== 'closed' && ticket.status !== 'resolved' && (
+              <button
+                title="Resolve/Close"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFieldChange(ticket, 'status', 'resolved');
+                }}
+                style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', color: '#22c55e', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+              >
+                <Check size={14} />
+              </button>
+            )}
+            <button
+              title="Delete"
+              onClick={(e) => {
+                e.stopPropagation();
+                if(window.confirm('Delete this ticket?')) {
+                  alert('Delete functionality to be implemented');
+                }
+              }}
+              style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+            >
+              <Trash2 size={14} />
+            </button>
+          </div>
         </td>
       </tr>
       {isExpanded && (

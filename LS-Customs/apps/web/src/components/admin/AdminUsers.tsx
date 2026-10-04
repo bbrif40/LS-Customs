@@ -12,7 +12,7 @@
  *   edits from earlier). City is read-only; the customer owns that field.
  */
 import { useState, useEffect } from 'react'
-import { Search, User, Shield, Wrench, Loader2, Flag, AlertTriangle, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, User, Shield, Wrench, Loader2, Flag, AlertTriangle, X, ChevronLeft, ChevronRight, Eye, Edit, Trash2 } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { peopleOutline, shieldCheckmarkOutline, constructOutline, personOutline, callOutline, locationOutline } from 'ionicons/icons'
 import {
@@ -302,21 +302,38 @@ export function AdminUsers() {
                             protected
                           </span>
                         ) : (
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              openFlagModal(user)
-                            }}
-                            className="admin-vehicle-btn secondary"
-                            style={{
-                              minWidth: 90,
-                              color: 'var(--admin-danger)',
-                              borderColor: 'rgba(239, 68, 68, 0.3)',
-                            }}
-                            aria-label={`Flag ${user.full_name || 'user'}`}
-                          >
-                            <Flag size={12} /> Flag user
-                          </button>
+                          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                            <button
+                              title="View Logbook"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setLogbookUser(user)
+                              }}
+                              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                            >
+                              <Eye size={14} />
+                            </button>
+                            <button
+                              title="Edit User"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                alert('Edit user functionality to be implemented')
+                              }}
+                              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                            >
+                              <Edit size={14} />
+                            </button>
+                            <button
+                              title="Delete/Flag User"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openFlagModal(user)
+                              }}
+                              style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>
