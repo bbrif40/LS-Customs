@@ -22,6 +22,7 @@ import {
   Send,
   MessageSquare,
   ArrowLeft,
+  Mail,
 } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 
@@ -427,14 +428,9 @@ export function TicketSuccess({ result, onClose, onCopy, onDismiss }: TicketSucc
         >
           <ArrowLeft size={14} /> Back to Assistant
         </button>
-        <button
-          type="button"
-          className="ticket-form-btn primary"
-          onClick={onClose}
-          title="Open live ticket conversation"
-        >
-          <MessageSquare size={14} /> Live Discussion
-        </button>
+        <p className="ticket-success-email-note" style={{ fontSize: '13px', color: '#6b7280', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Mail size={14} /> An email has been sent to you regarding your concern.
+        </p>
       </div>
     </div>
   )
