@@ -21,6 +21,7 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [showSplash, setShowSplash] = useState(false)
 
   // Password requirements
   const hasMinLength = password.length >= 8
@@ -87,7 +88,8 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         }
         
         if (data.user) {
-          onAuthenticated()
+          setShowSplash(true)
+          setTimeout(() => onAuthenticated(), 2500)
         }
       } else {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -100,7 +102,8 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         }
         
         if (data.session) {
-          onAuthenticated()
+          setShowSplash(true)
+          setTimeout(() => onAuthenticated(), 2500)
         }
       }
     } catch (err) {
@@ -108,6 +111,30 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
     } finally {
       setLoading(false)
     }
+  }
+
+  if (showSplash) {
+    return (
+      <div
+        className="auth-backdrop"
+        style={{ zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f8fafc' }}
+      >
+        <div style={{ animation: 'splashFadeInOut 2.5s forwards', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <img src="/logo.png" alt="LS Customs Logo" style={{ width: 80, height: 80, objectFit: 'contain', marginBottom: 16 }} />
+          <h1 style={{ fontSize: 32, fontWeight: 700, margin: 0, letterSpacing: '-0.02em', color: '#0f172a' }}>LS Customs</h1>
+        </div>
+        <style>
+          {`
+            @keyframes splashFadeInOut {
+              0% { opacity: 0; transform: scale(0.95); }
+              20% { opacity: 1; transform: scale(1); }
+              80% { opacity: 1; transform: scale(1); }
+              100% { opacity: 0; transform: scale(1.05); }
+            }
+          `}
+        </style>
+      </div>
+    )
   }
 
   return (
@@ -118,7 +145,13 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         if (event.target === event.currentTarget) onClose()
       }}
     >
-      <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <section 
+        className="auth-dialog" 
+        role="dialog" 
+        aria-modal="true" 
+        aria-labelledby="auth-title"
+        style={{ maxWidth: mode === 'create-account' ? 640 : 420, width: '100%', transition: 'max-width 0.3s ease' }}
+      >
         <button className="auth-close" onClick={onClose} aria-label="Close sign in">
           <X size={18} />
         </button>
@@ -142,26 +175,24 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {mode === 'create-account' && (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-                <input
-                  type="text"
-                  placeholder="First name"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
-                />
-                <input
-                  type="text"
-                  placeholder="Last name"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
-                />
-              </div>
+          {mode === 'create-account' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <input
+                type="text"
+                placeholder="First name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                required
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+              />
+              <input
+                type="text"
+                placeholder="Last name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                required
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+              />
               <input
                 type="tel"
                 placeholder="Contact number"
@@ -178,40 +209,33 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
                 required
                 style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
               />
-            </>
-          )}
+              <input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+              />
+              
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: 4 }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
 
-          <div>
-            <input
-              type="email"
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
-            />
-          </div>
-          
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: 4 }}
-            >
-              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-            </button>
-          </div>
-
-          {mode === 'create-account' && (
-            <>
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -224,7 +248,7 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
               </div>
 
               {/* Password Checklist */}
-              <div style={{ fontSize: 11, display: 'flex', flexDirection: 'column', gap: 4, marginTop: -6, marginBottom: 4 }}>
+              <div style={{ fontSize: 11, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
                 <div style={{ color: hasMinLength ? '#10b981' : '#9ca3af', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Check size={12} /> At least 8 characters
                 </div>
@@ -234,6 +258,37 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
                 <div style={{ color: hasSpecialChar ? '#10b981' : '#9ca3af', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Check size={12} /> Contains a special character
                 </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <input
+                  type="email"
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+                />
+              </div>
+              
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer', padding: 4 }}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
             </>
           )}
