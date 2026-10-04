@@ -113,6 +113,20 @@ export function ContactSupport() {
           console.warn('Failed to store guest ticket in localStorage:', storageErr)
         }
       }
+      }
+
+      if (ticketResult) {
+        supabase.functions.invoke('send-receipt', {
+          body: {
+            bookingId: ticketResult.id,
+            bookingType: 'service',
+            itemTitle: `Support Ticket (${ticketResult.tracking_number})`,
+            amount: 0,
+            customerName: name,
+            customerEmail: email,
+          }
+        }).catch(err => console.error('Failed to send ticket invoice email', err))
+      }
 
       setResult(ticketResult)
     } catch (err) {

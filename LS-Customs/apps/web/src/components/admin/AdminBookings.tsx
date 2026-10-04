@@ -227,6 +227,15 @@ export function AdminBookings() {
       const isVehicle = 'vehicle_id' in booking || activeTab === 'vehicles'
       if (isVehicle) {
         await updateVehicleBookingStatus(booking.id, nextStatus)
+        if (nextStatus === 'confirmed') {
+          supabase.functions.invoke('send-receipt', {
+            body: {
+              bookingId: booking.id,
+              bookingType: 'rental',
+              amount: booking.total_price,
+            }
+          }).catch(err => console.error('[admin] failed to send email receipt on confirmation', err))
+        }
       } else {
         await updateServiceBookingStatus(booking.id, nextStatus)
       }
@@ -286,6 +295,17 @@ export function AdminBookings() {
               provider: 'paymongo',
             })
           }
+
+          if (isVehicle) {
+            supabase.functions.invoke('send-receipt', {
+              body: {
+                bookingId: completionBooking.id,
+                bookingType: 'rental',
+                amount: completionBooking.total_price,
+              }
+            }).catch(err => console.error('[admin] failed to send email receipt on completion', err))
+          }
+
         } catch (paymentSyncErr) {
           console.warn('[admin] payment status update warning:', paymentSyncErr)
         }
