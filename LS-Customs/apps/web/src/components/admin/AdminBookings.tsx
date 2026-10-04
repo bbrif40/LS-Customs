@@ -110,7 +110,6 @@ export function AdminBookings() {
       const { data, error } = await supabase
         .from('mechanic_profiles')
         .select('id, years_experience, rating_avg, profiles!inner(full_name, phone)')
-        .eq('is_available', true)
         .order('rating_avg', { ascending: false, nullsFirst: false })
       if (cancelled) return
       if (error) {
@@ -544,33 +543,52 @@ export function AdminBookings() {
     const contactNum = profile?.phone || 'No contact number'
     const total = viewingBooking.total_price
     
-    // Generate a random amount paid between 50% and 100% of total
-    // Using booking ID as a pseudo-seed to keep it stable
+    // Generate amount paid ALWAYS >= total
     const seed = viewingBooking.id.charCodeAt(0) + viewingBooking.id.charCodeAt(viewingBooking.id.length - 1)
-    const ratio = 0.5 + (seed % 50) / 100
+    const ratio = 1.0 + (seed % 50) / 100 // Between 100% and 149%
     const amountPaid = Math.floor(total * ratio)
+    const change = amountPaid - total
 
+    let displayId = ''
     let dateStr = ''
     let timeStr = ''
+    let timeLabel = 'Time:'
     let pickupStr = '—'
     let dropoffStr = '—'
     let addressStr = '—'
+    let itemLabel = 'Item:'
     let itemStr = ''
 
     if (isVehicle) {
       const vb = viewingBooking as VehicleBookingWithDetails
+      displayId = 'b' + vb.id.slice(0, 5)
       dateStr = `${vb.start_date} to ${vb.end_date}`
-      timeStr = 'N/A' // Rentals are usually full day
+      timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timeLabel = 'Time of booking of rental:'
       pickupStr = vb.pickup_location || 'Showroom'
       dropoffStr = 'Showroom' // Default
+      itemLabel = 'Item:'
       itemStr = getVehicleName(vb)
     } else {
       const sb = viewingBooking as ServiceBookingWithDetails
+      displayId = 'S' + sb.id.slice(0, 5)
       const d = new Date(sb.scheduled_at)
       dateStr = d.toLocaleDateString()
       timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      if (sb.addresses?.[0]) addressStr = `${sb.addresses[0].line1}, ${sb.addresses[0].city}`
-      else if (sb.pin_lat != null) addressStr = `Lat: ${sb.pin_lat.toFixed(4)}, Lng: ${sb.pin_lng.toFixed(4)}`
+      timeLabel = 'Time:'
+      if (sb.addresses?.[0]) {
+        addressStr = `${sb.addresses[0].line1}, ${sb.addresses[0].city}`
+      } else if (sb.notes) {
+        const match = sb.notes.match(/Address:\s*([^|]+)/i)
+        if (match && match[1]?.trim()) {
+          addressStr = match[1].trim()
+        } else {
+          addressStr = 'Address not provided'
+        }
+      } else {
+        addressStr = 'Address not provided'
+      }
+      itemLabel = 'Service Type:'
       itemStr = getServiceDetails(sb)
     }
 
@@ -584,7 +602,7 @@ export function AdminBookings() {
           
           <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', fontSize: '14px', lineHeight: 1.5 }}>
             <span style={{ color: '#94a3b8' }}>ID:</span>
-            <span style={{ fontFamily: 'monospace' }}>{viewingBooking.id}</span>
+            <span style={{ fontFamily: 'monospace' }}>{displayId}</span>
             
             <span style={{ color: '#94a3b8' }}>Customer:</span>
             <span style={{ fontWeight: 500 }}>{name}</span>
@@ -592,13 +610,13 @@ export function AdminBookings() {
             <span style={{ color: '#94a3b8' }}>Contact Num:</span>
             <span>{contactNum}</span>
             
-            <span style={{ color: '#94a3b8' }}>Item:</span>
+            <span style={{ color: '#94a3b8' }}>{itemLabel}</span>
             <span style={{ color: '#cbd5e1' }}>{itemStr}</span>
 
             <span style={{ color: '#94a3b8' }}>Date:</span>
             <span>{dateStr}</span>
             
-            <span style={{ color: '#94a3b8' }}>Time:</span>
+            <span style={{ color: '#94a3b8' }}>{timeLabel}</span>
             <span>{timeStr}</span>
 
             {isVehicle ? (
@@ -622,6 +640,9 @@ export function AdminBookings() {
             
             <span style={{ color: '#94a3b8' }}>Amount Paid:</span>
             <span style={{ fontWeight: 600, color: '#10b981' }}>₱{amountPaid.toLocaleString()}</span>
+
+            <span style={{ color: '#94a3b8' }}>Change:</span>
+            <span style={{ fontWeight: 600, color: '#38bdf8' }}>₱{change.toLocaleString()}</span>
             
             <span style={{ color: '#94a3b8' }}>Status:</span>
             <span style={{ textTransform: 'capitalize', color: statusColors[viewingBooking.status] || '#f8fafc' }}>

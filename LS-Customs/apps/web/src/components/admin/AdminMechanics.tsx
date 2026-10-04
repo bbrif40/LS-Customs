@@ -274,7 +274,6 @@ export function AdminMechanics() {
                   <th>Experience</th>
                   <th>Rating</th>
                   <th>Availability</th>
-                  <th>Location</th>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -399,12 +398,6 @@ export function AdminMechanics() {
                         <span className={`admin-status-badge ${mechanic.is_available ? 'active' : 'pending'}`}>
                           {mechanic.is_available ? 'Available' : 'Unavailable'}
                         </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--admin-muted)' }}>
-                          <MapPin size={12} />
-                          {formatLocation(mechanic.current_lat, mechanic.current_lng)}
-                        </div>
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
