@@ -113,7 +113,6 @@ export function ContactSupport() {
           console.warn('Failed to store guest ticket in localStorage:', storageErr)
         }
       }
-      }
 
       if (ticketResult) {
         supabase.functions.invoke('send-receipt', {
