@@ -51,7 +51,7 @@ const categoryLabels: Record<TicketCategory, string> = {
 }
 
 function formatTicketCode(tracking: string): string {
-  return tracking.startsWith('ticket-') ? tracking : `ticket-${tracking.toLowerCase()}`
+  return `tkt${tracking.slice(-5).toLowerCase()}`
 }
 
 const categoryColors: Record<TicketCategory, string> = {
@@ -389,18 +389,16 @@ function TicketRow({
   onFieldChange,
 }: TicketRowProps) {
   const selectStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.02)',
-    color: '#d4d9e6',
-    border: '1px solid #2d3748',
-    borderRadius: 12,
-    padding: '4px 24px 4px 10px',
+    background: '#ffffff',
+    color: '#334155',
+    border: '1px solid #cbd5e1',
+    borderRadius: 8,
+    padding: '4px 8px',
     fontSize: 12,
     fontWeight: 500,
-    fontFamily: 'DM Sans, sans-serif',
+    fontFamily: 'inherit',
     cursor: 'pointer',
     width: '100%',
-    appearance: 'none',
-    outline: 'none',
   }
 
   return (
@@ -418,13 +416,13 @@ function TicketRow({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 4,
-              padding: '3px 8px',
+              padding: '4px 8px',
               borderRadius: 6,
-              border: '1px solid #2d3748',
-              background: isCopied ? '#22c55e20' : '#1a1f2e',
-              color: isCopied ? '#22c55e' : '#e8a838',
+              border: '1px solid #e2e8f0',
+              background: isCopied ? '#dcfce7' : '#f8fafc',
+              color: isCopied ? '#166534' : '#475569',
               fontFamily: 'monospace',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',
             }}
@@ -434,41 +432,29 @@ function TicketRow({
           </button>
         </td>
         <td style={{ fontWeight: 500 }}>{customerName}</td>
-        <td onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
+        <td onClick={(e) => e.stopPropagation()}>
           <select
             value={ticket.category}
             disabled={busyKey === `${ticket.id}:category`}
             onChange={(e) => onFieldChange(ticket, 'category', e.target.value as TicketCategory)}
-            style={{
-              ...selectStyle,
-              borderColor: `${categoryColors[ticket.category]}40`,
-              color: categoryColors[ticket.category],
-              background: `${categoryColors[ticket.category]}10`,
-            }}
+            style={selectStyle}
           >
             {ALL_CATEGORIES.map((c) => (
-              <option key={c} value={c} style={{ background: '#1a1f2e', color: '#fff' }}>{categoryLabels[c]}</option>
+              <option key={c} value={c} style={{ background: '#fff', color: '#333' }}>{categoryLabels[c]}</option>
             ))}
           </select>
-          <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 10, color: categoryColors[ticket.category] }}>▼</div>
         </td>
-        <td onClick={(e) => e.stopPropagation()} style={{ position: 'relative' }}>
+        <td onClick={(e) => e.stopPropagation()}>
           <select
             value={ticket.priority}
             disabled={busyKey === `${ticket.id}:priority`}
             onChange={(e) => onFieldChange(ticket, 'priority', e.target.value as TicketPriority)}
-            style={{
-              ...selectStyle,
-              borderColor: `${priorityColors[ticket.priority]}40`,
-              color: priorityColors[ticket.priority],
-              background: `${priorityColors[ticket.priority]}10`,
-            }}
+            style={selectStyle}
           >
             {ALL_PRIORITIES.map((p) => (
-              <option key={p} value={p} style={{ background: '#1a1f2e', color: '#fff' }}>{p}</option>
+              <option key={p} value={p} style={{ background: '#fff', color: '#333' }}>{p}</option>
             ))}
           </select>
-          <div style={{ position: 'absolute', right: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', fontSize: 10, color: priorityColors[ticket.priority] }}>▼</div>
         </td>
         <td style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {ticket.subject}

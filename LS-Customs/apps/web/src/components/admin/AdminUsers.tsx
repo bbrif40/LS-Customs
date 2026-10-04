@@ -248,7 +248,7 @@ export function AdminUsers() {
                           <div>
                             <div style={{ fontWeight: 600 }}>{user.full_name || 'Unnamed'}</div>
                             <div style={{ fontSize: 11, color: 'var(--admin-muted)', fontFamily: 'monospace' }}>
-                              {user.id}
+                              {`user${user.id.slice(0, 5).toLowerCase()}`}
                             </div>
                           </div>
                         </div>

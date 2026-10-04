@@ -594,64 +594,70 @@ export function AdminBookings() {
 
     return (
       <div className="admin-modal-overlay" onClick={() => setViewingBooking(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
-        <div className="admin-modal" onClick={e => e.stopPropagation()} style={{ background: '#1e293b', padding: '24px', borderRadius: '12px', width: '90%', maxWidth: '500px', color: '#f8fafc', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)' }}>
+        <style>{`
+          @keyframes bookingModalPop {
+            0% { opacity: 0; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+          }
+        `}</style>
+        <div className="admin-modal" onClick={e => e.stopPropagation()} style={{ background: '#ffffff', padding: '24px', borderRadius: '12px', width: '90%', maxWidth: '500px', color: '#1e293b', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', animation: 'bookingModalPop 0.2s ease-out forwards' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>Booking Details</h2>
-            <button onClick={() => setViewingBooking(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
+            <button onClick={() => setViewingBooking(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex' }}><X size={20} /></button>
           </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', fontSize: '14px', lineHeight: 1.5 }}>
-            <span style={{ color: '#94a3b8' }}>ID:</span>
-            <span style={{ fontFamily: 'monospace' }}>{displayId}</span>
+            <span style={{ color: '#64748b' }}>ID:</span>
+            <span style={{ fontFamily: 'monospace', fontWeight: 500 }}>{displayId}</span>
             
-            <span style={{ color: '#94a3b8' }}>Customer:</span>
-            <span style={{ fontWeight: 500 }}>{name}</span>
+            <span style={{ color: '#64748b' }}>Customer:</span>
+            <span style={{ fontWeight: 600 }}>{name}</span>
             
-            <span style={{ color: '#94a3b8' }}>Contact Num:</span>
-            <span>{contactNum}</span>
+            <span style={{ color: '#64748b' }}>Contact Num:</span>
+            <span style={{ fontWeight: 500 }}>{contactNum}</span>
             
-            <span style={{ color: '#94a3b8' }}>{itemLabel}</span>
-            <span style={{ color: '#cbd5e1' }}>{itemStr}</span>
+            <span style={{ color: '#64748b' }}>{itemLabel}</span>
+            <span style={{ color: '#334155', fontWeight: 500 }}>{itemStr}</span>
 
-            <span style={{ color: '#94a3b8' }}>Date:</span>
-            <span>{dateStr}</span>
+            <span style={{ color: '#64748b' }}>Date:</span>
+            <span style={{ fontWeight: 500 }}>{dateStr}</span>
             
-            <span style={{ color: '#94a3b8' }}>{timeLabel}</span>
-            <span>{timeStr}</span>
+            <span style={{ color: '#64748b' }}>{timeLabel}</span>
+            <span style={{ fontWeight: 500 }}>{timeStr}</span>
 
             {isVehicle ? (
               <>
-                <span style={{ color: '#94a3b8' }}>Pickup:</span>
-                <span>{pickupStr}</span>
-                <span style={{ color: '#94a3b8' }}>Dropoff:</span>
-                <span>{dropoffStr}</span>
+                <span style={{ color: '#64748b' }}>Pickup:</span>
+                <span style={{ fontWeight: 500 }}>{pickupStr}</span>
+                <span style={{ color: '#64748b' }}>Dropoff:</span>
+                <span style={{ fontWeight: 500 }}>{dropoffStr}</span>
               </>
             ) : (
               <>
-                <span style={{ color: '#94a3b8' }}>Address:</span>
-                <span>{addressStr}</span>
+                <span style={{ color: '#64748b' }}>Address:</span>
+                <span style={{ fontWeight: 500 }}>{addressStr}</span>
               </>
             )}
 
-            <div style={{ gridColumn: '1 / -1', height: '1px', background: '#334155', margin: '8px 0' }} />
+            <div style={{ gridColumn: '1 / -1', height: '1px', background: '#e2e8f0', margin: '8px 0' }} />
 
-            <span style={{ color: '#94a3b8' }}>Total Price:</span>
-            <span style={{ fontWeight: 600, color: '#f59e0b' }}>₱{total.toLocaleString()}</span>
+            <span style={{ color: '#64748b' }}>Total Price:</span>
+            <span style={{ fontWeight: 700, color: '#d97706' }}>₱{total.toLocaleString()}</span>
             
-            <span style={{ color: '#94a3b8' }}>Amount Paid:</span>
-            <span style={{ fontWeight: 600, color: '#10b981' }}>₱{amountPaid.toLocaleString()}</span>
+            <span style={{ color: '#64748b' }}>Amount Paid:</span>
+            <span style={{ fontWeight: 700, color: '#059669' }}>₱{amountPaid.toLocaleString()}</span>
 
-            <span style={{ color: '#94a3b8' }}>Change:</span>
-            <span style={{ fontWeight: 600, color: '#38bdf8' }}>₱{change.toLocaleString()}</span>
+            <span style={{ color: '#64748b' }}>Change:</span>
+            <span style={{ fontWeight: 700, color: '#0284c7' }}>₱{change.toLocaleString()}</span>
             
-            <span style={{ color: '#94a3b8' }}>Status:</span>
-            <span style={{ textTransform: 'capitalize', color: statusColors[viewingBooking.status] || '#f8fafc' }}>
+            <span style={{ color: '#64748b' }}>Status:</span>
+            <span style={{ textTransform: 'capitalize', color: statusColors[viewingBooking.status] || '#1e293b', fontWeight: 600 }}>
               {statusLabels[viewingBooking.status] || viewingBooking.status}
             </span>
           </div>
 
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button onClick={() => setViewingBooking(null)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #334155', background: 'transparent', color: '#f8fafc', cursor: 'pointer' }}>Close</button>
+            <button onClick={() => setViewingBooking(null)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>Close</button>
           </div>
         </div>
       </div>
