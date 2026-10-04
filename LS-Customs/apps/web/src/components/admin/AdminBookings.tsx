@@ -913,6 +913,7 @@ export function AdminBookings() {
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <select
+                        aria-label="Change booking status"
                         value={booking.status}
                         onChange={(e) => {
                           e.stopPropagation()
@@ -921,16 +922,15 @@ export function AdminBookings() {
                         onClick={(e) => e.stopPropagation()}
                         className="admin-status-badge"
                         style={{
-                          background: `${statusColors[booking.status]}20`,
+                          background: `${statusColors[booking.status]}15`,
                           color: statusColors[booking.status],
                           border: `1px solid ${statusColors[booking.status]}40`,
                           cursor: 'pointer',
-                          appearance: 'none',
-                          outline: 'none',
+                          fontWeight: 600,
                         }}
                       >
-                        {['pending', 'confirmed', 'assigned', 'en_route', 'in_progress', 'completed', 'cancelled'].map((s) => (
-                          <option key={s} value={s} style={{ background: '#1a1f2e', color: '#fff' }}>
+                        {(activeTab === 'vehicles' ? ['pending', 'confirmed', 'completed', 'cancelled'] : ['pending', 'confirmed', 'assigned', 'en_route', 'in_progress', 'completed', 'cancelled']).map((s) => (
+                          <option key={s} value={s} style={{ background: '#ffffff', color: '#1e293b', fontWeight: 500 }}>
                             {statusLabels[s as BookingStatus]}
                           </option>
                         ))}
