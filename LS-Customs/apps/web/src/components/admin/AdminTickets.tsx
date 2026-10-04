@@ -552,7 +552,9 @@ function TicketRow({
                 )}
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b' }}>
                   <IonIcon icon={fingerPrintOutline} style={{ fontSize: 14 }} />
-                  <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4, color: '#0f172a', fontSize: 11 }}>{ticket.customer_id || ticket.id}</code>
+                  <code style={{ background: '#f1f5f9', padding: '2px 6px', borderRadius: 4, color: '#0f172a', fontSize: 11 }}>
+                    {`user${(ticket.customer_id || ticket.id).slice(0, 5).toLowerCase()}`}
+                  </code>
                 </span>
                 {ticket.resolved_at && (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#16a34a' }}>
