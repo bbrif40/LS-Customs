@@ -238,7 +238,15 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
           <span className="date-arrow">to</span>
           <label><span>Return</span><input aria-label="Return date" type="date" min={startDate || new Date().toISOString().slice(0, 10)} max={maxEndDate || undefined} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
         </div>
-        <span className={`planner-status ${startDate && endDate && endDate > startDate ? 'ready' : ''}`}>{startDate && endDate && endDate > startDate ? 'Dates selected' : 'Dates required to book'}</span>
+        {bookingError ? (
+          <span className="planner-status error" style={{ color: '#b91c1c', fontWeight: 600, background: '#fef2f2', padding: '6px 12px', borderRadius: 6, border: '1px solid #fecaca', fontSize: 12 }}>
+            {bookingError}
+          </span>
+        ) : (
+          <span className={`planner-status ${startDate && endDate && endDate > startDate ? 'ready' : ''}`}>
+            {startDate && endDate && endDate > startDate ? 'Dates selected' : 'Dates required to book'}
+          </span>
+        )}
       </section>
 
       <div className="rental-toolbar">
@@ -270,7 +278,6 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
         </label>
       </div>
 
-      {bookingError && <p className="form-helper review-error">{bookingError}</p>}
       {loading ? (
         <div className="rentals-grid" aria-hidden="true" style={{ marginTop: 24 }}>
           {Array.from({ length: 6 }).map((_, i) => (
