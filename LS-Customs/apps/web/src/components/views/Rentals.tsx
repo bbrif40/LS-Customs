@@ -55,13 +55,17 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
     if (initialStartDate) {
       const d = new Date(initialStartDate + 'T00:00:00')
       d.setDate(d.getDate() + 1)
-      const y = d.getFullYear()
-      const m = String(d.getMonth() + 1).padStart(2, '0')
-      const day = String(d.getDate()).padStart(2, '0')
-      return `${y}-${m}-${day}`
+      return d.toISOString().slice(0, 10)
     }
     return ''
   })
+
+  const maxEndDate = useMemo(() => {
+    if (!startDate) return ''
+    const maxDate = new Date(`${startDate}T00:00:00`)
+    maxDate.setDate(maxDate.getDate() + 30)
+    return maxDate.toISOString().slice(0, 10)
+  }, [startDate])
 
   useEffect(() => {
     if (initialStartDate) {
@@ -164,13 +168,23 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
   }
 
   const chooseVehicle = async (vehicle: typeof vehicles[number]) => {
-    if (!startDate || !endDate || endDate <= startDate) { setBookingError('Select a valid pickup and return date first.'); return }
-    setBookingError(null)
-    if (unavailableIds.has(vehicle.id)) {
-      setBookingError(`${vehicle.name} is already booked for those dates. Try a different vehicle or shift your dates.`)
+    if (!startDate || !endDate || endDate <= startDate) {
+      setBookingError('Select a valid pickup and return date first.')
+      document.querySelector('.rental-planner')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
     const days = Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))
+    if (days > 30) {
+      setBookingError('You can only rent a vehicle for a maximum of 30 days.')
+      document.querySelector('.rental-planner')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    setBookingError(null)
+    if (unavailableIds.has(vehicle.id)) {
+      setBookingError(`${vehicle.name} is already booked for those dates. Try a different vehicle or shift your dates.`)
+      document.querySelector('.rental-planner')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
     if (!userId) { onNotify('Please sign in before booking a rental.'); return }
 
     const baseTotal = days * vehicle.pricePerDay
@@ -222,7 +236,7 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
         <div className="date-picker-group">
           <label><span>Pickup</span><input aria-label="Pickup date" type="date" min={new Date().toISOString().slice(0, 10)} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
           <span className="date-arrow">to</span>
-          <label><span>Return</span><input aria-label="Return date" type="date" min={startDate || new Date().toISOString().slice(0, 10)} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
+          <label><span>Return</span><input aria-label="Return date" type="date" min={startDate || new Date().toISOString().slice(0, 10)} max={maxEndDate || undefined} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
         </div>
         <span className={`planner-status ${startDate && endDate && endDate > startDate ? 'ready' : ''}`}>{startDate && endDate && endDate > startDate ? 'Dates selected' : 'Dates required to book'}</span>
       </section>
