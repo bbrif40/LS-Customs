@@ -17,6 +17,10 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [address, setAddress] = useState('')
 
   // Password requirements
   const hasMinLength = password.length >= 8
@@ -61,6 +65,13 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
+          options: {
+            data: {
+              full_name: `${firstName.trim()} ${lastName.trim()}`,
+              phone: phone.trim(),
+              address: address.trim()
+            }
+          }
         })
         
         if (signUpError) {
@@ -106,9 +117,15 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         <button className="auth-close" onClick={onClose} aria-label="Close sign in">
           <X size={18} />
         </button>
-        <div className="auth-logo">✳</div>
-        <p className="eyebrow">WELCOME TO LS CUSTOMS</p>
-        <h2 id="auth-title">{mode === 'create-account' ? 'Create an account.' : 'Welcome back.'}</h2>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 16 }}>
+          <img
+            src="/logo.png"
+            alt="LS Customs Logo"
+            style={{ width: 48, height: 48, objectFit: 'contain', marginBottom: 8 }}
+          />
+          <h1 style={{ fontSize: 20, fontWeight: 700, margin: 0, letterSpacing: '-0.02em' }}>LS Customs</h1>
+        </div>
+        <h2 id="auth-title" style={{ textAlign: 'center', marginTop: 0 }}>{mode === 'create-account' ? 'Create an account.' : 'Welcome back.'}</h2>
         <p className="auth-description">
           Sign in or create an account to access your rentals, mechanic services, and AI assistant.
         </p>
@@ -120,6 +137,45 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {mode === 'create-account' && (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                <input
+                  type="text"
+                  placeholder="First name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+                />
+                <input
+                  type="text"
+                  placeholder="Last name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+                />
+              </div>
+              <input
+                type="tel"
+                placeholder="Contact number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+              />
+              <input
+                type="text"
+                placeholder="Address"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                required
+                style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+              />
+            </>
+          )}
+
           <div>
             <input
               type="email"
