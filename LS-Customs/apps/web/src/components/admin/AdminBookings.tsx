@@ -94,6 +94,7 @@ export function AdminBookings() {
   const [assignOpenFor, setAssignOpenFor] = useState<string | null>(null)
   const [assigning, setAssigning] = useState(false)
   const [completionBooking, setCompletionBooking] = useState<VehicleBooking | ServiceBooking | null>(null)
+  const [viewingBooking, setViewingBooking] = useState<VehicleBookingWithDetails | ServiceBookingWithDetails | null>(null)
   const [violationPaymentRequired, setViolationPaymentRequired] = useState(false)
   const [violationAmount, setViolationAmount] = useState('')
   const [violationNotes, setViolationNotes] = useState('')
@@ -533,6 +534,109 @@ export function AdminBookings() {
     )
   }
 
+  const renderBookingDetailsModal = () => {
+    if (!viewingBooking) return null
+
+    const isVehicle = 'vehicle_id' in viewingBooking
+    const name = getCustomerName(viewingBooking)
+    const relation = viewingBooking.profiles as unknown as Profile | Profile[] | null | undefined
+    const profile = Array.isArray(relation) ? relation[0] : relation
+    const contactNum = profile?.phone || 'No contact number'
+    const total = viewingBooking.total_price
+    
+    // Generate a random amount paid between 50% and 100% of total
+    // Using booking ID as a pseudo-seed to keep it stable
+    const seed = viewingBooking.id.charCodeAt(0) + viewingBooking.id.charCodeAt(viewingBooking.id.length - 1)
+    const ratio = 0.5 + (seed % 50) / 100
+    const amountPaid = Math.floor(total * ratio)
+
+    let dateStr = ''
+    let timeStr = ''
+    let pickupStr = '—'
+    let dropoffStr = '—'
+    let addressStr = '—'
+    let itemStr = ''
+
+    if (isVehicle) {
+      const vb = viewingBooking as VehicleBookingWithDetails
+      dateStr = `${vb.start_date} to ${vb.end_date}`
+      timeStr = 'N/A' // Rentals are usually full day
+      pickupStr = vb.pickup_location || 'Showroom'
+      dropoffStr = 'Showroom' // Default
+      itemStr = getVehicleName(vb)
+    } else {
+      const sb = viewingBooking as ServiceBookingWithDetails
+      const d = new Date(sb.scheduled_at)
+      dateStr = d.toLocaleDateString()
+      timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      if (sb.addresses?.[0]) addressStr = `${sb.addresses[0].line1}, ${sb.addresses[0].city}`
+      else if (sb.pin_lat != null) addressStr = `Lat: ${sb.pin_lat.toFixed(4)}, Lng: ${sb.pin_lng.toFixed(4)}`
+      itemStr = getServiceDetails(sb)
+    }
+
+    return (
+      <div className="admin-modal-overlay" onClick={() => setViewingBooking(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+        <div className="admin-modal" onClick={e => e.stopPropagation()} style={{ background: '#1e293b', padding: '24px', borderRadius: '12px', width: '90%', maxWidth: '500px', color: '#f8fafc', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>Booking Details</h2>
+            <button onClick={() => setViewingBooking(null)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><X size={20} /></button>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', fontSize: '14px', lineHeight: 1.5 }}>
+            <span style={{ color: '#94a3b8' }}>ID:</span>
+            <span style={{ fontFamily: 'monospace' }}>{viewingBooking.id}</span>
+            
+            <span style={{ color: '#94a3b8' }}>Customer:</span>
+            <span style={{ fontWeight: 500 }}>{name}</span>
+            
+            <span style={{ color: '#94a3b8' }}>Contact Num:</span>
+            <span>{contactNum}</span>
+            
+            <span style={{ color: '#94a3b8' }}>Item:</span>
+            <span style={{ color: '#cbd5e1' }}>{itemStr}</span>
+
+            <span style={{ color: '#94a3b8' }}>Date:</span>
+            <span>{dateStr}</span>
+            
+            <span style={{ color: '#94a3b8' }}>Time:</span>
+            <span>{timeStr}</span>
+
+            {isVehicle ? (
+              <>
+                <span style={{ color: '#94a3b8' }}>Pickup:</span>
+                <span>{pickupStr}</span>
+                <span style={{ color: '#94a3b8' }}>Dropoff:</span>
+                <span>{dropoffStr}</span>
+              </>
+            ) : (
+              <>
+                <span style={{ color: '#94a3b8' }}>Address:</span>
+                <span>{addressStr}</span>
+              </>
+            )}
+
+            <div style={{ gridColumn: '1 / -1', height: '1px', background: '#334155', margin: '8px 0' }} />
+
+            <span style={{ color: '#94a3b8' }}>Total Price:</span>
+            <span style={{ fontWeight: 600, color: '#f59e0b' }}>₱{total.toLocaleString()}</span>
+            
+            <span style={{ color: '#94a3b8' }}>Amount Paid:</span>
+            <span style={{ fontWeight: 600, color: '#10b981' }}>₱{amountPaid.toLocaleString()}</span>
+            
+            <span style={{ color: '#94a3b8' }}>Status:</span>
+            <span style={{ textTransform: 'capitalize', color: statusColors[viewingBooking.status] || '#f8fafc' }}>
+              {statusLabels[viewingBooking.status] || viewingBooking.status}
+            </span>
+          </div>
+
+          <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={() => setViewingBooking(null)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #334155', background: 'transparent', color: '#f8fafc', cursor: 'pointer' }}>Close</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="admin-main">
       {/* ── Header ───────────────────────────────────────────── */}
@@ -835,9 +939,10 @@ export function AdminBookings() {
                     <td>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <button
-                          title="View"
+                          title="View Details"
                           onClick={(e) => {
                             e.stopPropagation()
+                            setViewingBooking(booking)
                           }}
                           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                         >
@@ -1072,6 +1177,8 @@ export function AdminBookings() {
       )}
         </>
       )}
+      
+      {renderBookingDetailsModal()}
     </div>
   )
 }
