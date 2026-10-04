@@ -28,6 +28,7 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
   const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password)
   const isPasswordStrong = hasMinLength && hasNumber && hasSpecialChar
   const passwordsMatch = password === confirmPassword
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 
   const handleGoogleSignIn = async () => {
     setLoading(true)
@@ -54,6 +55,10 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
     setError('')
 
     try {
+      if (!isValidEmail) {
+        throw new Error('Please enter a valid email address.')
+      }
+
       if (mode === 'create-account') {
         if (!isPasswordStrong) {
           throw new Error('Please meet all password requirements.')
