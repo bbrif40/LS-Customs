@@ -97,9 +97,11 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
           throw signUpError
         }
         
-        if (data.user) {
+        if (data.session) {
           setShowSplash(true)
           setTimeout(() => onAuthenticated(), 2500)
+        } else if (data.user) {
+          throw new Error('Account created! Please check your email to confirm and then sign in.')
         }
       } else {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
