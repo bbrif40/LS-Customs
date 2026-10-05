@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { X, Eye, EyeOff, Check, ArrowRight } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import type { AuthMode } from '../../types'
+import { Capacitor } from '@capacitor/core'
 
 interface AuthModalProps {
   mode: AuthMode
@@ -35,9 +36,13 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
     setLoading(true)
     setError('')
     try {
+      const redirectTo = Capacitor.isNativePlatform() 
+        ? 'com.lscustoms.app://login' 
+        : window.location.origin;
+
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin },
+        options: { redirectTo },
       })
       if (authError) {
         setError(authError.message)
@@ -68,10 +73,15 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
           throw new Error('Passwords do not match.')
         }
         
+        const redirectTo = Capacitor.isNativePlatform() 
+          ? 'com.lscustoms.app://login' 
+          : window.location.origin;
+
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim(),
           password,
           options: {
+            emailRedirectTo: redirectTo,
             data: {
               full_name: `${firstName.trim()} ${lastName.trim()}`,
               phone: phone.trim(),
