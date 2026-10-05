@@ -84,6 +84,9 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
           bannerTextColor={settings.bannerTextColor}
           bannerLinkText={settings.bannerLinkText}
           bannerLinkView={settings.bannerLinkView}
+          promoCode={settings.promoCode}
+          promoTitle={settings.promoTitle}
+          promoDiscount={settings.promoDiscount}
         />
       )}
 

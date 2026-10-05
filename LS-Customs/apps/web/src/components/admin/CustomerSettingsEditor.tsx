@@ -119,15 +119,46 @@ export function CustomerSettingsEditor() {
         </div>
 
         {draft.showBanner && (
-          <div>
-            <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#8fa09c', marginBottom: 6 }}>Promo Banner Text</label>
-            <textarea 
-              value={draft.bannerText}
-              onChange={e => setDraft({ ...draft, bannerText: e.target.value })}
-              rows={3}
-              style={{ width: '100%', padding: '8px 12px', background: '#0a0d14', border: '1px solid #2a3441', borderRadius: 4, color: '#fff', fontSize: 12, resize: 'vertical' }}
-            />
-          </div>
+          <>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#8fa09c', marginBottom: 6 }}>Promo Banner Text</label>
+              <textarea 
+                value={draft.bannerText}
+                onChange={e => setDraft({ ...draft, bannerText: e.target.value })}
+                rows={3}
+                style={{ width: '100%', padding: '8px 12px', background: '#0a0d14', border: '1px solid #2a3441', borderRadius: 4, color: '#fff', fontSize: 12, resize: 'vertical' }}
+              />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#8fa09c', marginBottom: 6 }}>Discount Code</label>
+                <input 
+                  type="text" 
+                  value={draft.promoCode}
+                  onChange={e => setDraft({ ...draft, promoCode: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', background: '#0a0d14', border: '1px solid #2a3441', borderRadius: 4, color: '#fff', fontSize: 12 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#8fa09c', marginBottom: 6 }}>Discount Value (e.g. 20%)</label>
+                <input 
+                  type="text" 
+                  value={draft.promoDiscount}
+                  onChange={e => setDraft({ ...draft, promoDiscount: e.target.value })}
+                  style={{ width: '100%', padding: '8px 12px', background: '#0a0d14', border: '1px solid #2a3441', borderRadius: 4, color: '#fff', fontSize: 12 }}
+                />
+              </div>
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#8fa09c', marginBottom: 6 }}>Voucher Title</label>
+              <input 
+                type="text" 
+                value={draft.promoTitle}
+                onChange={e => setDraft({ ...draft, promoTitle: e.target.value })}
+                style={{ width: '100%', padding: '8px 12px', background: '#0a0d14', border: '1px solid #2a3441', borderRadius: 4, color: '#fff', fontSize: 12 }}
+              />
+            </div>
+          </>
         )}
 
       </div>

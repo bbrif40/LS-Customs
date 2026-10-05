@@ -101,35 +101,17 @@ interface AvailableVouchersPromosProps {
   bannerTextColor?: string
   bannerLinkText?: string
   bannerLinkView?: 'rentals' | 'services' | 'bookings' | 'none'
+  promoCode?: string
+  promoTitle?: string
+  promoDiscount?: string
 }
 
-export function getPromosList(bannerText?: string): PromoVoucher[] {
-  let promoCode = 'ESCAPE20'
-  let discountStr = '20% OFF'
-  let discountVal = 20
-  let discountType: 'percent' | 'fixed' | 'free' = 'percent'
-  let title = 'Flash Sale: 20% Off Exotic Fleet'
-
-  if (bannerText) {
-    const codeMatch = bannerText.match(/Code:\s*([A-Za-z0-9_-]+)/i)
-    if (codeMatch && codeMatch[1]) {
-      promoCode = codeMatch[1].toUpperCase()
-    }
-    const percentMatch = bannerText.match(/(\d+)%\s*off/i)
-    if (percentMatch && percentMatch[1]) {
-      discountVal = parseInt(percentMatch[1], 10)
-      discountStr = `${discountVal}% OFF`
-      title = `Featured Promo: ${discountVal}% Off`
-    } else {
-      const fixedMatch = bannerText.match(/₱\s*(\d+)/i)
-      if (fixedMatch && fixedMatch[1]) {
-        discountVal = parseInt(fixedMatch[1], 10)
-        discountStr = `₱${discountVal} OFF`
-        discountType = 'fixed'
-        title = `Featured Promo: ₱${discountVal} Off`
-      }
-    }
-  }
+export function getPromosList(bannerText?: string, propCode?: string, propTitle?: string, propDiscount?: string): PromoVoucher[] {
+  let promoCode = propCode || 'ESCAPE20'
+  let discountStr = propDiscount || '20% OFF'
+  let discountVal = parseInt(discountStr.replace(/[^0-9]/g, '')) || 20
+  let discountType: 'percent' | 'fixed' | 'free' = discountStr.includes('%') ? 'percent' : discountStr.includes('FREE') ? 'free' : 'fixed'
+  let title = propTitle || 'Flash Sale: 20% Off Exotic Fleet'
 
   const defaultPromo: PromoVoucher = {
     id: `promo-${promoCode.toLowerCase()}`,
@@ -163,6 +145,9 @@ export function AvailableVouchersPromos({
   bannerTextColor = '#000000',
   bannerLinkText = 'Claim Offer',
   bannerLinkView = 'rentals',
+  promoCode,
+  promoTitle,
+  promoDiscount
 }: AvailableVouchersPromosProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const [inputCode, setInputCode] = useState('')
@@ -170,7 +155,7 @@ export function AvailableVouchersPromos({
   const [copiedCode, setCopiedCode] = useState<string | null>(null)
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null)
 
-  const promosList = React.useMemo(() => getPromosList(bannerText), [bannerText])
+  const promosList = React.useMemo(() => getPromosList(bannerText, promoCode, promoTitle, promoDiscount), [bannerText, promoCode, promoTitle, promoDiscount])
 
   // Load active promo from storage on mount
   useEffect(() => {

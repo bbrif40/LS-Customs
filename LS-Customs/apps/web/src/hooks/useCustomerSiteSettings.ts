@@ -10,6 +10,11 @@ export interface CustomerSiteSettings {
   bannerLinkText: string
   bannerLinkView: 'rentals' | 'services' | 'bookings' | 'none'
 
+  // Primary Promo/Voucher
+  promoCode: string
+  promoDiscount: string
+  promoTitle: string
+
   // Welcome & Hero
   welcomeSubtitle: string
   heroEyebrow: string
@@ -37,6 +42,10 @@ export const DEFAULT_SITE_SETTINGS: CustomerSiteSettings = {
   bannerTextColor: '#000000',
   bannerLinkText: 'Claim Offer',
   bannerLinkView: 'rentals',
+
+  promoCode: 'ESCAPE20',
+  promoDiscount: '20%',
+  promoTitle: 'Flash Sale: 20% Off Exotic Fleet',
 
   welcomeSubtitle: 'Your garage is in good hands. What do you need today?',
   heroEyebrow: 'LS CUSTOMS CONCIERGE',
