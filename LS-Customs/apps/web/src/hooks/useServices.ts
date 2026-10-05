@@ -71,8 +71,9 @@ export function useServices(): UseServicesResult {
     // ponytail: any change to the catalog should land in the customer flow
     // without a hard refresh — refetch on insert/update/delete. Filter on
     // is_active so toggles that hide a row take effect immediately.
+    const channelId = `mechanic-services-catalog-${Math.random().toString(36).substring(2, 9)}`
     const channel = supabase
-      .channel('mechanic-services-catalog')
+      .channel(channelId)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'mechanic_services' }, () => { void fetchServices() })
       .subscribe()
     return () => { void supabase.removeChannel(channel) }
