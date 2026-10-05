@@ -31,7 +31,7 @@ export interface SendEmailOptions {
 const DEFAULT_FROM = "LS Customs <onboarding@resend.dev>";
 const HELP_CENTER_URL = "https://ls-customs-web.vercel.app/help";
 
-import * as nodemailer from "npm:nodemailer";
+import * as nodemailer from "https://esm.sh/nodemailer@6.9.14";
 
 /**
  * Sends any email via Gmail (Nodemailer) instead of Resend API for free sending.
