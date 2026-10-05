@@ -9,11 +9,12 @@ interface ServiceMiniProps {
   detail: string
   price: string
   icon: ReactNode
+  onClick?: () => void
 }
 
-export function ServiceMini({ title, detail, price, icon }: ServiceMiniProps) {
+export function ServiceMini({ title, detail, price, icon, onClick }: ServiceMiniProps) {
   return (
-    <article className="service-mini">
+    <article className="service-mini" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       <div className="service-icon">{icon}</div>
       <h3>{title}</h3>
       <p>{detail}</p>

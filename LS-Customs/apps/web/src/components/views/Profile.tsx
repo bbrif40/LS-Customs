@@ -19,6 +19,7 @@ import { useRef, useState, useEffect } from 'react'
 import { Bell, MapPin, Headset, Loader2 } from 'lucide-react'
 import { PageHeading } from '../common/PageHeading'
 import { SettingsRow } from '../common/SettingsRow'
+import { LocationPicker } from '../common/map/LocationPicker'
 import { useProfile } from '../../hooks/useProfile'
 
 /** Storage key for customer notification preference toggles. */
@@ -315,6 +316,16 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
             {/* ── Address section ──────────────────────────── */}
             <div className="profile-section" ref={addressSectionRef}>
               <h3 className="profile-section-title">Address</h3>
+              <div style={{ marginBottom: 16 }}>
+                <LocationPicker
+                  onChange={() => {}}
+                  onAddressResolved={(addr) => {
+                    setAddressLine1(addr.line1)
+                    setAddressCity(addr.city)
+                    setAddressDirty(true)
+                  }}
+                />
+              </div>
               <label>
                 Street address
                 <input

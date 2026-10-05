@@ -32,6 +32,7 @@ interface DashboardProps {
   initials: string
   onView: (view: View) => void
   onNotify: (message: string) => void
+  onSelectService?: (serviceId: string) => void
 }
 
 function getGreeting(hour: number): string {
@@ -52,7 +53,7 @@ function formatDashboardDate(date: Date): string {
     .toUpperCase()
 }
 
-export function Dashboard({ displayName, initials, onView, onNotify }: DashboardProps) {
+export function Dashboard({ displayName, initials, onView, onNotify, onSelectService }: DashboardProps) {
   const { vehicles: featured, loading: featuredLoading } = useCustomerVehicles()
   const { services: trending, loading: trendingLoading } = useTrendingServices(2)
   const { isFavorite, toggleFavorite } = useFavoriteVehicles()
@@ -235,6 +236,7 @@ export function Dashboard({ displayName, initials, onView, onNotify }: Dashboard
               detail={service.description ?? 'Professional service performed at your location.'}
               price={`STARTS AT ₱${service.basePrice.toFixed(0)}`}
               icon={<IconForCategory category={service.category} size={20} />}
+              onClick={() => onSelectService?.(service.id)}
             />
           ))
         )}

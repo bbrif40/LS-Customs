@@ -13,6 +13,25 @@ export function useCustomerNotifications(userId: string | undefined, channelKey:
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const getStoredPrefs = () => {
+    try {
+      const stored = localStorage.getItem('ls-customs-notification-preferences')
+      return stored ? JSON.parse(stored) : { bookingUpdates: true, ticketReplies: true, paymentUpdates: true, promotions: false }
+    } catch {
+      return { bookingUpdates: true, ticketReplies: true, paymentUpdates: true, promotions: false }
+    }
+  }
+
+  const filterPrefs = (item: CustomerNotification) => {
+    const prefs = getStoredPrefs()
+    const t = item.type || ''
+    if (t.includes('booking') || t.includes('dispatch')) return prefs.bookingUpdates !== false
+    if (t.includes('ticket')) return prefs.ticketReplies !== false
+    if (t.includes('payment')) return prefs.paymentUpdates !== false
+    if (t.includes('promo')) return prefs.promotions !== false
+    return true
+  }
+
   const fetchNotifications = useCallback(async () => {
     if (!userId) {
       setNotifications([])
@@ -26,9 +45,9 @@ export function useCustomerNotifications(userId: string | undefined, channelKey:
       .select('id, type, title, body, metadata, is_read, created_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(25)
+      .limit(100)
     if (queryError) setError(queryError.message)
-    else setNotifications((data ?? []) as CustomerNotification[])
+    else setNotifications(((data ?? []) as CustomerNotification[]).filter(filterPrefs).slice(0, 25))
     setLoading(false)
   }, [userId])
 
@@ -41,7 +60,10 @@ export function useCustomerNotifications(userId: string | undefined, channelKey:
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}`,
       }, (payload) => {
-        setNotifications((current) => [payload.new as CustomerNotification, ...current].slice(0, 25))
+        const newItem = payload.new as CustomerNotification
+        if (filterPrefs(newItem)) {
+          setNotifications((current) => [newItem, ...current].slice(0, 25))
+        }
       })
       .subscribe()
     return () => { void supabase.removeChannel(channel) }

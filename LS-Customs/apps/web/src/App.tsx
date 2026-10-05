@@ -186,6 +186,7 @@ export function App() {
   const [emergencyModalOpen, setEmergencyModalOpen] = useState(false)
   const [activeEmergencyDispatch, setActiveEmergencyDispatch] = useState<EmergencyDispatchData | null>(null)
   const [preselectedBookingDate, setPreselectedBookingDate] = useState<string | null>(null)
+  const [preselectedServiceId, setPreselectedServiceId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading) {
@@ -426,6 +427,10 @@ export function App() {
                 initials={identity.initials}
                 onView={setView}
                 onNotify={notify}
+                onSelectService={(serviceId) => {
+                  setPreselectedServiceId(serviceId)
+                  setView('services')
+                }}
               />
             )}
             {view === 'rentals' && (
@@ -440,8 +445,10 @@ export function App() {
                 userId={userId}
                 onNotify={notify}
                 initialDate={preselectedBookingDate}
+                initialServiceId={preselectedServiceId}
                 onBackToHome={() => {
                   setPreselectedBookingDate(null)
+                  setPreselectedServiceId(null)
                   setView('home')
                 }}
               />

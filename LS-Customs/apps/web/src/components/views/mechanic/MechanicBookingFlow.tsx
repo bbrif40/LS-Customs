@@ -44,6 +44,7 @@ interface MechanicBookingFlowProps {
   onNotify: (message: string) => void
   onBackToHome?: () => void
   initialDate?: string | null
+  initialServiceId?: string | null
 }
 
 function generateLocalRef(): string {
@@ -56,7 +57,7 @@ function buildScheduledAt(date: string, time: string): string {
   return d.toISOString()
 }
 
-export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDate }: MechanicBookingFlowProps) {
+export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDate, initialServiceId }: MechanicBookingFlowProps) {
   useEffect(() => {
     preloadMap()
   }, [])
@@ -70,11 +71,24 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
   const [date, setDate] = useState<string | null>(initialDate ?? null) // YYYY-MM-DD
   const [time, setTime] = useState<string | null>(null) // HH:MM
 
+  const { services: initialAllServices } = useServices()
+
   useEffect(() => {
     if (initialDate) {
       setDate(initialDate)
     }
   }, [initialDate])
+
+  useEffect(() => {
+    if (initialServiceId && initialAllServices.length > 0) {
+      const found = initialAllServices.find(s => s.id === initialServiceId)
+      if (found && !service) {
+        setCategory(found.category)
+        setService(found)
+        setStep('schedule')
+      }
+    }
+  }, [initialServiceId, initialAllServices, service])
   const [address, setAddress] = useState<ChosenAddress | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [confirmedBooking, setConfirmedBooking] = useState<ServiceBooking | null>(null)
