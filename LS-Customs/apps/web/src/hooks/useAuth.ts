@@ -2,7 +2,7 @@
  * useAuth — manages Supabase session state and user identity extraction.
  * Extracted from App.tsx so auth logic is reusable and testable.
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../supabaseClient'
 import type { UserIdentity } from '../types'
@@ -12,6 +12,8 @@ interface UseAuthReturn {
   userId: string | undefined
   identity: UserIdentity
   authLoading: boolean
+  /** True once the profile row for the current user was fetched successfully. */
+  profileChecked: boolean
   authMode: 'sign-in' | 'create-account'
   authOpen: boolean
   setAuthMode: (mode: 'sign-in' | 'create-account') => void
@@ -29,25 +31,31 @@ export function useAuth(): UseAuthReturn {
   const [role, setRole] = useState<string | null>(null)
   const [phone, setPhone] = useState<string | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
+  const [profileChecked, setProfileChecked] = useState(false)
+  // Monotonic counter so a slow, stale identity fetch can't overwrite a newer one.
+  const resolveSeq = useRef(0)
   const [authMode, setAuthMode] = useState<'sign-in' | 'create-account'>('sign-in')
   const [authOpen, setAuthOpen] = useState(false)
 
   useEffect(() => {
     let mounted = true
 
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    // Keep authLoading true until the profile row has been fetched, otherwise
+    // App briefly sees `phone === null` on every refresh and flashes the
+    // "Complete Your Profile" screen.
+    supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (!mounted) return
       if (error) {
         console.error('[useAuth] failed to restore session:', error)
         setSignedIn(false)
         setUserId(undefined)
-        void resolveIdentity(null)
+        await resolveIdentity(null)
       } else {
         setSignedIn(Boolean(session))
         setUserId(session?.user?.id)
-        void resolveIdentity(session)
+        await resolveIdentity(session)
       }
-      setAuthLoading(false)
+      if (mounted) setAuthLoading(false)
     }).catch((error: unknown) => {
       if (!mounted) return
       console.error('[useAuth] session startup failed:', error)
@@ -72,8 +80,11 @@ export function useAuth(): UseAuthReturn {
       }
       setSignedIn(Boolean(session))
       setUserId(session?.user?.id)
-      void resolveIdentity(session)
-      setAuthLoading(false)
+      // Don't await inside the auth callback (supabase-js can deadlock);
+      // finish loading once the identity fetch settles instead.
+      void resolveIdentity(session).finally(() => {
+        if (mounted) setAuthLoading(false)
+      })
     })
 
     return () => {
@@ -83,6 +94,8 @@ export function useAuth(): UseAuthReturn {
   }, [])
 
   async function resolveIdentity(session: Session | null) {
+    const seq = ++resolveSeq.current
+
     if (!session?.user) {
       setUserId(undefined)
       setDisplayName('')
@@ -90,16 +103,33 @@ export function useAuth(): UseAuthReturn {
       setInitials('LS')
       setAvatarUrl(null)
       setRole(null)
+      setPhone(null)
+      setProfileChecked(false)
       return
     }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name, avatar_url, role, phone')
-      .eq('id', session.user.id)
-      .maybeSingle()
+    let profile: { full_name?: string | null; avatar_url?: string | null; role?: string | null; phone?: string | null } | null = null
+    let profileOk = false
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url, role, phone')
+        .eq('id', session.user.id)
+        .maybeSingle()
+      if (error) {
+        console.error('[useAuth] failed to load profile:', error)
+      } else {
+        profile = data
+        profileOk = true
+      }
+    } catch (err) {
+      console.error('[useAuth] profile request crashed:', err)
+    }
 
-    const metadata = session.user.user_metadata as { full_name?: string; name?: string }
+    // A newer resolve started while we were waiting — drop this result.
+    if (seq !== resolveSeq.current) return
+
+    const metadata = session.user.user_metadata as { full_name?: string; name?: string; phone?: string }
     const name =
       profile?.full_name ||
       metadata.full_name ||
@@ -111,7 +141,9 @@ export function useAuth(): UseAuthReturn {
     setDisplayEmail(session.user.email || '')
     setAvatarUrl(profile?.avatar_url ?? null)
     setRole(profile?.role ?? null)
-    setPhone(profile?.phone ?? null)
+    // Fall back to the phone on the auth user (phone OTP sign-ups) or metadata.
+    setPhone(profile?.phone || session.user.phone || metadata.phone || null)
+    setProfileChecked(profileOk)
     setInitials(
       name
         .split(/\s+/)
@@ -124,8 +156,11 @@ export function useAuth(): UseAuthReturn {
 
   useEffect(() => {
     const handleProfileUpdate = (event: Event) => {
-      const avatar = (event as CustomEvent<{ avatarUrl?: string | null }>).detail?.avatarUrl
-      setAvatarUrl(avatar ?? null)
+      const detail = (event as CustomEvent<{ avatarUrl?: string | null; phone?: string | null }>).detail
+      if (!detail) return
+      // Only touch fields that were actually included in the event.
+      if ('avatarUrl' in detail) setAvatarUrl(detail.avatarUrl ?? null)
+      if ('phone' in detail) setPhone(detail.phone ?? null)
     }
     window.addEventListener('ls-profile-updated', handleProfileUpdate)
     return () => window.removeEventListener('ls-profile-updated', handleProfileUpdate)
@@ -141,6 +176,7 @@ export function useAuth(): UseAuthReturn {
     userId,
     identity: { displayName, displayEmail, initials, avatarUrl, role, phone },
     authLoading,
+    profileChecked,
     authMode,
     authOpen,
     setAuthMode,

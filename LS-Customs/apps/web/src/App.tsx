@@ -1,12 +1,13 @@
 /**
- * App — root component. Thin orchestrator that manages global state
+ * App â€” root component. Thin orchestrator that manages global state
  * (view routing, admin routes, toast, cart, sign-out) and delegates rendering to
  * small, single-purpose child components.
  */
 import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { SplashScreen } from '@capacitor/splash-screen'
-import { X } from 'lucide-react'
+import { X, AlertTriangle, RefreshCw, Home, ChevronDown, Copy, Check } from 'lucide-react'
+import './status-screens.css'
 import { supabase } from './supabaseClient'
 import { useAuth } from './hooks/useAuth'
 import { useAdminAuth } from './hooks/useAdminAuth'
@@ -62,7 +63,7 @@ const resolvePublicView = (path: string): PublicView | null => {
 type AppMode = 'customer' | 'admin' | 'admin-login' | 'public'
 
 /**
- * RootErrorBoundary — last-resort safety net for the whole app.
+ * RootErrorBoundary â€” last-resort safety net for the whole app.
  *
  * The admin and customer trees each have their own narrower error
  * boundaries (see AdminBookingDetail, MapBoundary), but a throw outside
@@ -72,8 +73,8 @@ type AppMode = 'customer' | 'admin' | 'admin-login' | 'public'
  * the cause, and shows a small "Something went wrong" panel with a
  * Reload button so the user is never stranded.
  */
-class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
-  state = { error: null as Error | null }
+class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null; copied: boolean }> {
+  state = { error: null as Error | null, copied: false }
 
   static getDerivedStateFromError(error: Error) {
     return { error }
@@ -84,66 +85,84 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
     console.error('[App] uncaught error:', error, info)
   }
 
+  handleRetry = () => {
+    this.setState({ error: null, copied: false })
+  }
+
   handleReload = () => {
     window.location.reload()
   }
 
+  handleHome = () => {
+    window.location.href = '/'
+  }
+
+  handleCopy = () => {
+    const err = this.state.error
+    if (!err) return
+    const report = `${err.name}: ${err.message}\n\nURL: ${window.location.href}\nTime: ${new Date().toISOString()}\n\n${err.stack ?? ''}`
+    navigator.clipboard?.writeText(report).then(
+      () => this.setState({ copied: true }),
+      () => undefined,
+    )
+  }
+
   render() {
-    if (this.state.error) {
+    const { error, copied } = this.state
+    if (error) {
+      const offline = typeof navigator !== 'undefined' && navigator.onLine === false
       return (
-        <div
-          style={{
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#0f1320',
-            color: '#d4d9e6',
-            padding: 24,
-            fontFamily: 'DM Sans, sans-serif',
-            textAlign: 'center',
-            gap: 12,
-          }}
-        >
-          <div style={{ fontSize: 18, fontWeight: 600 }}>Something went wrong.</div>
-          <div style={{ fontSize: 13, color: '#9ca3af', maxWidth: 420 }}>
-            The page crashed before it could render. Reload to try again.
-          </div>
-          {this.state.error?.message && (
-            <div
-              style={{
-                fontSize: 12,
-                color: '#ef4444',
-                maxWidth: 500,
-                fontFamily: 'monospace',
-                padding: '10px 14px',
-                background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid #ef444440',
-                borderRadius: 6,
-                wordBreak: 'break-word',
-              }}
-            >
-              {this.state.error.message}
+        <main className="ls-screen ls-screen--error">
+          <section className="ls-card ls-card--wide" role="alert" aria-labelledby="app-error-title">
+            <div className="ls-brand">
+              <span className="ls-brand-mark">LS</span> LS Customs
             </div>
-          )}
-          <button
-            type="button"
-            onClick={this.handleReload}
-            style={{
-              marginTop: 8,
-              padding: '10px 18px',
-              background: '#e8a838',
-              color: '#0f1320',
-              border: 0,
-              borderRadius: 8,
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Reload
-          </button>
-        </div>
+
+            <div className="ls-icon-badge ls-icon-badge--error" aria-hidden="true">
+              <AlertTriangle size={26} />
+            </div>
+
+            <h1 id="app-error-title" className="ls-title">
+              {offline ? "You're offline" : 'Something went wrong'}
+            </h1>
+            <p className="ls-subtitle">
+              {offline
+                ? 'We lost your internet connection. Reconnect and try again â€” your bookings are safe.'
+                : "We hit an unexpected problem loading this page. Don't worry, your account and bookings are safe. Try again, or head back home."}
+            </p>
+
+            <div className="ls-actions ls-actions--row">
+              <button id="app-error-retry" type="button" className="ls-btn ls-btn--primary" onClick={this.handleRetry}>
+                <RefreshCw size={17} /> Try again
+              </button>
+              <button id="app-error-home" type="button" className="ls-btn ls-btn--ghost" onClick={this.handleHome}>
+                <Home size={17} /> Go home
+              </button>
+            </div>
+            <div className="ls-actions" style={{ marginTop: 6 }}>
+              <button id="app-error-reload" type="button" className="ls-btn ls-btn--link" onClick={this.handleReload}>
+                Still stuck? Reload the page
+              </button>
+            </div>
+
+            {error.message && (
+              <details className="ls-details">
+                <summary>
+                  Technical details <ChevronDown size={15} />
+                </summary>
+                <pre>{error.name}: {error.message}</pre>
+                <button id="app-error-copy" type="button" className="ls-details-copy" onClick={this.handleCopy}>
+                  {copied ? <Check size={12} /> : <Copy size={12} />}
+                  {copied ? 'Copied' : 'Copy error report'}
+                </button>
+              </details>
+            )}
+
+            <p className="ls-footnote">
+              Keeps happening? <a href="/contact">Contact support</a>
+            </p>
+          </section>
+        </main>
       )
     }
     return this.props.children
@@ -151,7 +170,7 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
 }
 
 export function App() {
-  const { signedIn, userId, identity, authLoading, authMode, authOpen, setAuthMode, setAuthOpen, openAuth } = useAuth()
+  const { signedIn, userId, identity, authLoading, profileChecked, authMode, authOpen, setAuthMode, setAuthOpen, openAuth } = useAuth()
   const adminAuth = useAdminAuth()
 
   // App mode determined by URL path or state
@@ -283,7 +302,7 @@ export function App() {
     notify('You have been signed out')
   }
 
-  // ── Render Admin Portal ───────────────────────────────────────
+  // â”€â”€ Render Admin Portal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (appMode === 'admin-login' || (appMode === 'admin' && !adminAuth.isAuthenticated)) {
     if (adminAuth.isLoading) {
       return (
@@ -318,7 +337,7 @@ export function App() {
     )
   }
 
-  // ── Render Public Content Pages ─────────────────────────────────
+  // â”€â”€ Render Public Content Pages â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (appMode === 'public') {
     return (
       <RootErrorBoundary>
@@ -334,11 +353,18 @@ export function App() {
     )
   }
 
-  // ── Render Customer App ───────────────────────────────────────
+  // â”€â”€ Render Customer App â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (authLoading) {
     return (
       <RootErrorBoundary>
-        <div className="auth-loading">Loading LS Customs...</div>
+        <main className="ls-screen" aria-busy="true">
+          <div className="ls-loader">
+            <div className="ls-loader-ring">
+              <span className="ls-brand-mark">LS</span>
+            </div>
+            <span className="ls-loader-text">Loading LS Customs</span>
+          </div>
+        </main>
       </RootErrorBoundary>
     )
   }
@@ -379,7 +405,9 @@ export function App() {
     )
   }
 
-  if (signedIn && !identity.phone && userId) {
+  // Only ask for a phone once we've *confirmed* the profile has none â€” a
+  // failed/slow profile fetch must not trap the user on this screen.
+  if (signedIn && userId && profileChecked && !identity.phone) {
     return (
       <RootErrorBoundary>
         <AccountSetup userId={userId} onComplete={() => setView('home')} />
