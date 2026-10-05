@@ -26,6 +26,7 @@ import { ChatBot } from './components/chat/ChatBot'
 import { PublicLayout } from './components/layout/PublicLayout'
 import { AdminLayout } from './components/admin/AdminLayout'
 import { AdminLogin } from './components/admin/AdminLogin'
+import { CustomerSettingsEditor } from './components/admin/CustomerSettingsEditor'
 import { TicketRealtimeProvider } from './components/common/TicketRealtimeProvider'
 import { HelpCenter } from './pages/public/HelpCenter'
 import { ContactSupport } from './pages/public/ContactSupport'
@@ -237,17 +238,14 @@ export function App() {
     }
   }, [])
 
-  // Redirect admin users to the admin dashboard automatically
+  // Redirect non-admins away from admin routes
   useEffect(() => {
-    if (signedIn && identity.role === 'admin' && appMode !== 'admin') {
-      navigateTo('admin')
-      if (authOpen) setAuthOpen(false)
-    } else if (signedIn && identity.role && identity.role !== 'admin' && (appMode === 'admin' || appMode === 'admin-login')) {
+    if (signedIn && identity.role && identity.role !== 'admin' && (appMode === 'admin' || appMode === 'admin-login')) {
       // Prevent non-admins from accessing admin routes
       navigateTo('customer')
       notify('Access denied. Admin privileges required.')
     }
-  }, [signedIn, identity.role, appMode, authOpen, setAuthOpen])
+  }, [signedIn, identity.role, appMode])
 
   const navigateTo = (mode: AppMode) => {
     setAppMode(mode)
@@ -510,6 +508,10 @@ export function App() {
           )}
 
           <ChatBot userId={userId} onNotify={notify} />
+
+          {identity.role === 'admin' && (
+            <CustomerSettingsEditor />
+          )}
 
           <EmergencyMechanicModal
             open={emergencyModalOpen}

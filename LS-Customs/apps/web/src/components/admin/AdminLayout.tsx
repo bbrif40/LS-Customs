@@ -15,7 +15,7 @@ import { AdminUsers } from './AdminUsers'
 import { AdminBookings } from './AdminBookings'
 import { AdminRevenue } from './AdminRevenue'
 import { AdminTickets } from './AdminTickets'
-import { AdminSettings } from './AdminSettings'
+
 import { AdminAuditLogs } from './AdminAuditLogs'
 import { useOpenTicketCount, useAdminBookingsCount } from '../../hooks/useAdminData'
 import type { AdminView } from './AdminSidebar'
@@ -91,8 +91,6 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
         return <AdminTickets />
       case 'revenue':
         return <AdminRevenue />
-      case 'settings':
-        return <AdminSettings />
       case 'audit-logs':
         return <AdminAuditLogs />
       default:

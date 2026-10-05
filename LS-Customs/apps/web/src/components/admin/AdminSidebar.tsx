@@ -49,7 +49,6 @@ const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[]
   { id: 'bookings',      label: 'Bookings',          icon: FileBarChart },
   { id: 'tickets',       label: 'Ticket Requests',   icon: TicketPlus },
   { id: 'revenue',       label: 'Revenue',           icon: DollarSign },
-  { id: 'settings',      label: 'Settings',          icon: Settings },
   { id: 'audit-logs',    label: 'Audit Logs',        icon: ShieldCheck },
 ]
 
