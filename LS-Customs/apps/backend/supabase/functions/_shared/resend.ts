@@ -31,93 +31,45 @@ export interface SendEmailOptions {
 const DEFAULT_FROM = "LS Customs <onboarding@resend.dev>";
 const HELP_CENTER_URL = "https://ls-customs-web.vercel.app/help";
 
+import * as nodemailer from "npm:nodemailer";
+
 /**
- * Sends any email via Resend API using standard fetch.
+ * Sends any email via Gmail (Nodemailer) instead of Resend API for free sending.
  */
 export async function sendResendEmail(
   options: SendEmailOptions,
   apiKeyOverride?: string,
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  const apiKey =
-    apiKeyOverride ||
-    (typeof Deno !== "undefined" ? Deno.env.get("RESEND_API_KEY") : undefined) ||
-    (typeof process !== "undefined" ? process.env?.RESEND_API_KEY : undefined);
+  // We grab the Gmail credentials from environment/secrets
+  const user = (typeof Deno !== "undefined" ? Deno.env.get("GMAIL_USER") : undefined) || (typeof process !== "undefined" ? process.env?.GMAIL_USER : undefined);
+  const pass = (typeof Deno !== "undefined" ? Deno.env.get("GMAIL_PASSWORD") : undefined) || (typeof process !== "undefined" ? process.env?.GMAIL_PASSWORD : undefined);
 
-  if (!apiKey) {
-    console.error("[resend] RESEND_API_KEY is not configured in environment variables.");
-    return { success: false, error: "Missing RESEND_API_KEY environment variable" };
+  if (!user || !pass) {
+    console.error("[email] GMAIL_USER or GMAIL_PASSWORD is not configured in secrets.");
+    return { success: false, error: "Missing Gmail credentials" };
   }
 
-  const from =
-    options.from ||
-    (typeof Deno !== "undefined" ? Deno.env.get("RESEND_FROM_EMAIL") : undefined) ||
-    DEFAULT_FROM;
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: user,
+      pass: pass,
+    }
+  });
 
   const toList = Array.isArray(options.to) ? options.to : [options.to];
 
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: toList,
-        subject: options.subject,
-        html: options.html,
-        text: options.text,
-      }),
+    const info = await transporter.sendMail({
+      from: `LS Customs <${user}>`,
+      to: toList,
+      subject: options.subject,
+      html: options.html,
+      text: options.text,
     });
-
-    const responseData = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      const errMsg = responseData.message || `HTTP ${res.status}`;
-      // In Resend onboarding sandbox mode, if the recipient is not the account owner,
-      // Resend returns an error: "You can only send testing emails to your own email address...".
-      // Fallback to sending to the verified developer email so testing succeeds.
-      const fallbackEmail =
-        (typeof Deno !== "undefined" ? Deno.env.get("RESEND_FALLBACK_EMAIL") : undefined) ||
-        (typeof process !== "undefined" ? process.env?.RESEND_FALLBACK_EMAIL : undefined) ||
-        "bbri7198@gmail.com";
-
-      if (
-        res.status === 403 &&
-        fallbackEmail &&
-        !toList.includes(fallbackEmail) &&
-        typeof errMsg === "string" &&
-        errMsg.toLowerCase().includes("testing emails to your own email address")
-      ) {
-        console.warn(`[resend] Sandbox restriction: retrying send to verified email ${fallbackEmail} (original: ${toList.join(", ")})`);
-        const fallbackRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from,
-            to: [fallbackEmail],
-            subject: `[Dev Sandbox] ${options.subject}`,
-            html: `<div style="background:#2a1e05;border:1px solid #e8bf67;padding:10px 14px;border-radius:6px;margin-bottom:18px;color:#fcefc7;font-size:12px;font-family:sans-serif;">
-              <strong>Resend Test Sandbox Notice:</strong> This receipt was addressed to <code>${toList.join(", ")}</code>. While testing on <code>onboarding@resend.dev</code>, Resend forwards all receipts to your verified account (<code>${fallbackEmail}</code>). Add a custom domain at <a href="https://resend.com/domains" style="color:#e8bf67;">resend.com/domains</a> to send to any external address.
-            </div>` + options.html,
-            text: options.text,
-          }),
-        });
-
-        const fallbackData = await fallbackRes.json().catch(() => ({}));
-        if (fallbackRes.ok) {
-          return { success: true, id: fallbackData.id };
-        }
-      }
-
-      return { success: false, error: errMsg };
-    }
-
-    return { success: true, id: responseData.id };
+    
+    console.log("Email sent successfully:", info.messageId);
+    return { success: true, id: info.messageId };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     return { success: false, error: msg };
