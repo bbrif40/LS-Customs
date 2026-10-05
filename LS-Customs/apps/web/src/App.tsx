@@ -5,6 +5,7 @@
  */
 import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react'
 import { App as CapacitorApp } from '@capacitor/app'
+import { SplashScreen } from '@capacitor/splash-screen'
 import { X } from 'lucide-react'
 import { supabase } from './supabaseClient'
 import { useAuth } from './hooks/useAuth'
@@ -184,6 +185,12 @@ export function App() {
   const [emergencyModalOpen, setEmergencyModalOpen] = useState(false)
   const [activeEmergencyDispatch, setActiveEmergencyDispatch] = useState<EmergencyDispatchData | null>(null)
   const [preselectedBookingDate, setPreselectedBookingDate] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!authLoading) {
+      SplashScreen.hide().catch(console.error)
+    }
+  }, [authLoading])
 
   // Listen to browser forward/back buttons and deep links
   useEffect(() => {

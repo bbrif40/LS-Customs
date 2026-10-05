@@ -167,7 +167,7 @@ site_url = "https://ls-customs-web.vercel.app"
 # in the Supabase Dashboard → Authentication → Settings → Redirect URLs, e.g. https://<your-app>.vercel.app
 # Also register the Supabase callback URL in Google Cloud Console → OAuth → Authorized redirect URIs:
 #   https://<project-ref>.supabase.co/auth/v1/callback
-additional_redirect_urls = ["https://ls-customs-web.vercel.app","https://ls-customs-web.vercel.app/auth/v1/callback","https://ls-customs-6g9wbt6p1-ls-customs.vercel.app","https://ls-customs-6g9wbt6p1-ls-customs.vercel.app/auth/v1/callback","http://localhost:5173"]
+additional_redirect_urls = ["https://ls-customs-web.vercel.app","https://ls-customs-web.vercel.app/auth/v1/callback","https://ls-customs-6g9wbt6p1-ls-customs.vercel.app","https://ls-customs-6g9wbt6p1-ls-customs.vercel.app/auth/v1/callback","http://localhost:5173","com.lscustoms.app://callback","com.lscustoms.app://login","com.lscustoms.app://*"]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
