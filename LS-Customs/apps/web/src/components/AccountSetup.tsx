@@ -83,7 +83,7 @@ export function AccountSetup({ userId, onComplete }: AccountSetupProps) {
     <main className="ls-screen">
       <section className="ls-card" aria-labelledby="account-setup-title">
         <div className="ls-brand">
-          <span className="ls-brand-mark">LS</span> LS Customs
+          <img src="/logo.png" alt="" className="ls-brand-logo" /> LS Customs
         </div>
 
         <div className="ls-icon-badge" aria-hidden="true">

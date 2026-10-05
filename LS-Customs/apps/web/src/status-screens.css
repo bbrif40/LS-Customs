@@ -322,7 +322,7 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 72px; height: 72px;
+  width: 132px; height: 132px;
 }
 .ls-loader-ring::before {
   content: '';
@@ -334,12 +334,18 @@
   border-right-color: var(--yellow, #e8b74f);
   animation: ls-rotate 0.9s linear infinite;
 }
-.ls-loader-ring .ls-brand-mark {
-  width: 44px; height: 44px;
-  border-radius: 14px;
-  font-size: 15px;
-  font-weight: 700;
+.ls-loader-logo {
+  width: 108px; height: 108px;
+  padding: 6px;
+  border-radius: 50%;
+  object-fit: contain;
+  background: #fff;
+  box-shadow: 0 12px 28px -14px rgba(20, 32, 38, 0.35);
   animation: ls-pulse 1.6s ease-in-out infinite;
+}
+.ls-brand-logo {
+  width: 34px; height: 34px;
+  object-fit: contain;
 }
 @keyframes ls-pulse {
   0%, 100% { transform: scale(1); }
@@ -361,5 +367,5 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ls-screen::before, .ls-screen::after,
-  .ls-card, .ls-icon-badge--error, .ls-loader-ring .ls-brand-mark { animation: none; }
+  .ls-card, .ls-icon-badge--error, .ls-loader-logo { animation: none; }
 }

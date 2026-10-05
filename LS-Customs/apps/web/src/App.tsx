@@ -115,7 +115,7 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
         <main className="ls-screen ls-screen--error">
           <section className="ls-card ls-card--wide" role="alert" aria-labelledby="app-error-title">
             <div className="ls-brand">
-              <span className="ls-brand-mark">LS</span> LS Customs
+              <img src="/logo.png" alt="" className="ls-brand-logo" /> LS Customs
             </div>
 
             <div className="ls-icon-badge ls-icon-badge--error" aria-hidden="true">
@@ -360,7 +360,7 @@ export function App() {
         <main className="ls-screen" aria-busy="true">
           <div className="ls-loader">
             <div className="ls-loader-ring">
-              <span className="ls-brand-mark">LS</span>
+              <img src="/logo.png" alt="LS Customs" className="ls-loader-logo" />
             </div>
             <span className="ls-loader-text">Loading LS Customs</span>
           </div>
