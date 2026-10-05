@@ -27,6 +27,7 @@ export function useAuth(): UseAuthReturn {
   const [initials, setInitials] = useState('LS')
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [role, setRole] = useState<string | null>(null)
+  const [phone, setPhone] = useState<string | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
   const [authMode, setAuthMode] = useState<'sign-in' | 'create-account'>('sign-in')
   const [authOpen, setAuthOpen] = useState(false)
@@ -94,7 +95,7 @@ export function useAuth(): UseAuthReturn {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name, avatar_url, role')
+      .select('full_name, avatar_url, role, phone')
       .eq('id', session.user.id)
       .maybeSingle()
 
@@ -110,6 +111,7 @@ export function useAuth(): UseAuthReturn {
     setDisplayEmail(session.user.email || '')
     setAvatarUrl(profile?.avatar_url ?? null)
     setRole(profile?.role ?? null)
+    setPhone(profile?.phone ?? null)
     setInitials(
       name
         .split(/\s+/)
@@ -137,7 +139,7 @@ export function useAuth(): UseAuthReturn {
   return {
     signedIn,
     userId,
-    identity: { displayName, displayEmail, initials, avatarUrl, role },
+    identity: { displayName, displayEmail, initials, avatarUrl, role, phone },
     authLoading,
     authMode,
     authOpen,

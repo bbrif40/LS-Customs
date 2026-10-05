@@ -163,6 +163,7 @@ export interface UserIdentity {
   initials: string
   avatarUrl: string | null
   role?: string | null
+  phone?: string | null
 }
 
 export interface PageHeadingProps {

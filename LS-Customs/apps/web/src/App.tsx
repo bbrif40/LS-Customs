@@ -29,6 +29,7 @@ import { AdminLayout } from './components/admin/AdminLayout'
 import { AdminLogin } from './components/admin/AdminLogin'
 import { CustomerSettingsEditor } from './components/admin/CustomerSettingsEditor'
 import { TicketRealtimeProvider } from './components/common/TicketRealtimeProvider'
+import { AccountSetup } from './components/AccountSetup'
 import { HelpCenter } from './pages/public/HelpCenter'
 import { ContactSupport } from './pages/public/ContactSupport'
 import { Terms } from './pages/public/Terms'
@@ -373,6 +374,14 @@ export function App() {
             }}
           />
         </>
+      </RootErrorBoundary>
+    )
+  }
+
+  if (signedIn && !identity.phone && userId) {
+    return (
+      <RootErrorBoundary>
+        <AccountSetup userId={userId} onComplete={() => setView('home')} />
       </RootErrorBoundary>
     )
   }
