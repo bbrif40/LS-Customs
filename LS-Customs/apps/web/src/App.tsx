@@ -4,6 +4,7 @@
  * small, single-purpose child components.
  */
 import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react'
+import { App as CapacitorApp } from '@capacitor/app'
 import { X } from 'lucide-react'
 import { supabase } from './supabaseClient'
 import { useAuth } from './hooks/useAuth'
@@ -211,7 +212,29 @@ export function App() {
     }
 
     window.addEventListener('popstate', handleLocationChange)
-    return () => window.removeEventListener('popstate', handleLocationChange)
+    
+    const urlListener = CapacitorApp.addListener('appUrlOpen', async (event) => {
+      const url = new URL(event.url)
+      // Pass the custom scheme URL (like com.lscustoms.app://login#access_token=...) to Supabase
+      if (url.hash || url.search) {
+        // We only care if there is an auth token in the hash or query string
+        window.location.hash = url.hash
+        window.location.search = url.search
+        // Supabase will automatically pick it up and process it via the onAuthStateChange listener
+        
+        try {
+          const { Browser } = await import('@capacitor/browser')
+          await Browser.close()
+        } catch (err) {
+          console.error('Failed to close browser:', err)
+        }
+      }
+    })
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange)
+      urlListener.then(listener => listener.remove())
+    }
   }, [])
 
   // Redirect admin users to the admin dashboard automatically

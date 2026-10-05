@@ -40,12 +40,15 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         ? 'com.lscustoms.app://login' 
         : window.location.origin;
 
-      const { error: authError } = await supabase.auth.signInWithOAuth({
+      const { data, error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo },
+        options: { redirectTo, skipBrowserRedirect: Capacitor.isNativePlatform() },
       })
       if (authError) {
         setError(authError.message)
+      } else if (data?.url && Capacitor.isNativePlatform()) {
+        const { Browser } = await import('@capacitor/browser')
+        await Browser.open({ url: data.url })
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Google Sign-in is unavailable.'
