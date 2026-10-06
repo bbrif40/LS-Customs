@@ -16,7 +16,7 @@
 import {
   createServiceClient,
 } from "../_shared/supabaseClient.ts";
-import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
+import { getCorsHeaders, jsonResponse as baseJsonResponse } from "../_shared/cors.ts";
 
 const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") ?? "";
 const OPENROUTER_BASE_URL = Deno.env.get("OPENROUTER_BASE_URL") ?? "https://openrouter.ai/api/v1";
@@ -472,6 +472,9 @@ async function callOpenRouter(
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const jsonResponse = (data: unknown, error: Parameters<typeof baseJsonResponse>[1], status = 200): Response =>
+    baseJsonResponse(data, error, status, req);
   if (req.method === "OPTIONS") {
     return new Response("ok", { status: 200, headers: corsHeaders });
   }

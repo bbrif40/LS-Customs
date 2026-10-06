@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { IonApp } from '@ionic/react';
 import '@ionic/react/css/core.css';
@@ -15,7 +15,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <IonApp>
       <ToastProvider>
-        <App />
+        <Suspense fallback={<div role="status" style={{ padding: 24 }}>Loading LS Customs…</div>}><App /></Suspense>
       </ToastProvider>
     </IonApp>
   </StrictMode>,

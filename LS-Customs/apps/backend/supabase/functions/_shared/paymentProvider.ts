@@ -75,6 +75,23 @@ export function getProvider(): PaymentProvider {
   return "stripe"; // default
 }
 
+/** Resume an existing provider checkout without creating another charge. */
+export async function retrievePaymentIntent(reference: string, provider: string): Promise<{ client_secret: string; checkout_url?: string }> {
+  const config = getProviderConfig();
+  if (!reference || provider !== config.provider) throw new Error('Unsupported payment provider');
+  const stripe = provider === 'stripe';
+  const resource = stripe ? 'payment_intents' : reference.startsWith('cs_') ? 'checkout_sessions' : 'payment_intents';
+  const response = await fetch(`${config.baseUrl}${stripe ? '' : '/v1'}/${resource}/${encodeURIComponent(reference)}`, {
+    headers: { Authorization: stripe ? `Bearer ${config.secretKey}` : `Basic ${btoa(config.secretKey + ':')}` },
+  });
+  if (!response.ok) throw new Error('Could not retrieve checkout');
+  const payload = await response.json();
+  const attributes = stripe ? payload : payload.data?.attributes;
+  const secret = stripe ? attributes?.client_secret : attributes?.checkout_url;
+  if (!secret) throw new Error('Checkout is unavailable');
+  return { client_secret: secret, checkout_url: stripe ? undefined : attributes.checkout_url };
+}
+
 /**
  * Resolve the provider-specific settings from environment variables.
  */
@@ -213,11 +230,6 @@ async function createPaymongoCheckoutSession(
       body: JSON.stringify(checkoutPayload),
     });
 
-    // If 404 (e.g. against a mock server only handling /v1/payment_intents), fall back to raw payment intent
-    if (response.status === 404) {
-      return createPaymongoRawPaymentIntent(config, amountInCents, bookingType, bookingId, userId);
-    }
-
     if (!response.ok) {
       const errBody = await response.json().catch(() => ({}));
       const errMsg = errBody?.errors?.[0]?.detail
@@ -229,8 +241,8 @@ async function createPaymongoCheckoutSession(
     const data = await response.json();
     const attributes = data?.data?.attributes;
 
-    if (!attributes) {
-      throw new Error("PayMongo checkout session response missing attributes");
+    if (!attributes?.checkout_url) {
+      throw new Error("PayMongo checkout session response missing checkout URL");
     }
 
     const checkoutUrl = attributes.checkout_url;
@@ -245,72 +257,9 @@ async function createPaymongoCheckoutSession(
       provider: "paymongo",
     };
   } catch (err: unknown) {
-    // If the call failed because checkout_sessions wasn't reached, try raw payment intent as fallback
-    if (err instanceof Error && err.message.includes("404")) {
-      return createPaymongoRawPaymentIntent(config, amountInCents, bookingType, bookingId, userId);
-    }
+    // Never manufacture a hosted URL for a raw payment intent.
     throw err;
   }
-}
-
-/**
- * Fallback / direct Payment Intent creation via PayMongo API.
- */
-async function createPaymongoRawPaymentIntent(
-  config: ProviderConfig,
-  amountInCents: number,
-  bookingType: string,
-  bookingId: string,
-  userId: string,
-): Promise<CreatePaymentIntentResult> {
-  const authHeader = "Basic " + btoa(`${config.secretKey}:`);
-
-  const response = await fetch(`${config.baseUrl}/v1/payment_intents`, {
-    method: "POST",
-    headers: {
-      Authorization: authHeader,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      data: {
-        attributes: {
-          amount: amountInCents,
-          currency: "PHP",
-          payment_method_allowed: ["card", "gcash", "paymaya", "qrph"],
-          metadata: {
-            booking_type: bookingType,
-            booking_id: bookingId,
-            customer_id: userId,
-          },
-        },
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const errBody = await response.json().catch(() => ({}));
-    const errMsg = errBody?.errors?.[0]?.detail
-      ?? errBody?.errors?.[0]?.code
-      ?? response.statusText;
-    throw new Error(`PayMongo API error: ${errMsg}`);
-  }
-
-  const data = await response.json();
-  const attributes = data?.data?.attributes;
-
-  if (!attributes || !attributes.client_key) {
-    throw new Error("PayMongo payment intent response missing client_key");
-  }
-
-  return {
-    providerReference: data.data.id,
-    clientSecret: attributes.client_key,
-    checkoutUrl: `https://checkout.paymongo.com/${data.data.id}`,
-    amount: attributes.amount / 100,
-    currency: attributes.currency ?? "PHP",
-    provider: "paymongo",
-  };
 }
 
 /**
@@ -653,8 +602,9 @@ async function verifyPaymongoSignatureParts(
 
   // For local/dev (test mode), check `te`.
   // For production (live mode), check `li`.
-  // Accept either — this makes the function work in both environments.
-  const candidateSigs = [testSig, liveSig].filter((s): s is string => s !== null);
+  // A live checkout must not accept a test-mode signature.
+  const mode = Deno.env.get('PAYMONGO_MODE') ?? (getProviderConfig().secretKey.startsWith('sk_live_') ? 'live' : 'test');
+  const candidateSigs = [mode === 'live' ? liveSig : testSig].filter((s): s is string => s !== null);
 
   for (const sig of candidateSigs) {
     if (timingSafeEqual(expectedSig, sig)) {

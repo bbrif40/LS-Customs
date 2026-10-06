@@ -19,7 +19,7 @@
 import {
   createServiceClient,
 } from "../_shared/supabaseClient.ts";
-import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
+import { getCorsHeaders, jsonResponse as baseJsonResponse } from "../_shared/cors.ts";
 
 type Category = "general" | "rental" | "billing" | "bug" | "mechanic" | "other"
 type Priority = "low" | "medium" | "high" | "critical"
@@ -28,12 +28,12 @@ type Status = "open" | "in_progress" | "resolved" | "closed"
 const CATEGORIES: readonly Category[] = ["general", "rental", "billing", "bug", "mechanic", "other"] as const
 const PRIORITIES: readonly Priority[] = ["low", "medium", "high", "critical"] as const
 
-function badRequest(message: string, status = 400) {
+function baseBadRequest(message: string, status = 400, req?: Request) {
   return new Response(
     JSON.stringify({ data: null, error: { message } }),
     {
       status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     },
   )
 }
@@ -61,6 +61,10 @@ function buildTrackingNumber(customerId: string, ts: number, description: string
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const badRequest = (message: string, status = 400) => baseBadRequest(message, status, req);
+  const jsonResponse = (data: unknown, error: Parameters<typeof baseJsonResponse>[1], status = 200): Response =>
+    baseJsonResponse(data, error, status, req);
   // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders })

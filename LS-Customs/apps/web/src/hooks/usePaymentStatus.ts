@@ -68,8 +68,15 @@ export function usePaymentStatus(paymentId: string | null | undefined): UsePayme
   }, [paymentId])
 
   useEffect(() => {
+    setStatus(null)
     void fetchStatus()
-  }, [fetchStatus])
+    if (!paymentId) return
+    const refresh = () => { if (document.visibilityState === 'visible') void fetchStatus() }
+    const timer = window.setInterval(refresh, 15000)
+    window.addEventListener('online', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => { window.clearInterval(timer); window.removeEventListener('online', refresh); document.removeEventListener('visibilitychange', refresh) }
+  }, [fetchStatus, paymentId])
 
   useEffect(() => {
     if (!paymentId) return

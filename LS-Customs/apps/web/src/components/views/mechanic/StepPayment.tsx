@@ -136,7 +136,7 @@ export function StepPayment({
   }
 
   const handleFormComplete = (result: 'succeeded' | 'failed' | 'processing') => {
-    setFormStatus(result === 'succeeded' ? 'succeeded' : result === 'failed' ? 'failed' : 'processing')
+    setFormStatus(result === 'failed' ? 'failed' : 'processing')
   }
 
   return (

@@ -19,12 +19,15 @@ import {
   createServiceClient,
   extractJwt,
 } from "../_shared/supabaseClient.ts";
-import { corsHeaders, jsonResponse, type EdgeFunctionError } from "../_shared/cors.ts";
+import { getCorsHeaders, jsonResponse as baseJsonResponse, type EdgeFunctionError } from "../_shared/cors.ts";
 import {
   createPaymentIntent,
+  retrievePaymentIntent,
   getProviderConfig,
   type CreatePaymentIntentResult,
 } from "../_shared/paymentProvider.ts";
+
+import { validateCheckoutRedirect } from "../_shared/checkout.ts";
 
 interface CreatePaymentIntentRequest {
   booking_type: "vehicle" | "service";
@@ -45,6 +48,9 @@ interface CreatePaymentIntentResponse {
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const jsonResponse = (data: unknown, error: Parameters<typeof baseJsonResponse>[1], status = 200): Response =>
+    baseJsonResponse(data, error, status, req);
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -76,7 +82,7 @@ Deno.serve(async (req: Request) => {
       }, 400);
     }
 
-    if (!UUID_REGEX.test(body.booking_id)) {
+    if (typeof body.booking_id !== 'string' || !UUID_REGEX.test(body.booking_id)) {
       return jsonResponse(null, {
         code: "VALIDATION_ERROR",
         message: "booking_id must be a valid UUID",
@@ -101,13 +107,13 @@ Deno.serve(async (req: Request) => {
     // ------------------------------------------------------------------
     // 1. Fetch the booking; verify ownership and get total_price
     // ------------------------------------------------------------------
-    let booking: { total_price: number; customer_id: string } | null = null;
+    let booking: { total_price: number; customer_id: string; status: string; hold_expires_at?: string | null } | null = null;
     let bookingTitle: string | undefined;
 
     if (body.booking_type === "vehicle") {
       const { data, error } = await supabase
         .from("vehicle_bookings")
-        .select("total_price, customer_id, vehicles(name)")
+        .select("total_price, customer_id, status, hold_expires_at, vehicles(name)")
         .eq("id", body.booking_id)
         .maybeSingle();
 
@@ -124,7 +130,7 @@ Deno.serve(async (req: Request) => {
     } else {
       const { data, error } = await supabase
         .from("service_bookings")
-        .select("total_price, customer_id")
+        .select("total_price, customer_id, status")
         .eq("id", body.booking_id)
         .maybeSingle();
 
@@ -166,6 +172,24 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(null, err, 403);
     }
 
+    if (['cancelled', 'completed'].includes(booking.status)) {
+      return jsonResponse(null, { code: 'INVALID_STATE', message: 'This booking is no longer payable' }, 409);
+    }
+    if (booking.hold_expires_at && new Date(booking.hold_expires_at).getTime() <= Date.now()) {
+      return jsonResponse(null, { code: 'HOLD_EXPIRED', message: 'Your reservation expired. Please choose your dates again.' }, 409);
+    }
+    if (!Number.isFinite(Number(booking.total_price)) || Number(booking.total_price) <= 0) {
+      return jsonResponse(null, { code: 'INVALID_STATE', message: 'This booking needs a valid payable total. Contact support.' }, 409);
+    }
+    let successUrl: string | undefined;
+    let cancelUrl: string | undefined;
+    try {
+      successUrl = validateCheckoutRedirect(body.success_url);
+      cancelUrl = validateCheckoutRedirect(body.cancel_url);
+    } catch {
+      return jsonResponse(null, { code: 'VALIDATION_ERROR', message: 'Invalid checkout return destination' }, 400);
+    }
+
     // Fetch customer profile to prefill PayMongo checkout billing
     const { data: profile } = await supabase
       .from("profiles")
@@ -190,14 +214,22 @@ Deno.serve(async (req: Request) => {
     // ------------------------------------------------------------------
     // 2.5 Prevent duplicate payment intents for the same booking
     // ------------------------------------------------------------------
-    const { data: existingPayment } = await supabase
+    const { data: paidPayment, error: paidError } = await supabase.from('payments').select('id')
+      .eq('booking_type', body.booking_type).eq('booking_id', body.booking_id)
+      .eq('status', 'succeeded').limit(1).maybeSingle();
+    if (paidError) throw paidError;
+    if (paidPayment) return jsonResponse(null, { code: 'ALREADY_PAID', message: 'This booking has already been paid for' }, 409);
+    const { data: existingPayment, error: existingError } = await supabase
       .from("payments")
-      .select("id, status, provider_reference")
+      .select("id, status, provider_reference, provider, amount, currency")
       .eq("booking_type", body.booking_type)
       .eq("booking_id", body.booking_id)
-      .in("status", ["pending", "succeeded"])
+      .in("status", ["pending", "succeeded", "failed"])
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
+    if (existingError) throw existingError;
     if (existingPayment) {
       if (existingPayment.status === "succeeded") {
         return jsonResponse(null, {
@@ -205,13 +237,19 @@ Deno.serve(async (req: Request) => {
           message: "This booking has already been paid for",
         }, 409);
       }
-      // Return existing pending payment instead of creating a duplicate
+      const { data: session, error: sessionError } = await supabase
+        .from('payment_checkout_sessions').select('client_secret, checkout_url')
+        .eq('payment_id', existingPayment.id).maybeSingle();
+      if (sessionError) throw sessionError;
+      // Recover older transactions from the provider, never treat its ID as a secret/URL.
+      const resumed = session ?? await retrievePaymentIntent(
+        existingPayment.provider_reference, existingPayment.provider);
       return jsonResponse({
         payment_id: existingPayment.id,
-        client_secret: existingPayment.provider_reference,
-        checkout_url: existingPayment.provider_reference,
-        provider: config.provider,
-        existing: true,
+        client_secret: resumed.client_secret,
+        checkout_url: resumed.checkout_url,
+        amount: Number(existingPayment.amount), currency: existingPayment.currency,
+        provider: existingPayment.provider, existing: true,
       }, null, 200);
     }
 
@@ -220,8 +258,22 @@ Deno.serve(async (req: Request) => {
     // ------------------------------------------------------------------
     const amountNumeric = Number(booking.total_price);
 
-    // Idempotency support: forward from client header if present
-    const idempotencyKey = req.headers.get("idempotency-key") ?? undefined;
+    // Serialize checkout creation across tabs and use a server-derived provider key.
+    const lockToken = crypto.randomUUID();
+    const lockArgs = { p_type: body.booking_type, p_id: body.booking_id, p_token: lockToken };
+    const { data: locked, error: lockError } = await supabase.rpc('acquire_checkout_lock', lockArgs);
+    if (lockError) throw lockError;
+    if (!locked) return jsonResponse(null, { code: 'CHECKOUT_IN_PROGRESS', message: 'Checkout is already being prepared. Please wait and resume payment from your booking.' }, 409);
+    // Recheck after obtaining the lease: another request may have just finished.
+    const { data: competing, error: competingError } = await supabase.from('payments').select('id')
+      .eq('booking_type', body.booking_type).eq('booking_id', body.booking_id)
+      .in('status', ['pending', 'succeeded']).limit(1).maybeSingle();
+    if (competingError) throw competingError;
+    if (competing) {
+      await supabase.rpc('release_checkout_lock', lockArgs);
+      return jsonResponse(null, { code: 'CHECKOUT_IN_PROGRESS', message: 'Checkout is ready. Please resume payment from your booking.' }, 409);
+    }
+    const idempotencyKey = `${body.booking_type}:${body.booking_id}`;
 
     let intent: CreatePaymentIntentResult;
     try {
@@ -235,8 +287,8 @@ Deno.serve(async (req: Request) => {
           customerName: profile?.full_name ?? undefined,
           customerEmail: user.email ?? undefined,
           customerPhone: profile?.phone ?? undefined,
-          successUrl: body.success_url,
-          cancelUrl: body.cancel_url,
+          successUrl,
+          cancelUrl,
           idempotencyKey,
         },
       );
@@ -247,7 +299,7 @@ Deno.serve(async (req: Request) => {
       console.error(`${config.provider} API error:`, msg);
       return jsonResponse(null, {
         code: "PROVIDER_ERROR",
-        message: `Payment provider error: ${msg}`,
+        message: "Checkout could not be prepared. Please retry or contact support.",
       }, 502);
     }
 
@@ -280,7 +332,15 @@ Deno.serve(async (req: Request) => {
     }
 
     // ------------------------------------------------------------------
-    // 5. Return client secret & checkout URL for the frontend SDK to complete payment
+    // 5. Persist provider resume data in a service-role-only table.
+    const { error: sessionError } = await supabase.from('payment_checkout_sessions').upsert({
+      payment_id: payment.id, client_secret: intent.clientSecret,
+      checkout_url: intent.checkoutUrl ?? null,
+    });
+    if (sessionError) throw sessionError;
+    const { error: releaseError } = await supabase.rpc('release_checkout_lock', lockArgs);
+    if (releaseError) console.error('Checkout lease cleanup failed:', releaseError.message);
+    // Return client secret & checkout URL for the frontend SDK to complete payment
     // ------------------------------------------------------------------
     return jsonResponse({
       payment_id: payment.id,

@@ -94,7 +94,7 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
                 <strong>Emergency Mechanic</strong>
                 <span className="emergency-pill-tag">SOS</span>
               </div>
-              <small>Instant 24/7 Roadside SOS</small>
+              <small>Request roadside assistance</small>
             </div>
           </button>
         </div>
@@ -166,7 +166,7 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
 
         {guestView === 'rentals' && <Rentals onNotify={() => onOpenAuth('sign-in')} />}
         {guestView === 'services' && (
-          <MechanicServices cartCount={0} onAdd={() => onOpenAuth('sign-in')} onNotify={() => onOpenAuth('sign-in')} />
+          <MechanicServices cartCount={0} onAdd={() => onOpenAuth('sign-in')} onNotify={() => onOpenAuth('sign-in')} onEmergencyClick={onEmergencyClick} />
         )}
 
         <WorkspaceFooter

@@ -16,8 +16,10 @@ import {
   Navigation,
   Loader2,
   X,
+  AlertTriangle,
 } from 'lucide-react'
 import { MapBoundary } from './MapBoundary'
+import { locateUser, hasLocationPermission, type LocateError } from './geolocation'
 import type { MapSurfacePin } from './lazyMap'
 
 const MapSurface = lazy(() =>
@@ -254,6 +256,7 @@ export function LocationPicker({
     value ?? null,
   )
   const [busy, setBusy] = useState(false)
+  const [locError, setLocError] = useState<string | null>(null)
 
   // Search & Predictive Suggestions State
   const [searchQuery, setSearchQuery] = useState('')
@@ -304,22 +307,31 @@ export function LocationPicker({
   // On mount, try to geolocate if no value yet. Best-effort; if denied, keep fallback.
   useEffect(() => {
     if (pin) return
-    if (!navigator.geolocation) return
-    setBusy(true)
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        const pos = { lat: coords.latitude, lng: coords.longitude }
-        setPin(pos)
-        onChange(pos)
-        if (onAddressResolved) {
-          const resolved = await reverseGeocode(pos.lat, pos.lng)
-          onAddressResolved(resolved, pos)
+    let mounted = true
+    const initLocate = async () => {
+      const allowed = await hasLocationPermission()
+      if (!allowed || !mounted) return
+      setBusy(true)
+      try {
+        const pos = await locateUser()
+        if (mounted) {
+          setPin(pos)
+          onChange(pos)
+          if (onAddressResolved) {
+            const resolved = await reverseGeocode(pos.lat, pos.lng)
+            onAddressResolved(resolved, pos)
+          }
         }
-        setBusy(false)
-      },
-      () => setBusy(false),
-      { enableHighAccuracy: true, timeout: 8000 },
-    )
+      } catch (err) {
+        // We silently fail on auto-locate so we don't spam the user with errors on load
+      } finally {
+        if (mounted) setBusy(false)
+      }
+    }
+    initLocate()
+    return () => {
+      mounted = false
+    }
     // run once on mount only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -359,23 +371,22 @@ export function LocationPicker({
     setShowSuggestions(false)
   }
 
-  const useCurrent = () => {
-    if (!navigator.geolocation) return
+  const useCurrent = async () => {
     setBusy(true)
-    navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        const pos = { lat: coords.latitude, lng: coords.longitude }
-        setPin(pos)
-        onChange(pos)
-        if (onAddressResolved) {
-          const resolved = await reverseGeocode(pos.lat, pos.lng)
-          onAddressResolved(resolved, pos)
-        }
-        setBusy(false)
-      },
-      () => setBusy(false),
-      { enableHighAccuracy: true, timeout: 10000 },
-    )
+    setLocError(null)
+    try {
+      const pos = await locateUser()
+      setPin(pos)
+      onChange(pos)
+      if (onAddressResolved) {
+        const resolved = await reverseGeocode(pos.lat, pos.lng)
+        onAddressResolved(resolved, pos)
+      }
+    } catch (err) {
+      setLocError((err as LocateError).message || 'Failed to find location.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const reset = () => {
@@ -509,6 +520,15 @@ export function LocationPicker({
           </span>
         )}
       </div>
+      
+      {locError && (
+        <div className="map-error-banner">
+          <AlertTriangle size={14} /> {locError}
+          <button type="button" className="map-error-dismiss" onClick={() => setLocError(null)}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       <Suspense fallback={<div className="map-skeleton" style={{ height }}>Loading map…</div>}>
         <MapBoundary height={height}>

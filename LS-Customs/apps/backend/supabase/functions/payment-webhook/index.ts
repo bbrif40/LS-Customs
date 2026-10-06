@@ -18,7 +18,7 @@
  */
 
 import { createServiceClient } from "../_shared/supabaseClient.ts";
-import { corsHeaders, jsonResponse, type EdgeFunctionError } from "../_shared/cors.ts";
+import { getCorsHeaders, jsonResponse as baseJsonResponse, type EdgeFunctionError } from "../_shared/cors.ts";
 import {
   getProvider,
   normalizeWebhookEvent,
@@ -26,6 +26,9 @@ import {
 } from "../_shared/paymentProvider.ts";
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const jsonResponse = (data: unknown, error: Parameters<typeof baseJsonResponse>[1], status = 200): Response =>
+    baseJsonResponse(data, error, status, req);
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -144,42 +147,7 @@ Deno.serve(async (req: Request) => {
       console.error(
         `No payment record found for provider_reference: ${providerReference}${event.alternateReferences ? ` (alternates: ${event.alternateReferences.join(", ")})` : ""}`,
       );
-      // Ack the webhook even if we don't have a matching payment,
-      // to avoid infinite retries from the provider.
-      return new Response(
-        JSON.stringify({ received: true }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-    }
-
-    // Idempotency: skip if already in this state
-    if (payment.status === newPaymentStatus) {
-      return new Response(
-        JSON.stringify({ received: true }),
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders,
-            "Content-Type": "application/json",
-          },
-        },
-      );
-    }
-
-    // Update payment status
-    const { error: updatePaymentError } = await supabase
-      .from("payments")
-      .update({ status: newPaymentStatus })
-      .eq("id", payment.id);
-
-    if (updatePaymentError) {
-      console.error("Failed to update payment status:", updatePaymentError.message);
+      // A provider event may beat our payment insert. Retry instead of losing it.
       return new Response(
         JSON.stringify({ received: false }),
         {
@@ -192,65 +160,21 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // ------------------------------------------------------------------
-    // 5. On success, update the parent booking's status
-    // ------------------------------------------------------------------
-    // Per API.md §2.3:
-    //   rental → confirmed
-    //   service → leave as-is (payment unlocks but doesn't change workflow status)
-    if (newPaymentStatus === "succeeded") {
-      if (payment.booking_type === "vehicle") {
-        const { error: updateBookingError } = await supabase
-          .from("vehicle_bookings")
-          .update({ status: "confirmed" })
-          .eq("id", payment.booking_id);
-
-        if (updateBookingError) {
-          console.error("Failed to update booking status:", updateBookingError.message);
-        }
-      }
+    // Reconcile both payment and booking in a transaction, including repeated
+    // success events after a previous booking-confirmation failure.
+    const { data: reconciliation, error: reconcileError } = await supabase.rpc('reconcile_payment', {
+      p_payment_id: payment.id, p_status: newPaymentStatus,
+    });
+    if (reconcileError) {
+      console.error('Payment reconciliation failed:', reconcileError.message);
+      return jsonResponse(null, { code: 'INTERNAL_ERROR', message: 'Reconciliation will be retried' }, 500);
     }
-
-    // ------------------------------------------------------------------
-    // Return 200 OK — providers require a fast, simple ack
-    // ------------------------------------------------------------------
-    return new Response(
-      JSON.stringify({ received: true }),
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      },
-    );
-
+    if (reconciliation?.requires_refund) {
+      console.error('Payment succeeded after booking cancellation; refund review required', payment.id);
+    }
+    return new Response(JSON.stringify({ received: true }), { status: 200, headers: corsHeaders });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    console.error("payment-webhook error:", message);
-
-    // Distinguish transient errors (DB failures, network issues) from
-    // permanent ones (bad data shape, unknown event types). Transient
-    // errors should return 500 so the payment provider retries the webhook.
-    const isTransient =
-      message.includes("fetch") ||
-      message.includes("network") ||
-      message.includes("timeout") ||
-      message.includes("connect") ||
-      message.includes("ECONNREFUSED") ||
-      message.includes("503") ||
-      message.includes("502") ||
-      (err instanceof Error && err.name === "TypeError");
-
-    return new Response(
-      JSON.stringify({ received: false, retryable: isTransient }),
-      {
-        status: isTransient ? 500 : 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json",
-        },
-      },
-    );
+    console.error('payment-webhook error:', err instanceof Error ? err.message : String(err));
+    return new Response(JSON.stringify({ received: false }), { status: 500, headers: corsHeaders });
   }
 });

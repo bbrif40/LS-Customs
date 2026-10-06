@@ -250,6 +250,14 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+[auth.email.template.magic_link]
+subject = "Your LS Customs verification code"
+content_path = "./supabase/templates/email-otp.html"
+
+[auth.email.template.confirmation]
+subject = "Verify your LS Customs email"
+content_path = "./supabase/templates/email-otp.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
@@ -439,3 +447,7 @@ enabled = true
 [functions.payment-webhook]
 verify_jwt = false
 
+
+# The dispatch endpoint authenticates a private Vault token itself.
+[functions.dispatch-notification]
+verify_jwt = false

@@ -13,6 +13,7 @@ import type { PromoVoucher } from '../common/AvailableVouchersPromos'
 interface RentalPaymentProps {
   vehicle: Vehicle
   bookingId: string
+  holdExpiresAt?: string | null
   startDate: string
   endDate: string
   total: number
@@ -24,7 +25,7 @@ interface RentalPaymentProps {
   onNotify: (message: string) => void
 }
 
-export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, originalTotal, discountAmount, promo, userId, onBack, onNotify }: RentalPaymentProps) {
+export function RentalPayment({ vehicle, bookingId, holdExpiresAt, startDate, endDate, total, originalTotal, discountAmount, promo, userId, onBack, onNotify }: RentalPaymentProps) {
   const [payment, setPayment] = useState<PaymentIntentResult | null>(null)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [formStatus, setFormStatus] = useState<'idle' | 'processing' | 'succeeded' | 'failed' | 'refunded'>('idle')
@@ -76,7 +77,7 @@ export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, o
   }
 
   const handleFormComplete = (result: 'succeeded' | 'failed' | 'processing') => {
-    setFormStatus(result === 'succeeded' ? 'succeeded' : result === 'failed' ? 'failed' : 'processing')
+    setFormStatus(result === 'failed' ? 'failed' : 'processing')
   }
 
   const gallery = vehicle.galleryImages?.length ? vehicle.galleryImages : vehicle.image ? [vehicle.image] : []
@@ -86,6 +87,7 @@ export function RentalPayment({ vehicle, bookingId, startDate, endDate, total, o
   return (
     <div className="page rental-payment-page">
       <button className="text-button" onClick={onBack}><ArrowLeft size={15} /> Back to rentals</button>
+      {holdExpiresAt && formStatus !== 'succeeded' && <p role="status">Unpaid reservation expires at {new Date(holdExpiresAt).toLocaleString()}. Complete payment before expiry, or resume it from Bookings.</p>}
       <section className="rental-detail-gallery">
         {gallery.slice(0, 5).map((image, index) => <img key={`${image}-${index}`} className={index === 0 ? 'is-featured' : ''} src={image} alt={`${vehicle.name} view ${index + 1}`} />)}
         {gallery.length === 0 && <div className="rental-gallery-empty">Vehicle images coming soon</div>}

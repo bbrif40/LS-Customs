@@ -593,3 +593,23 @@ All Edge Functions return errors in the same shape:
 - `create-payment-intent` accepts an optional `Idempotency-Key` header, forwarded to the payment provider, to prevent duplicate intents on client retry.
 - `assign-mechanic` is safe to call repeatedly — it's a no-op (returns current state) if `status` is already past `pending`.
 - Supabase's built-in rate limiting on Auth endpoints is left at defaults for v1; Edge Function-level rate limiting is deferred (documented as a Phase 5+ concern, out of scope per `SPEC.md`).
+
+
+## Hosted QA booking and payment contracts (6 October 2026)
+
+Apply the new migrations before deploying these contracts. Booking creation uses authenticated Supabase RPCs:
+
+- `create_vehicle_booking(p_request_id uuid, p_vehicle_id uuid, p_start date, p_end date, p_promo_code text = null)` returns the saved vehicle booking, including the trusted total and hold deadline. Dates are half-open; the return day can start another rental.
+- `create_service_booking(p_request_id uuid, p_service_id uuid, p_scheduled_at timestamptz, p_address_id uuid = null, p_lat float8 = null, p_lng float8 = null, p_notes text = null, p_promo_code text = null, p_emergency text = null)` returns the saved service booking and atomically persists its catalog item. Choose one owned saved address or an explicit valid pin. For an emergency, service/time may be null; supported scenarios are battery, tire, engine, lockout, fuel, and towing. UI appointment times are Philippine time (UTC+08:00).
+- `cancel_customer_booking(p_booking_type text, p_booking_id uuid)` returns true only after a permitted owned cancellation. Paid bookings require support/refund handling.
+- `get_dispatch_quote(p_lat float8, p_lng float8)` returns distance/fee rows or no row when unavailable, without named mechanic coordinates.
+
+`create-payment-intent` resumes pending/failed checkouts using the recorded provider contract: payment_id, client_secret, optional checkout_url, amount, currency, provider. It rejects paid/terminal/expired bookings and unapproved return URLs. Checkout creation is serialized across tabs with a server lease. Provider IDs are not client secrets or constructed PayMongo URLs. Clients display processing until saved payment confirmation arrives through Realtime or polling.
+
+`assign-mechanic` verifies the caller owns the booking or is an admin/service caller before invoking the trusted assignment transaction. It returns 409 for no capacity/invalid state; successful assignment reports assigned, not en_route. A saved emergency request can be retried without creating another booking.
+
+`send-receipt` accepts paymentId, or bookingId plus bookingType, requires an existing successful payment owned by the caller (or an admin), and derives recipient/content from stored records. Client-provided recipient, amount, or receipt status is ignored. Repeated attempts within one minute return 429; delivery failures return a generic error.
+
+`payment-webhook` requires a valid provider signature and reconciles state transactionally. Missing payment records or reconciliation failures are retryable. A late payment for a cancelled booking requires staff refund review and does not reopen the booking.
+
+`dispatch-notification` authenticates a private NOTIFICATION_DISPATCH_TOKEN or verified service/admin credentials. A record object is not authentication. The database trigger obtains its endpoint and token from Vault; configure both before delivery testing.

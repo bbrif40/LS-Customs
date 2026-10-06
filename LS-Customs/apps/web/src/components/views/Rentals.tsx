@@ -2,7 +2,7 @@
  * Rentals — fleet collection page with filters and search.
  * Pulls the active fleet from Supabase via useCustomerVehicles.
  */
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef, lazy } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronRight, Search, CalendarDays, Fuel, MapPin, Settings2, SlidersHorizontal, Star, Users, X } from 'lucide-react'
 import { VehicleCardSkeleton } from '../common/Skeleton'
@@ -14,7 +14,8 @@ import { useFavoriteVehicles } from '../../hooks/useFavoriteVehicles'
 import { VehicleCard } from '../common/VehicleCard'
 import { PageHeading } from '../common/PageHeading'
 import { FleetTickerBanner } from '../common/FleetTickerBanner'
-import { RentalPayment } from './RentalPayment'
+const RentalPayment = lazy(() => import('./RentalPayment').then(module => ({ default: module.RentalPayment })))
+import { addCalendarDays, bookingToday } from '../../utils/bookingDates'
 import { getActivePromo, calculatePromoDiscount } from '../../utils/promoHelper'
 
 interface RentalsProps {
@@ -53,18 +54,14 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
   const [endDate, setEndDate] = useState(() => {
     if (initialEndDate) return initialEndDate
     if (initialStartDate) {
-      const d = new Date(initialStartDate + 'T00:00:00')
-      d.setDate(d.getDate() + 1)
-      return d.toISOString().slice(0, 10)
+      return addCalendarDays(initialStartDate, 1)
     }
     return ''
   })
 
   const maxEndDate = useMemo(() => {
     if (!startDate) return ''
-    const maxDate = new Date(`${startDate}T00:00:00`)
-    maxDate.setDate(maxDate.getDate() + 30)
-    return maxDate.toISOString().slice(0, 10)
+    return addCalendarDays(startDate, 30)
   }, [startDate])
 
   useEffect(() => {
@@ -80,6 +77,11 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
   }, [initialStartDate, initialEndDate])
   const [selectedVehicle, setSelectedVehicle] = useState<typeof vehicles[number] | null>(null)
   const [previewVehicle, setPreviewVehicle] = useState<typeof vehicles[number] | null>(null)
+  const [bookingTotal, setBookingTotal] = useState<number | null>(null)
+  const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null)
+  const [creatingBooking, setCreatingBooking] = useState(false)
+  const bookingAttempt = useRef<{ key: string; id: string } | null>(null)
+  const bookingInFlight = useRef(false)
   const [bookingId, setBookingId] = useState<string | null>(null)
   const [bookingError, setBookingError] = useState<string | null>(null)
   // Mark vehicles as unavailable when they have an active booking
@@ -92,10 +94,10 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
   // changes the dates. If they had a vehicle selected and that
   // vehicle is now blocked, drop the selection.
   useEffect(() => {
-    if (selectedVehicle && unavailableIds.has(selectedVehicle.id)) {
+    if (!bookingId && selectedVehicle && unavailableIds.has(selectedVehicle.id)) {
       setSelectedVehicle(null)
     }
-  }, [unavailableIds, selectedVehicle])
+  }, [unavailableIds, selectedVehicle, bookingId])
 
   const scrollRef = useScrollAnimation<HTMLDivElement>()
   const isPageVisible = scrollRef.className.includes('visible')
@@ -154,11 +156,12 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
       <RentalPayment
         vehicle={selectedVehicle}
         bookingId={bookingId}
+        holdExpiresAt={holdExpiresAt}
         startDate={startDate}
         endDate={endDate}
-        total={finalTotal}
+        total={bookingTotal ?? finalTotal}
         originalTotal={baseTotal}
-        discountAmount={discountAmount}
+        discountAmount={baseTotal - (bookingTotal ?? finalTotal)}
         promo={discountAmount > 0 ? activePromo : null}
         userId={userId}
         onBack={() => { setBookingId(null); setSelectedVehicle(null) }}
@@ -168,6 +171,7 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
   }
 
   const chooseVehicle = async (vehicle: typeof vehicles[number]) => {
+    if (bookingInFlight.current) return
     if (!startDate || !endDate || endDate <= startDate) {
       setBookingError('Select a valid pickup and return date first.')
       document.querySelector('.rental-planner')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -187,25 +191,16 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
     }
     if (!userId) { onNotify('Please sign in before booking a rental.'); return }
 
-    const baseTotal = days * vehicle.pricePerDay
-    const { discountAmount, finalTotal } = calculatePromoDiscount(baseTotal, activePromo, 'rentals')
-    const pickupLocationWithPromo = activePromo && discountAmount > 0
-      ? `Showroom Pickup | Voucher: ${activePromo.code} (${activePromo.discount})`
-      : 'Showroom Pickup'
-
-    const { data, error: insertError } = await supabase
-      .from('vehicle_bookings')
-      .insert({
-        vehicle_id: vehicle.id,
-        customer_id: userId,
-        start_date: startDate,
-        end_date: endDate,
-        total_price: finalTotal,
-        pickup_location: pickupLocationWithPromo,
-        status: 'pending',
-      })
-      .select('id')
-      .single()
+    const attemptKey = [vehicle.id, startDate, endDate, activePromo?.code ?? ''].join(':')
+    if (bookingAttempt.current?.key !== attemptKey) bookingAttempt.current = { key: attemptKey, id: crypto.randomUUID() }
+    bookingInFlight.current = true
+    setCreatingBooking(true)
+    const { data, error: insertError } = await supabase.rpc('create_vehicle_booking', {
+      p_request_id: bookingAttempt.current.id, p_vehicle_id: vehicle.id,
+      p_start: startDate, p_end: endDate, p_promo_code: activePromo?.code ?? null,
+    })
+    bookingInFlight.current = false
+    setCreatingBooking(false)
     if (insertError || !data) {
       const msg = insertError?.message ?? 'Booking could not be created.'
       if (msg.toLowerCase().includes('no_overlapping_bookings') || msg.toLowerCase().includes('conflicting key')) {
@@ -215,6 +210,9 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
       }
       return
     }
+    bookingAttempt.current = null
+    setBookingTotal(Number(data.total_price))
+    setHoldExpiresAt(data.hold_expires_at)
     setSelectedVehicle(vehicle); setBookingId(data.id); onNotify('Rental booking created')
   }
 
@@ -234,9 +232,9 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
           <div><strong>Plan your trip</strong><span>Select your dates to see the right daily rate.</span></div>
         </div>
         <div className="date-picker-group">
-          <label><span>Pickup</span><input aria-label="Pickup date" type="date" min={new Date().toISOString().slice(0, 10)} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
+          <label><span>Pickup</span><input aria-label="Pickup date" type="date" min={bookingToday()} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
           <span className="date-arrow">to</span>
-          <label><span>Return</span><input aria-label="Return date" type="date" min={startDate || new Date().toISOString().slice(0, 10)} max={maxEndDate || undefined} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
+          <label><span>Return</span><input aria-label="Return date" type="date" min={startDate || bookingToday()} max={maxEndDate || undefined} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
         </div>
         {bookingError ? (
           <span className="planner-status error" style={{ color: '#b91c1c', fontWeight: 600, background: '#fef2f2', padding: '6px 12px', borderRadius: 6, border: '1px solid #fecaca', fontSize: 12 }}>
@@ -269,6 +267,7 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
           <Search size={17} />
           <input
             placeholder="Search vehicles..."
+            aria-label="Search vehicles"
             value={searchQuery}
             onChange={(event) => {
               setSearchQuery(event.target.value)

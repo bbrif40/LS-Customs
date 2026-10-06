@@ -37,6 +37,7 @@ const staticCorsHeaders = {
     "authorization, x-client-info, apikey, content-type, content-length, idempotency-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Credentials": "true",
+  "Vary": "Origin",
 };
 
 /**

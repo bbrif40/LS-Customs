@@ -87,9 +87,10 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
       >
         {/* ── Column 1: Brand & Tagline ─── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 300 }}>
-          <div
+          <button type="button"
             onClick={() => handleNav('home')}
             style={{
+              border: 0, padding: 0, background: 'none', textAlign: 'left',
               display: 'flex',
               alignItems: 'center',
               gap: 10,
@@ -113,7 +114,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             >
               {settings.companyName || 'LS CUSTOMS'}
             </span>
-          </div>
+          </button>
           <p
             style={{
               fontSize: 13,
@@ -152,67 +153,67 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             }}
           >
             <li>
-              <span
+              <button type="button"
                 onClick={() => handleNav('home')}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Home
-              </span>
+              </button>
             </li>
             <li>
-              <span
+              <button type="button"
                 onClick={() => handleNav('services')}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Book Service
-              </span>
+              </button>
             </li>
             <li>
-              <span
+              <button type="button"
                 onClick={() => handleNav('rentals')}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Vehicle Rentals
-              </span>
+              </button>
             </li>
             <li>
-              <span
+              <button type="button"
                 onClick={() => handleNav('bookings')}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Live Repair Tracker
-              </span>
+              </button>
             </li>
             <li>
-              <span
+              <button type="button"
                 onClick={() => handleNav('home', 'promos')}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Vouchers & Promos
-              </span>
+              </button>
             </li>
             <li>
-              <span
+              <button type="button"
                 onClick={() => {
                   navigateTo('/contact')
                   window.scrollTo({ top: 0, behavior: 'smooth' })
                 }}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Contact Us
-              </span>
+              </button>
             </li>
           </ul>
         </div>
@@ -242,54 +243,54 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             }}
           >
             <li>
-              <span
+              <button type="button"
                 onClick={() => handleNav('services')}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Performance & ECU Tuning
-              </span>
+              </button>
             </li>
             <li>
-              <span
+              <button type="button"
                 onClick={() => handleNav('services')}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Custom Bodywork & Paint
-              </span>
+              </button>
             </li>
             <li>
-              <span
+              <button type="button"
                 onClick={() => handleNav('services')}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Suspension & Precision Alignment
-              </span>
+              </button>
             </li>
             <li>
-              <span
+              <button type="button"
                 onClick={() => handleNav('services')}
-                style={{ cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
               >
                 Advanced Diagnostics & Electrical
-              </span>
+              </button>
             </li>
             <li>
-              <span
+              <button type="button"
                 onClick={handleEmergency}
-                style={{ cursor: 'pointer', color: '#16a34a', fontWeight: 600, transition: 'color 0.2s' }}
+                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#16a34a', fontWeight: 600, transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#15803d')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#16a34a')}
               >
                 24/7 Roadside Concierge Dispatch (SOS)
-              </span>
+              </button>
             </li>
           </ul>
         </div>
@@ -366,13 +367,13 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             {/* Hours with subtle icon */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <Clock size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
-              <span
+              <button type="button"
                 onClick={() => onNotify?.(settings.workingHours || 'Showroom 8AM – 9PM · Roadside dispatch is available 24/7.')}
                 style={{ color: '#475569', lineHeight: 1.5, fontSize: 12, cursor: 'pointer' }}
                 title="Click for schedule info"
               >
                 {settings.workingHours || 'Open 24/7 for Emergency Dispatch · Showroom 8AM – 9PM'}
-              </span>
+              </button>
             </div>
           </div>
         </div>

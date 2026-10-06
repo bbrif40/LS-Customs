@@ -22,9 +22,6 @@ export function VehicleCard({ vehicle, onBook, onView, unavailable, isFavorite =
     <article
       className={`vehicle-card ${unavailable ? 'is-unavailable' : ''} ${onView ? 'is-viewable' : ''}`}
       onClick={onView}
-      onKeyDown={(event) => { if (onView && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onView() } }}
-      tabIndex={onView ? 0 : undefined}
-      role={onView ? 'button' : undefined}
     >
       <div className="vehicle-image">
         {vehicle.image ? (
@@ -69,7 +66,7 @@ export function VehicleCard({ vehicle, onBook, onView, unavailable, isFavorite =
       </div>
       <div className="vehicle-info">
         <div className="vehicle-title">
-          <h3>{vehicle.name}</h3>
+          <h3>{onView ? <button type="button" style={{ border: 0, background: 'none', color: 'inherit', font: 'inherit', padding: 0, textAlign: 'left' }} onClick={event => { event.stopPropagation(); onView() }}>{vehicle.name}</button> : vehicle.name}</h3>
           <span className="vehicle-rating"><Star size={13} fill="currentColor" /> {vehicle.rating}</span>
         </div>
         <p>{vehicle.detail}</p>

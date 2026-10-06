@@ -17,7 +17,7 @@
  */
 
 import { createServiceClient } from "../_shared/supabaseClient.ts";
-import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
+import { getCorsHeaders, jsonResponse as baseJsonResponse } from "../_shared/cors.ts";
 
 interface DispatchNotificationRequest {
   notification_id?: string;
@@ -260,6 +260,9 @@ async function sendSmsSemaphore(
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const jsonResponse = (data: unknown, error: Parameters<typeof baseJsonResponse>[1], status = 200): Response =>
+    baseJsonResponse(data, error, status, req);
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -299,7 +302,7 @@ Deno.serve(async (req: Request) => {
     let isAuthenticated = false;
 
     // Check 1: Service-role key (DB webhook / trigger invocation)
-    if (bearerToken === supabaseServiceKey) {
+    if (bearerToken && (bearerToken === supabaseServiceKey || bearerToken === Deno.env.get("NOTIFICATION_DISPATCH_TOKEN"))) {
       isAuthenticated = true;
     }
 
@@ -319,12 +322,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Check 3: If the request came from a Supabase DB webhook, the
-    // `record` field is present (auto-populated by the webhook trigger).
-    // Accept this as a trusted internal invocation.
-    if (!isAuthenticated && record && record.id) {
-      isAuthenticated = true;
-    }
+    // Payload shape does not authenticate a webhook. Only verified credentials do.
 
     if (!isAuthenticated) {
       return jsonResponse(null, {

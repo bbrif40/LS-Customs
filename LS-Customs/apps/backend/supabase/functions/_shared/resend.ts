@@ -32,6 +32,7 @@ const DEFAULT_FROM = "LS Customs <onboarding@resend.dev>";
 const HELP_CENTER_URL = "https://ls-customs-web.vercel.app/help";
 
 import * as nodemailer from "https://esm.sh/nodemailer@6.9.14";
+import { escapeHtml } from './html.ts';
 
 /**
  * Sends any email via Gmail (Nodemailer) instead of Resend API for free sending.
@@ -89,7 +90,12 @@ export function buildReceiptEmailHtml(data: ReceiptEmailData): string {
     scheduledDate = "As Scheduled",
     location = "On-site / Preferred Location",
     status = "Confirmed & Acknowledged",
-  } = data;
+  } = { ...data, customerName: escapeHtml(data.customerName), bookingId: escapeHtml(data.bookingId),
+    itemTitle: data.itemTitle === undefined ? undefined : escapeHtml(data.itemTitle),
+    scheduledDate: data.scheduledDate === undefined ? undefined : escapeHtml(data.scheduledDate),
+    location: data.location === undefined ? undefined : escapeHtml(data.location),
+    status: data.status === undefined ? undefined : escapeHtml(data.status),
+    amount: typeof data.amount === 'string' ? escapeHtml(data.amount) : data.amount };
 
   const typeLabel =
     bookingType.toLowerCase() === "rental"

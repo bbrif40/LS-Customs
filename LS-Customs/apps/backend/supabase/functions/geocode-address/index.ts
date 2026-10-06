@@ -17,7 +17,7 @@ import {
   createServiceClient,
   extractJwt,
 } from "../_shared/supabaseClient.ts";
-import { corsHeaders, jsonResponse, type EdgeFunctionError } from "../_shared/cors.ts";
+import { getCorsHeaders, jsonResponse as baseJsonResponse, type EdgeFunctionError } from "../_shared/cors.ts";
 
 interface GeocodeRequest {
   address: string;
@@ -31,6 +31,9 @@ interface GeocodeResponse {
 }
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const jsonResponse = (data: unknown, error: Parameters<typeof baseJsonResponse>[1], status = 200): Response =>
+    baseJsonResponse(data, error, status, req);
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });

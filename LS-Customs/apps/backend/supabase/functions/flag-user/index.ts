@@ -25,7 +25,7 @@ import {
   createServiceClient,
   extractJwt,
 } from "../_shared/supabaseClient.ts";
-import { corsHeaders, jsonResponse } from "../_shared/cors.ts";
+import { getCorsHeaders, jsonResponse as baseJsonResponse } from "../_shared/cors.ts";
 
 interface FlagUserRequest {
   user_id: string;
@@ -45,6 +45,9 @@ const UUID_REGEX =
 const PERMANENT_BAN_UNTIL = "9999-12-31T23:59:59.999Z";
 
 Deno.serve(async (req: Request) => {
+  const corsHeaders = getCorsHeaders(req);
+  const jsonResponse = (data: unknown, error: Parameters<typeof baseJsonResponse>[1], status = 200): Response =>
+    baseJsonResponse(data, error, status, req);
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });

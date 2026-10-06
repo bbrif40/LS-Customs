@@ -431,3 +431,22 @@ create index idx_support_tickets_customer on support_tickets(customer_id);
 create index idx_support_tickets_status on support_tickets(status);
 create index idx_support_ticket_messages_ticket on support_ticket_messages(ticket_id, created_at);
 ```
+
+
+## 7. Hosted QA remediation (6 October 2026)
+
+Forward migrations: `20261006120000_qa_booking_security.sql` and `20261006120100_disable_seeded_admin_passwords.sql`.
+
+- `vehicle_bookings.hold_expires_at` is nullable for paid/legacy bookings; new unpaid reservations expire after 30 minutes. Half-open rental dates allow a new trip on the return day. Expired unpaid holds are reclaimed atomically on the next reservation for that vehicle.
+- Both booking tables have nullable `request_id` for legacy compatibility and a unique customer/request index. New booking RPCs require it for retry idempotency.
+- `booking_promotions` stores active, optional expiry, category-limited server discounts. Anonymous/authenticated users read active offers; admins manage them. Full-total discounts require a future complimentary-booking workflow.
+- `payment_checkout_sessions`, `payment_checkout_locks`, and `payment_receipt_deliveries` have RLS enabled and service-role-only grants. They hold private provider resume data, five-minute creation leases, and a one-minute receipt-delivery cooldown. They are not client-readable.
+- `create_vehicle_booking` and `create_service_booking` derive the customer from `auth.uid()`, compute totals from trusted records, and write atomically. Direct customer inserts were replaced by admin-only insert policies. Trigger checks restrict role changes and customer/mechanic booking updates to permitted fields and transitions.
+- `cancel_customer_booking` locks and checks ownership/status/payment. Paid cancellation requires support. Emergency cancellation also permits assigned/en-route requests before payment.
+- `assign_booking_mechanic` is service-role-only and reserves mechanic capacity. The capacity trigger also covers manual assignments. Duration comes from catalog items, with a 30-minute travel buffer; active jobs extend occupancy until completion.
+- `get_dispatch_quote` exposes only distance and fee. Public execution of `get_dispatch_mechanics` was revoked. Customer mechanic-GPS access is limited to active assigned bookings.
+- `reconcile_payment` is service-role-only, locks payment/booking, preserves terminal payment ordering, and reconciles replayed success. Cancelled bookings stay cancelled; late success creates an admin refund-review notification.
+- Notification delivery uses Vault keys `notification_dispatch_url` and `notification_dispatch_token`; an absent configuration produces a warning rather than exposing a public unauthenticated delivery path.
+- Published seeded-admin passwords are conditionally disabled and admin roles removed. Rotated passwords are preserved; account recovery and restoring privilege require owner verification.
+
+See `QA_IMPLEMENTATION_2026-10-06.md` for verification scope and required deployment order. The PostgreSQL regression suite is `apps/backend/scripts/booking-security.test.mjs`.

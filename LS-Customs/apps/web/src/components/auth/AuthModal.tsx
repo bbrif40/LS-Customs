@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, ArrowRight, ArrowLeft } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
 import type { AuthMode } from '../../types'
 import { Capacitor } from '@capacitor/core'
+import { useDialog } from '../../hooks/useDialog'
+import { normalizeAuthContact } from '../../utils/authContact'
 
 interface AuthModalProps {
   mode: AuthMode
@@ -12,12 +14,19 @@ interface AuthModalProps {
 }
 
 export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: AuthModalProps) {
+  const dialogRef = useDialog(onClose)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [contact, setContact] = useState('') 
   const [otp, setOtp] = useState('')
   const [step, setStep] = useState<'input_contact' | 'verify_otp'>('input_contact')
   const [showSplash, setShowSplash] = useState(false)
+  const [resendSeconds, setResendSeconds] = useState(0)
+  useEffect(() => {
+    if (!resendSeconds) return
+    const timer = window.setTimeout(() => setResendSeconds(seconds => seconds - 1), 1000)
+    return () => window.clearTimeout(timer)
+  }, [resendSeconds])
   
   const isEmail = contact.includes('@')
   
@@ -49,6 +58,7 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading || resendSeconds > 0) return
     setLoading(true)
     setError('')
 
@@ -57,17 +67,24 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         throw new Error('Please enter an email or phone number.')
       }
       
+      const normalizedContact = normalizeAuthContact(contact)
+      setContact(normalizedContact)
       const { error: otpError } = await supabase.auth.signInWithOtp(
-        isEmail ? { email: contact.trim() } : { phone: contact.trim() }
+        isEmail ? { email: normalizedContact } : { phone: normalizedContact }
       )
       
       if (otpError) {
         throw otpError
       }
       
+      setOtp('')
       setStep('verify_otp')
+      setResendSeconds(30)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred.')
+      const message = err instanceof Error ? err.message : 'Unable to send a verification code.'
+      setError(/error sending (magic link|confirmation).*email/i.test(message)
+        ? 'We couldn’t send your verification code. Please try again later or continue with Google.'
+        : message)
     } finally {
       setLoading(false)
     }
@@ -75,15 +92,14 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (loading || !/^[0-9]{6}$/.test(otp)) return
     setLoading(true)
     setError('')
     
     try {
-      const { data, error: verifyError } = await supabase.auth.verifyOtp({
-        [isEmail ? 'email' : 'phone']: contact.trim(),
-        token: otp,
-        type: isEmail ? 'email' : 'sms'
-      })
+      const { data, error: verifyError } = await supabase.auth.verifyOtp(isEmail
+        ? { email: contact.trim(), token: otp, type: 'email' }
+        : { phone: contact.trim(), token: otp, type: 'sms' })
       
       if (verifyError) {
         throw verifyError
@@ -132,6 +148,10 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
       <section 
         className="auth-dialog" 
         role="dialog" 
+        ref={dialogRef}
+        aria-modal="true"
+        aria-labelledby="auth-title"
+        tabIndex={-1}
         style={{ maxWidth: 420, width: '100%' }}
       >
         <button className="auth-close" onClick={onClose} aria-label="Close sign in">
@@ -162,6 +182,8 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
           <form onSubmit={handleSendOtp} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <input
               type="text"
+              aria-label="Email or phone number"
+              autoComplete="username"
               placeholder="Email or Phone number (+63...)"
               value={contact}
               onChange={(e) => setContact(e.target.value)}
@@ -172,14 +194,14 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
             <button
               className="auth-submit-btn"
               type="submit"
-              disabled={loading || !contact}
+              disabled={loading || !contact || resendSeconds > 0}
               style={{ 
                 background: '#0f172a', color: '#fff', border: 'none', borderRadius: 6, padding: '10px 16px', 
                 fontSize: 13, fontWeight: 600, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, cursor: 'pointer',
                 opacity: (loading || !contact) ? 0.6 : 1
               }}
             >
-              {loading ? 'Please wait...' : 'Continue'}
+              {loading ? 'Please wait...' : resendSeconds > 0 ? `Try again in ${resendSeconds}s` : 'Continue'}
               {!loading && <ArrowRight size={14} />}
             </button>
           </form>
@@ -188,8 +210,13 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
              <input
               type="text"
               placeholder="6-digit code"
+              aria-label="Six-digit verification code"
+              autoFocus
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]{6}"
               value={otp}
-              onChange={(e) => setOtp(e.target.value)}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
               required
               maxLength={6}
               style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, textAlign: 'center', letterSpacing: '4px' }}
@@ -206,6 +233,9 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
               }}
             >
               {loading ? 'Verifying...' : 'Sign In'}
+            </button>
+            <button type="button" disabled={loading || resendSeconds > 0} onClick={event => void handleSendOtp(event)}>
+              {resendSeconds > 0 ? `Resend code in ${resendSeconds}s` : 'Resend code'}
             </button>
             <button
               type="button"
@@ -255,7 +285,7 @@ export function AuthModal({ mode, onModeChange, onClose, onAuthenticated }: Auth
         )}
 
         <small className="auth-legal" style={{ display: 'block', textAlign: 'center', marginTop: '16px', fontSize: 10, color: '#9ca3af' }}>
-          By continuing, you agree to our Terms of Service and Privacy Policy.
+          By continuing, you agree to our <a href="/terms">Terms of Service</a> and <a href="/privacy">Privacy Policy</a>.
         </small>
       </section>
     </div>

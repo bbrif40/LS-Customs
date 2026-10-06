@@ -1,867 +1,150 @@
-/**
- * EmergencyMechanicModal — high-priority roadside assistance dispatch modal.
- * Uses Ionic Icons (IonIcon from @ionic/react) exclusively — NO emojis.
- * Light mode design adhering to LS Customs color scheme.
- * Features Philippine Peso (₱) pricing, live satellite GPS lock,
- * and an interactive Virtual Mechanic GPS Tracker with live vehicle movement,
- * speed, distance, and real-time ETA calculation.
- */
-import { useState, useEffect } from 'react'
-import { IonIcon } from '@ionic/react'
-import {
-  warningOutline,
-  flashOutline,
-  discOutline,
-  keyOutline,
-  flameOutline,
-  constructOutline,
-  navigateOutline,
-  callOutline,
-  timeOutline,
-  checkmarkCircle,
-  closeOutline,
-  shieldCheckmarkOutline,
-  speedometerOutline,
-  locationOutline,
-  volumeHighOutline,
-  volumeMuteOutline,
-  radioOutline,
-  chevronForwardOutline,
-  checkmark,
-  star,
-  cashOutline,
-  carSportOutline,
-  compassOutline,
-  buildOutline,
-} from 'ionicons/icons'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../../supabaseClient'
+import { useDialog } from '../../hooks/useDialog'
+import { LocationPicker } from './map'
 
 export interface EmergencyDispatchData {
-  id: string
-  issue: string
-  issueLabel: string
-  coords: { lat: number; lng: number }
-  locationLabel: string
-  vehicleDetails: string
-  etaMinutes: number
-  dispatchedAt: number
-  mechanic: {
-    name: string
-    unit: string
-    vehicle: string
-    phone: string
-    rating: number
-    initials: string
-    plateNumber: string
-  }
+  customerId: string
+  id: string; issue: string; issueLabel: string; coords: { lat: number; lng: number }
+  locationLabel: string; vehicleDetails: string; etaMinutes: number; dispatchedAt: number
+  status?: string
+  mechanic: { name: string; unit: string; vehicle: string; phone: string; rating: number; initials: string; plateNumber: string }
 }
-
 interface EmergencyMechanicModalProps {
-  open: boolean
-  onClose: () => void
-  onNotify: (message: string) => void
-  userId?: string
+  open: boolean; onClose: () => void; onNotify: (message: string) => void; userId?: string
   activeDispatch: EmergencyDispatchData | null
   setActiveDispatch: (dispatch: EmergencyDispatchData | null) => void
   onViewBookings?: () => void
 }
+const scenarios = [
+  ['battery', 'Battery assistance', 1850], ['tire', 'Flat tire', 1250],
+  ['engine', 'Engine trouble', 2950], ['lockout', 'Vehicle lockout', 1650],
+  ['fuel', 'Fuel assistance', 1200], ['towing', 'Towing', 3800],
+] as const
 
-interface EmergencyScenario {
-  id: string
-  label: string
-  description: string
-  ionicIcon: string
-  avgEta: string
-  cost: number // in Philippine Peso (₱)
-  color: string
-}
+export function EmergencyMechanicModal({ open, onClose, onNotify, userId, activeDispatch, setActiveDispatch, onViewBookings }: EmergencyMechanicModalProps) {
+  const dispatch = activeDispatch?.customerId === userId && userId ? activeDispatch : null
+  const ref = useDialog(onClose, open)
+  const [issue, setIssue] = useState('battery')
+  const [latitude, setLatitude] = useState('')
+  const [longitude, setLongitude] = useState('')
+  const [notes, setNotes] = useState('')
+  const [confirmedLocation, setConfirmedLocation] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID())
+  const [restoring, setRestoring] = useState(true)
 
-const EMERGENCY_SCENARIOS: EmergencyScenario[] = [
-  {
-    id: 'battery',
-    label: 'Dead Battery / Jump Start',
-    description: 'Rapid battery health test, heavy-duty booster jump, or alternator check',
-    ionicIcon: flashOutline,
-    avgEta: '8 - 12 min',
-    cost: 1850,
-    color: '#d97706',
-  },
-  {
-    id: 'tire',
-    label: 'Flat Tire / Blowout',
-    description: 'On-site tire swap with spare or rapid puncture vulcanizing plug',
-    ionicIcon: discOutline,
-    avgEta: '10 - 15 min',
-    cost: 1250,
-    color: '#0284c7',
-  },
-  {
-    id: 'engine',
-    label: 'Engine Breakdown / Smoke',
-    description: 'OBD-II scanner diagnostic, radiator overheating check, belt inspection',
-    ionicIcon: warningOutline,
-    avgEta: '12 - 18 min',
-    cost: 2950,
-    color: '#dc2626',
-  },
-  {
-    id: 'lockout',
-    label: 'Vehicle Lockout',
-    description: 'Non-destructive rapid door unlocking & safe key retrieval tools',
-    ionicIcon: keyOutline,
-    avgEta: '8 - 12 min',
-    cost: 1650,
-    color: '#7c3aed',
-  },
-  {
-    id: 'fuel',
-    label: 'Emergency Fuel / Fluids',
-    description: 'Delivery of 10L gasoline/diesel or emergency radiator coolant top-up',
-    ionicIcon: flameOutline,
-    avgEta: '8 - 12 min',
-    cost: 1200,
-    color: '#ea580c',
-  },
-  {
-    id: 'towing',
-    label: 'Critical Tow / Flatbed',
-    description: 'Immediate heavy-duty hydraulic flatbed dispatch to your location',
-    ionicIcon: constructOutline,
-    avgEta: '15 - 22 min',
-    cost: 3800,
-    color: '#db2777',
-  },
-]
-
-// Default location anchor: Metro Central Highway
-const DEFAULT_COORDS = { lat: 14.5547, lng: 121.0244 }
-const DEFAULT_LOCATION_LABEL = 'Central Highway / Metro Ave (Near LS Customs Service Bay)'
-
-export function formatPeso(amount: number): string {
-  return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
-/** Tactical audio ping synthesized with Web Audio API */
-function playTacticalBeep(pitch = 880, duration = 0.08) {
-  try {
-    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-    if (!AudioCtx) return
-    const ctx = new AudioCtx()
-    const osc = ctx.createOscillator()
-    const gain = ctx.createGain()
-    osc.type = 'sine'
-    osc.frequency.setValueAtTime(pitch, ctx.currentTime)
-    osc.frequency.exponentialRampToValueAtTime(pitch * 1.4, ctx.currentTime + duration)
-    gain.gain.setValueAtTime(0.035, ctx.currentTime)
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration)
-    osc.connect(gain)
-    gain.connect(ctx.destination)
-    osc.start()
-    osc.stop(ctx.currentTime + duration)
-  } catch {
-    // Audio autoplay might be blocked; ignore gracefully
-  }
-}
-
-export function EmergencyMechanicModal({
-  open,
-  onClose,
-  onNotify,
-  userId,
-  activeDispatch,
-  setActiveDispatch,
-  onViewBookings,
-}: EmergencyMechanicModalProps) {
-  const [selectedIssueId, setSelectedIssueId] = useState<string>('battery')
-  const [vehicleDetails, setVehicleDetails] = useState<string>('')
-  const [locationLabel, setLocationLabel] = useState<string>(DEFAULT_LOCATION_LABEL)
-  const [coords, setCoords] = useState<{ lat: number; lng: number }>(DEFAULT_COORDS)
-  const [gpsStatus, setGpsStatus] = useState<'idle' | 'locating' | 'locked' | 'failed'>('idle')
-  const [isScanning, setIsScanning] = useState<boolean>(false)
-  const [scanStepMessage, setScanStepMessage] = useState<string>('Broadcasting SOS telemetry to fleet mesh...')
-  const [soundEnabled, setSoundEnabled] = useState<boolean>(true)
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(540) // 9 minutes default
-
-  // Auto-acquire GPS on modal mount if not already acquired
+  // Restore from the customer's saved booking and poll status. No simulated state.
   useEffect(() => {
-    if (open && gpsStatus === 'idle' && !activeDispatch) {
-      locateUser()
+    let active = true
+    setRestoring(Boolean(userId))
+    if (!userId) { setActiveDispatch(null); setRestoring(false); return }
+    const refresh = async () => {
+      const { data, error: queryError } = await supabase.from('service_bookings')
+        .select('id,status,pin_lat,pin_lng,notes,created_at,mechanic_id')
+        .eq('customer_id', userId).eq('is_emergency', true)
+        .in('status', ['pending', 'assigned', 'en_route', 'in_progress'])
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (!active) return
+      if (queryError) { setRestoring(true); setError('Unable to check your saved requests. Retry before creating another request.'); return }
+      setRestoring(false)
+      if (!data) { setActiveDispatch(null); return }
+      let name = 'Awaiting assignment', phone = ''
+      if (data.mechanic_id) {
+        const { data: mechanic } = await supabase.from('profiles').select('full_name,phone').eq('id', data.mechanic_id).maybeSingle()
+        if (!active) return
+        name = mechanic?.full_name ?? 'Assigned mechanic'; phone = mechanic?.phone ?? ''
+      }
+      const savedIssue = data.notes?.match(/Emergency: (\w+)/)?.[1] ?? 'Roadside assistance'
+      setActiveDispatch({ customerId: userId, id: data.id, status: data.status, issue: savedIssue, issueLabel: scenarios.find(([id]) => id === savedIssue)?.[1] ?? 'Roadside assistance',
+        coords: { lat: data.pin_lat, lng: data.pin_lng }, locationLabel: data.notes ?? '', vehicleDetails: '',
+        etaMinutes: 0, dispatchedAt: Date.parse(data.created_at),
+        mechanic: { name, phone, unit: data.status.replace(/_/g, ' '), vehicle: '', rating: 0, initials: '', plateNumber: '' } })
     }
-  }, [open, gpsStatus, activeDispatch])
+    void refresh()
+    const timer = window.setInterval(() => void refresh(), 15000)
+    return () => { active = false; window.clearInterval(timer) }
+  }, [userId, open, setActiveDispatch])
 
-  // Countdown timer for active dispatch
-  useEffect(() => {
-    if (!activeDispatch) return
-
-    const elapsed = Math.floor((Date.now() - activeDispatch.dispatchedAt) / 1000)
-    const initialSeconds = activeDispatch.etaMinutes * 60
-    const remaining = Math.max(0, initialSeconds - elapsed)
-    setRemainingSeconds(remaining)
-
-    const timer = setInterval(() => {
-      setRemainingSeconds((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer)
-          return 0
-        }
-        return prev - 1
+  async function assign(id: string) {
+    const { data, error: invokeError } = await supabase.functions.invoke('assign-mechanic', { body: { service_booking_id: id } })
+    if (invokeError || data?.error) throw new Error('Your request is saved, but a mechanic could not be assigned. Retry dispatch or contact support.')
+    const assignment = data?.data ?? data
+    if (!assignment?.mechanic_id || assignment.service_booking_id !== id || !['assigned', 'en_route', 'in_progress'].includes(assignment.status))
+      throw new Error('Your request is saved and awaiting assignment.')
+    setActiveDispatch({ customerId: userId!, id, status: assignment.status,
+      issue: dispatch?.issue ?? issue, issueLabel: dispatch?.issueLabel ?? issue,
+      coords: dispatch?.coords ?? { lat: Number(latitude), lng: Number(longitude) },
+      locationLabel: dispatch?.locationLabel ?? notes, vehicleDetails: dispatch?.vehicleDetails ?? '',
+      etaMinutes: 0, dispatchedAt: dispatch?.dispatchedAt ?? Date.now(),
+      mechanic: { name: assignment.mechanic_name ?? 'Assigned mechanic', phone: assignment.mechanic_phone ?? '',
+        unit: assignment.status, vehicle: '', rating: 0, initials: '', plateNumber: '' } })
+  }
+  async function request() {
+    if (busy || restoring) return
+    setBusy(true); setError(null)
+    try {
+      if (!userId) throw new Error('Please sign in before requesting roadside assistance.')
+      if (dispatch) { await assign(dispatch.id); return }
+      const lat = Number(latitude), lng = Number(longitude)
+      if (!latitude.trim() || !longitude.trim() || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 || !confirmedLocation)
+        throw new Error('Enter valid coordinates and confirm your service location.')
+      const { data, error: bookingError } = await supabase.rpc('create_service_booking', {
+        p_request_id: requestId, p_service_id: null, p_scheduled_at: null,
+        p_lat: lat, p_lng: lng, p_notes: notes, p_emergency: issue,
       })
-    }, 1000)
-
-    return () => clearInterval(timer)
-  }, [activeDispatch])
-
+      if (bookingError || !data?.id) throw new Error('Your request could not be saved. Please retry or contact support.')
+      setActiveDispatch({ customerId: userId, id: data.id, status: data.status, issue, issueLabel: issue, coords: { lat, lng },
+        locationLabel: notes, vehicleDetails: '', etaMinutes: 0, dispatchedAt: Date.now(),
+        mechanic: { name: 'Awaiting assignment', unit: 'Pending', vehicle: '', phone: '', rating: 0, initials: '', plateNumber: '' } })
+      await assign(data.id)
+      onNotify('A mechanic has been assigned. Check your booking for departure updates.')
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Assistance is temporarily unavailable.') }
+    finally { setBusy(false) }
+  }
+  async function cancel() {
+    if (!dispatch || busy) return
+    setBusy(true); setError(null)
+    const { error: cancellationError } = await supabase.rpc('cancel_customer_booking', { p_booking_type: 'service', p_booking_id: dispatch.id })
+    if (cancellationError) setError('Cancellation could not be completed. Check the booking status or contact support.')
+    else { setActiveDispatch(null); setRequestId(crypto.randomUUID()); onNotify('Roadside request cancelled.') }
+    setBusy(false)
+  }
+  function locate() {
+    setError(null)
+    if (!navigator.geolocation) { setError('Location access is unavailable. Enter coordinates below.'); return }
+    navigator.geolocation.getCurrentPosition(position => {
+      setLatitude(String(position.coords.latitude)); setLongitude(String(position.coords.longitude)); setConfirmedLocation(false)
+    }, () => setError('Location access failed. Enter coordinates or use your booking location.'), { timeout: 10000, enableHighAccuracy: true })
+  }
   if (!open) return null
-
-  const locateUser = () => {
-    setGpsStatus('locating')
-    if (soundEnabled) playTacticalBeep(640, 0.08)
-
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const newCoords = {
-            lat: Number(position.coords.latitude.toFixed(4)),
-            lng: Number(position.coords.longitude.toFixed(4)),
-          }
-          setCoords(newCoords)
-          setLocationLabel(`Live GPS: ${newCoords.lat}°N, ${newCoords.lng}°E (Accuracy ±${Math.round(position.coords.accuracy)}m)`)
-          setGpsStatus('locked')
-          if (soundEnabled) playTacticalBeep(1200, 0.12)
-        },
-        () => {
-          setGpsStatus('failed')
-          setLocationLabel('Metro Central Highway (Near LS Customs Central Depot)')
-        },
-        { timeout: 8000, enableHighAccuracy: true }
-      )
-    } else {
-      setGpsStatus('failed')
-      setLocationLabel('Metro Area Highway')
-    }
-  }
-
-  const handleStartDispatch = async () => {
-    setIsScanning(true)
-    if (soundEnabled) playTacticalBeep(520, 0.1)
-
-    const scanSteps = [
-      { msg: 'Transmitting encrypted SOS telemetry to Roadside Mesh...', delay: 600, pitch: 580 },
-      { msg: 'Triangulating closest mobile response units in 5km radius...', delay: 1400, pitch: 720 },
-      { msg: 'GPS Signal Locked: Rapid Unit #04 accepted emergency dispatch...', delay: 2200, pitch: 920 },
-      { msg: 'Unit en route! Route cleared via Southlink Highway.', delay: 3000, pitch: 1180 },
-    ]
-
-    scanSteps.forEach(({ msg, delay, pitch }) => {
-      window.setTimeout(() => {
-        setScanStepMessage(msg)
-        if (soundEnabled) playTacticalBeep(pitch, 0.08)
-      }, delay)
-    })
-
-    const selectedScenario = EMERGENCY_SCENARIOS.find((s) => s.id === selectedIssueId) || EMERGENCY_SCENARIOS[0]
-
-    let bookingId = `LSC-EMG-${Math.floor(1000 + Math.random() * 9000)}`
-    if (userId) {
-      try {
-        const { data, error } = await supabase
-          .from('service_bookings')
-          .insert({
-            customer_id: userId,
-            pin_lat: coords.lat,
-            pin_lng: coords.lng,
-            scheduled_at: new Date().toISOString(),
-            status: 'pending',
-            notes: `[EMERGENCY ROADSIDE DISPATCH] Issue: ${selectedScenario.label}. Location: ${locationLabel}. Vehicle: ${vehicleDetails || 'Passenger Vehicle'}. Fee: ₱${selectedScenario.cost}`,
-            total_price: selectedScenario.cost,
-          })
-          .select('id')
-          .single()
-
-        if (!error && data?.id) {
-          bookingId = data.id
-          void supabase.functions.invoke('assign-mechanic', {
-            body: { service_booking_id: data.id },
-          }).catch(() => {
-            // Graceful fallback to simulated on-duty technician
-          })
-        }
-      } catch {
-        // Fallback reference handled below
-      }
-    }
-
-    window.setTimeout(() => {
-      const newDispatch: EmergencyDispatchData = {
-        id: bookingId,
-        issue: selectedIssueId,
-        issueLabel: selectedScenario.label,
-        coords,
-        locationLabel,
-        vehicleDetails: vehicleDetails.trim() || 'Passenger Vehicle (Hazards On)',
-        etaMinutes: 9,
-        dispatchedAt: Date.now(),
-        mechanic: {
-          name: 'Marcus Vance',
-          unit: 'Mobile Van Unit #04',
-          vehicle: 'Ford F-250 Heavy Duty Service Rig',
-          phone: '(0917) 555-0199',
-          plateNumber: 'LSC-SOS-992',
-          rating: 4.98,
-          initials: 'MV',
-        },
-      }
-
-      setActiveDispatch(newDispatch)
-      setIsScanning(false)
-      onNotify(`Emergency Dispatch: Unit #04 (${newDispatch.mechanic.name}) is en route to your location!`)
-    }, 3300)
-  }
-
-  const handleCancelDispatch = () => {
-    if (window.confirm('Cancel emergency roadside mechanic dispatch?')) {
-      setActiveDispatch(null)
-      onNotify('Emergency dispatch request has been cancelled')
-    }
-  }
-
-  const formatCountdown = (secs: number) => {
-    const m = Math.floor(secs / 60)
-    const s = secs % 60
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-  }
-
-  const selectedScenario = EMERGENCY_SCENARIOS.find((s) => s.id === selectedIssueId) || EMERGENCY_SCENARIOS[0]
-
-  return (
-    <div className="emergency-modal-backdrop" onClick={onClose} role="dialog" aria-modal="true">
-      <div className="emergency-modal-dialog light-mode" onClick={(e) => e.stopPropagation()}>
-        {/* Modal Header */}
-        <div className="emergency-modal-header">
-          <div className="emergency-header-title">
-            <div className="emergency-pulse-icon">
-              <IonIcon icon={shieldCheckmarkOutline} style={{ fontSize: '20px' }} />
-            </div>
-            <div>
-              <div className="emergency-brand-row">
-                <h2>LS Customs Roadside SOS</h2>
-                <span className="emergency-live-pill">
-                  <span className="live-dot" />
-                  LIVE READY
-                </span>
-              </div>
-              <p className="emergency-subtitle">24/7 Rapid Response Dispatch • Metro Manila & Luzon</p>
-            </div>
-          </div>
-          <div className="emergency-header-actions">
-            <button
-              className={`emergency-sound-toggle ${soundEnabled ? 'is-active' : ''}`}
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              title={soundEnabled ? 'Mute radar sounds' : 'Enable radar sounds'}
-              aria-label="Toggle sound"
-            >
-              <IonIcon icon={soundEnabled ? volumeHighOutline : volumeMuteOutline} style={{ fontSize: '17px' }} />
-            </button>
-            <button className="emergency-modal-close" onClick={onClose} aria-label="Close emergency modal">
-              <IonIcon icon={closeOutline} style={{ fontSize: '20px' }} />
-            </button>
-          </div>
-        </div>
-
-        {/* ── Active Dispatch Screen with Virtual Mechanic GPS Tracking ── */}
-        {activeDispatch ? (
-          <div className="emergency-modal-content active-cockpit">
-            {/* Status Banner */}
-            <div className="active-dispatch-banner">
-              <div className="dispatch-radar-pulse">
-                <IonIcon icon={radioOutline} style={{ fontSize: '24px' }} className="radar-icon-spin" />
-              </div>
-              <div className="dispatch-banner-text">
-                <span className="dispatch-badge-enroute">UNIT EN ROUTE • EMERGENCY MODE</span>
-                <h3>Virtual Mechanic In Transit</h3>
-                <p className="dispatch-reference">Dispatch ID: <strong>{activeDispatch.id}</strong></p>
-              </div>
-              <div className="eta-countdown-display">
-                <span className="eta-label">ESTIMATED ARRIVAL</span>
-                <strong className="eta-timer">{formatCountdown(remainingSeconds)}</strong>
-                <small className="eta-distance">Live GPS Tracking Active</small>
-              </div>
-            </div>
-
-            {/* Stepper Progress */}
-            <div className="emergency-progress-track">
-              <div className="step-item completed">
-                <span className="step-dot">
-                  <IonIcon icon={checkmarkCircle} style={{ fontSize: '15px' }} />
-                </span>
-                <span className="step-title">SOS Confirmed</span>
-              </div>
-              <div className="step-connector active" />
-              <div className="step-item active">
-                <span className="step-dot pulse-beacon">
-                  <IonIcon icon={radioOutline} style={{ fontSize: '13px' }} />
-                </span>
-                <span className="step-title">En Route (Live GPS)</span>
-              </div>
-              <div className="step-connector" />
-              <div className="step-item pending">
-                <span className="step-dot">
-                  <IonIcon icon={buildOutline} style={{ fontSize: '13px' }} />
-                </span>
-                <span className="step-title">On-Site Service</span>
-              </div>
-            </div>
-
-            {/* ── Virtual Mechanic Live GPS Map Tracker ───────────────── */}
-            <VirtualMechanicGPSMap
-              activeDispatch={activeDispatch}
-              remainingSeconds={remainingSeconds}
-            />
-
-            {/* Assigned Mechanic Card */}
-            <div className="assigned-mechanic-card">
-              <div className="mechanic-avatar-box">
-                <span>{activeDispatch.mechanic.initials}</span>
-                <span className="mechanic-verified-check">
-                  <IonIcon icon={checkmark} style={{ fontSize: '10px' }} />
-                </span>
-              </div>
-              <div className="mechanic-info-main">
-                <div className="mechanic-name-row">
-                  <h4>{activeDispatch.mechanic.name}</h4>
-                  <span className="mechanic-rating-badge">
-                    <IonIcon icon={star} style={{ fontSize: '11px', color: '#eab308' }} /> {activeDispatch.mechanic.rating}
-                  </span>
-                  <span className="mechanic-plate-tag">Plate: {activeDispatch.mechanic.plateNumber}</span>
-                </div>
-                <p className="mechanic-unit-tag">{activeDispatch.mechanic.unit} • {activeDispatch.mechanic.vehicle}</p>
-                <div className="mechanic-detail-chips">
-                  <span>
-                    <IonIcon icon={locationOutline} style={{ fontSize: '12px' }} /> Destination: {activeDispatch.locationLabel}
-                  </span>
-                  <span>
-                    <IonIcon icon={constructOutline} style={{ fontSize: '12px' }} /> Service: {activeDispatch.issueLabel}
-                  </span>
-                  <span>
-                    <IonIcon icon={cashOutline} style={{ fontSize: '12px' }} /> Total: <strong>{formatPeso(selectedScenario.cost)}</strong>
-                  </span>
-                </div>
-              </div>
-              <div className="mechanic-call-action">
-                <a
-                  href={`tel:${activeDispatch.mechanic.phone}`}
-                  className="button emergency-call-tech-btn"
-                  onClick={() => onNotify('Connecting to roadside driver direct line...')}
-                >
-                  <IonIcon icon={callOutline} style={{ fontSize: '15px' }} />
-                  <span>Call Driver</span>
-                </a>
-              </div>
-            </div>
-
-            {/* Roadside Safety Protocol */}
-            <div className="roadside-safety-box">
-              <div className="safety-title">
-                <IonIcon icon={warningOutline} style={{ fontSize: '16px' }} />
-                <strong>Driver Safety Protocol:</strong>
-              </div>
-              <ul>
-                <li>Keep vehicle hazard emergency lights flashing.</li>
-                <li>Remain safely inside the vehicle with seatbelts fastened if stopped along an expressway shoulder.</li>
-                <li>Service van will arrive with high-visibility amber strobe beacon lights active.</li>
-              </ul>
-            </div>
-
-            {/* Bottom Actions */}
-            <div className="active-dispatch-actions">
-              <button
-                type="button"
-                className="button outline-button"
-                onClick={() => {
-                  onClose()
-                  if (onViewBookings) onViewBookings()
-                }}
-              >
-                Track in My Bookings
-              </button>
-              <button
-                type="button"
-                className="button cancel-emergency-btn"
-                onClick={handleCancelDispatch}
-              >
-                Cancel Emergency Request
-              </button>
-            </div>
-          </div>
-        ) : isScanning ? (
-          /* ── Radar Scanning State ───────────────────────────────── */
-          <div className="emergency-modal-content scanning-cockpit">
-            <div className="tactical-radar-container">
-              <div className="tactical-radar-screen">
-                <div className="radar-grid-ring ring-1" />
-                <div className="radar-grid-ring ring-2" />
-                <div className="radar-grid-ring ring-3" />
-                <div className="radar-axis-horizontal" />
-                <div className="radar-axis-vertical" />
-                <div className="radar-sweep-beam" />
-                {/* Radar Blips */}
-                <div className="radar-blip blip-user">
-                  <span className="blip-label">YOU</span>
-                </div>
-                <div className="radar-blip blip-unit-1">
-                  <span className="blip-label">UNIT 04</span>
-                </div>
-                <div className="radar-blip blip-unit-2">
-                  <span className="blip-label">UNIT 07</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="radar-scan-status">
-              <span className="status-indicator-dot" />
-              <h3>EMERGENCY DISPATCH IN PROGRESS</h3>
-              <p className="scan-step-text">{scanStepMessage}</p>
-              <div className="scan-progress-bar">
-                <div className="scan-progress-fill" />
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* ── Triage & SOS Request Form (Light Mode) ──────────────── */
-          <div className="emergency-modal-content">
-            {/* GPS Telemetry Bar */}
-            <div className="emergency-gps-strip">
-              <div className="gps-indicator-group">
-                <div className={`gps-status-indicator ${gpsStatus}`}>
-                  <span className="gps-pulse-ring" />
-                  <span className="gps-core-dot" />
-                </div>
-                <div className="gps-text-meta">
-                  <div className="gps-meta-header">
-                    <span className="gps-meta-label">LIVE SATELLITE GPS</span>
-                    <span className="gps-meta-tag">Location Calibrated</span>
-                  </div>
-                  <p className="gps-meta-location">{locationLabel}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className="emergency-gps-recenter-btn"
-                onClick={locateUser}
-                disabled={gpsStatus === 'locating'}
-              >
-                <IonIcon
-                  icon={navigateOutline}
-                  className={gpsStatus === 'locating' ? 'icon-spin-fast' : ''}
-                  style={{ fontSize: '13px' }}
-                />
-                <span>{gpsStatus === 'locating' ? 'Scanning...' : 'Re-scan GPS'}</span>
-              </button>
-            </div>
-
-            {/* Scenario Selection */}
-            <div className="emergency-section-header">
-              <div className="section-label-group">
-                <span className="section-index-badge">01</span>
-                <h3>Select Emergency Service</h3>
-              </div>
-              <span className="section-meta-hint">Priority roadside dispatch</span>
-            </div>
-
-            <div className="emergency-scenarios-grid">
-              {EMERGENCY_SCENARIOS.map((sc) => {
-                const isSelected = sc.id === selectedIssueId
-                return (
-                  <button
-                    key={sc.id}
-                    type="button"
-                    className={`scenario-card ${isSelected ? 'is-selected' : ''}`}
-                    onClick={() => {
-                      setSelectedIssueId(sc.id)
-                      if (soundEnabled) playTacticalBeep(750, 0.05)
-                    }}
-                    aria-pressed={isSelected}
-                  >
-                    <div className="scenario-card-header">
-                      <div className="scenario-icon-wrapper" style={{ color: sc.color, background: `${sc.color}14` }}>
-                        <IonIcon icon={sc.ionicIcon} style={{ fontSize: '19px' }} />
-                      </div>
-                      <div className={`scenario-radio-ring ${isSelected ? 'is-checked' : ''}`}>
-                        {isSelected && <IonIcon icon={checkmark} style={{ fontSize: '11px' }} />}
-                      </div>
-                    </div>
-                    <div className="scenario-info">
-                      <h4>{sc.label}</h4>
-                      <p>{sc.description}</p>
-                    </div>
-                    <div className="scenario-card-footer">
-                      <span className="scenario-eta-pill">
-                        <IonIcon icon={timeOutline} style={{ fontSize: '12px' }} />
-                        <span>{sc.avgEta}</span>
-                      </span>
-                      <strong className="scenario-price">{formatPeso(sc.cost)}</strong>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Vehicle Details Field */}
-            <div className="emergency-vehicle-box">
-              <div className="emergency-section-header">
-                <div className="section-label-group">
-                  <span className="section-index-badge">02</span>
-                  <h3>Vehicle & Location Notes</h3>
-                </div>
-                <span className="section-meta-hint">Optional</span>
-              </div>
-              <div className="vehicle-input-wrapper">
-                <span className="input-icon">
-                  <IonIcon icon={carSportOutline} style={{ fontSize: '16px' }} />
-                </span>
-                <input
-                  type="text"
-                  placeholder="e.g. 2024 White Toyota Fortuner, hazard lights on, near highway tollgate"
-                  value={vehicleDetails}
-                  onChange={(e) => setVehicleDetails(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Dispatch Footer */}
-            <div className="emergency-submit-footer">
-              <div className="emergency-pricing-preview">
-                <span className="pricing-title">ESTIMATED DISPATCH FEE</span>
-                <strong className="pricing-value">{formatPeso(selectedScenario.cost)}</strong>
-                <small className="pricing-note">No advance charge · Pay upon arrival via Cash or GCash</small>
-              </div>
-
-              <button
-                type="button"
-                className="button emergency-launch-btn"
-                onClick={handleStartDispatch}
-              >
-                <div className="btn-beacon-glow" />
-                <IonIcon icon={warningOutline} style={{ fontSize: '18px' }} />
-                <span>DISPATCH EMERGENCY MECHANIC</span>
-                <IonIcon icon={chevronForwardOutline} style={{ fontSize: '18px' }} />
-              </button>
-
-              <div className="emergency-tollfree-strip">
-                <span>24/7 Roadside Hotline:</span>
-                <a href="tel:0288880199" className="tollfree-link">
-                  <IonIcon icon={callOutline} style={{ fontSize: '13px' }} /> (02) 8888-0199
-                </a>
-                <span className="hotline-dot">•</span>
-                <a href="tel:09175550199" className="tollfree-link">
-                  0917-555-0199
-                </a>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+  return createPortal(<div className="auth-backdrop">
+    <div ref={ref} role="dialog" aria-modal="true" aria-labelledby="emergency-title" tabIndex={-1} className="auth-dialog" style={{ maxWidth: 520, maxHeight: '90vh', overflowY: 'auto' }}>
+      <button type="button" className="auth-close" aria-label="Close roadside assistance" onClick={onClose}>×</button>
+      <h2 id="emergency-title">Roadside assistance</h2>
+      <p>For immediate danger, contact local emergency services. Mechanic availability must be confirmed.</p>
+      {error && <p role="alert">{error}</p>}
+      {restoring ? <p role="status">Checking saved requests…</p> : dispatch ? <>
+        <p role="status">Saved request: <strong>{dispatch.status?.replace(/_/g, ' ') ?? 'pending'}</strong></p>
+        <p>{dispatch.issueLabel} · {dispatch.mechanic.name}</p><p>Arrival estimate unavailable.</p>
+        {dispatch.mechanic.phone && <a href={`tel:${dispatch.mechanic.phone.replace(/[^+\d]/g, '')}`}>Call assigned mechanic</a>}
+        {dispatch.status === 'pending' && <button type="button" disabled={busy} onClick={() => void request()}>Retry dispatch</button>}
+        {['pending', 'assigned', 'en_route'].includes(dispatch.status ?? '') && <button type="button" disabled={busy} onClick={() => void cancel()}>Cancel saved request</button>}
+        <button type="button" onClick={() => { onViewBookings?.(); onClose() }}>View booking details</button>
+      </> : <form onSubmit={event => { event.preventDefault(); void request() }} style={{ display: 'grid', gap: 12 }}>
+        <label>Assistance type<select value={issue} onChange={event => setIssue(event.target.value)}>{scenarios.map(([id, label, cost]) => <option key={id} value={id}>{label} · ₱{cost.toLocaleString()}</option>)}</select></label>
+        <button type="button" onClick={locate}>Use my location</button>
+        <LocationPicker height={260} id="emergency-location" value={latitude && longitude ? { lat: Number(latitude), lng: Number(longitude) } : null}
+          onChange={position => { setLatitude(String(position.lat)); setLongitude(String(position.lng)); setConfirmedLocation(false) }} />
+        <label>Latitude<input required type="number" step="any" min="-90" max="90" value={latitude} onChange={event => { setLatitude(event.target.value); setConfirmedLocation(false) }} /></label>
+        <label>Longitude<input required type="number" step="any" min="-180" max="180" value={longitude} onChange={event => { setLongitude(event.target.value); setConfirmedLocation(false) }} /></label>
+        <label>Landmark and vehicle details<textarea maxLength={1900} value={notes} onChange={event => setNotes(event.target.value)} /></label>
+        <label><input type="checkbox" checked={confirmedLocation} onChange={event => setConfirmedLocation(event.target.checked)} /> I confirm these coordinates are my service location.</label>
+        <p>Payment is collected on arrival. Your request is saved before assignment.</p>
+        <button type="submit" disabled={busy || !userId || !confirmedLocation}>{busy ? 'Saving request…' : userId ? 'Request mechanic' : 'Sign in to request a mechanic'}</button>
+      </form>}
     </div>
-  )
-}
-
-/**
- * VirtualMechanicGPSMap — animated real-time GPS tracking route
- * showing the virtual response van driving along the road towards the customer!
- * Uses pure SVG geometry and Ionic Icons — NO emojis.
- */
-function VirtualMechanicGPSMap({
-  activeDispatch,
-  remainingSeconds,
-}: {
-  activeDispatch: EmergencyDispatchData
-  remainingSeconds: number
-}) {
-  const initialTotalSeconds = activeDispatch.etaMinutes * 60
-  const elapsed = Math.max(0, initialTotalSeconds - remainingSeconds)
-  const baseProgress = Math.min(0.92, Math.max(0.12, elapsed / initialTotalSeconds))
-
-  const [speed, setSpeed] = useState<number>(46)
-  const [distanceKm, setDistanceKm] = useState<number>(Number((1.8 * (1 - baseProgress * 0.85)).toFixed(1)))
-  const [currentRoad, setCurrentRoad] = useState<string>('South Link Expressway → Central Interchange')
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setSpeed((prev) => {
-        const delta = Math.floor(Math.random() * 7) - 3
-        const newSpeed = prev + delta
-        return Math.min(58, Math.max(36, newSpeed))
-      })
-
-      const dist = Math.max(0.2, Number(((remainingSeconds / (activeDispatch.etaMinutes * 60)) * 2.2).toFixed(1)))
-      setDistanceKm(dist)
-
-      if (dist < 0.6) {
-        setCurrentRoad('Entering your street / service lane — Approaching vehicle')
-      } else if (dist < 1.2) {
-        setCurrentRoad('Taking Exit 14 Ramp → Connecting to Local Road')
-      } else {
-        setCurrentRoad('South Link Expressway → Central Interchange')
-      }
-    }, 2000)
-
-    return () => clearInterval(interval)
-  }, [remainingSeconds, activeDispatch.etaMinutes])
-
-  const progressRatio = Math.min(0.95, baseProgress)
-  const t = progressRatio
-  const p0 = { x: 50, y: 55 }
-  const p1 = { x: 260, y: 25 }
-  const p2 = { x: 320, y: 185 }
-  const p3 = { x: 510, y: 155 }
-
-  const cx = Math.pow(1 - t, 3) * p0.x + 3 * Math.pow(1 - t, 2) * t * p1.x + 3 * (1 - t) * Math.pow(t, 2) * p2.x + Math.pow(t, 3) * p3.x
-  const cy = Math.pow(1 - t, 3) * p0.y + 3 * Math.pow(1 - t, 2) * t * p1.y + 3 * (1 - t) * Math.pow(t, 2) * p2.y + Math.pow(t, 3) * p3.y
-
-  const dt = 0.01
-  const tNext = Math.min(1, t + dt)
-  const cxNext = Math.pow(1 - tNext, 3) * p0.x + 3 * Math.pow(1 - tNext, 2) * tNext * p1.x + 3 * (1 - tNext) * Math.pow(tNext, 2) * p2.x + Math.pow(tNext, 3) * p3.x
-  const cyNext = Math.pow(1 - tNext, 3) * p0.y + 3 * Math.pow(1 - tNext, 2) * tNext * p1.y + 3 * (1 - tNext) * Math.pow(tNext, 2) * p2.y + Math.pow(tNext, 3) * p3.y
-  const angleDeg = (Math.atan2(cyNext - cy, cxNext - cx) * 180) / Math.PI
-
-  return (
-    <div className="virtual-gps-tracker-card">
-      {/* Live Map Header */}
-      <div className="gps-map-header">
-        <div className="gps-map-title">
-          <IonIcon icon={navigateOutline} style={{ fontSize: '15px', color: '#3b82f6' }} />
-          <strong>LIVE VIRTUAL MECHANIC ROUTE</strong>
-          <span className="live-telemetry-badge">
-            <span className="live-radar-dot" /> LIVE SATELLITE
-          </span>
-        </div>
-        <div className="gps-telemetry-strip">
-          <span>
-            <IonIcon icon={speedometerOutline} style={{ fontSize: '13px' }} /> {speed} km/h
-          </span>
-          <span>
-            <IonIcon icon={locationOutline} style={{ fontSize: '13px' }} /> {distanceKm} km away
-          </span>
-        </div>
-      </div>
-
-      {/* SVG Animated Road Simulation */}
-      <div className="gps-map-canvas-container">
-        <svg
-          viewBox="0 0 580 210"
-          className="gps-map-svg"
-          preserveAspectRatio="xMidYMid meet"
-        >
-          <defs>
-            <filter id="glow">
-              <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-              <feMerge>
-                <feMergeNode in="coloredBlur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-
-          {/* Grid lines simulating city block coordinates */}
-          <pattern id="cityGrid" width="30" height="30" patternUnits="userSpaceOnUse">
-            <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#f1f5f9" strokeWidth="1" />
-          </pattern>
-          <rect width="100%" height="100%" fill="url(#cityGrid)" />
-
-          {/* Secondary streets */}
-          <path d="M 20 120 Q 200 110 560 60" stroke="#f1f5f9" strokeWidth="10" fill="none" />
-          <path d="M 120 10 Q 200 120 280 200" stroke="#f1f5f9" strokeWidth="8" fill="none" />
-          <path d="M 380 10 Q 420 100 480 200" stroke="#f1f5f9" strokeWidth="8" fill="none" />
-
-          {/* Main Highway Road (Asphalt base) */}
-          <path
-            d="M 50 55 C 260 25, 320 185, 510 155"
-            fill="none"
-            stroke="#cbd5e1"
-            strokeWidth="16"
-            strokeLinecap="round"
-          />
-          {/* Road Asphalt Fill */}
-          <path
-            d="M 50 55 C 260 25, 320 185, 510 155"
-            fill="none"
-            stroke="#475569"
-            strokeWidth="12"
-            strokeLinecap="round"
-          />
-
-          {/* Animated Road Dashes (Traffic Flow) */}
-          <path
-            d="M 50 55 C 260 25, 320 185, 510 155"
-            fill="none"
-            stroke="#f8fafc"
-            strokeWidth="2"
-            strokeDasharray="6,8"
-            className="animated-road-dashes"
-          />
-
-          {/* Active Navigation Line (Blue Traveled Route) */}
-          <path
-            d="M 50 55 C 260 25, 320 185, 510 155"
-            fill="none"
-            stroke="#3b82f6"
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeDasharray="600"
-            strokeDashoffset={600 * (1 - progressRatio)}
-            filter="url(#glow)"
-          />
-
-          {/* Dispatch Origin Station */}
-          <g transform="translate(45, 45)">
-            <circle r="12" fill="#0f172a" />
-            <circle r="6" fill="#e4b95e" />
-            <text x="-25" y="24" fontSize="9.5" fontWeight="700" fill="#475569">LSC DEPOT</text>
-          </g>
-
-          {/* Customer Vehicle Destination Pin */}
-          <g transform="translate(510, 155)">
-            <circle r="22" fill="none" stroke="rgba(239, 68, 68, 0.4)" strokeWidth="1.5" className="dest-pulse-ring" />
-            <circle r="14" fill="none" stroke="rgba(239, 68, 68, 0.7)" strokeWidth="2" className="dest-pulse-ring-inner" />
-            <circle r="8" fill="#ef4444" />
-            <circle r="3" fill="#ffffff" />
-            <rect x="-42" y="-36" width="84" height="18" rx="4" fill="#0f172a" />
-            <text x="0" y="-24" fontSize="8.5" fontWeight="800" fill="#ffffff" textAnchor="middle">YOUR VEHICLE</text>
-          </g>
-
-          {/* Moving Virtual Mechanic Van */}
-          <g
-            transform={`translate(${cx}, ${cy})`}
-            className="moving-mechanic-group"
-          >
-            <circle r="16" fill="rgba(34, 197, 94, 0.25)" className="van-radar-pulse" />
-
-            <g transform={`rotate(${angleDeg})`}>
-              <rect x="-14" y="-8" width="28" height="16" rx="4" fill="#0f172a" stroke="#ffffff" strokeWidth="1.5" />
-              <rect x="-11" y="-6" width="10" height="12" rx="2" fill="#3b82f6" />
-              <rect x="7" y="-5" width="4" height="10" rx="1" fill="#93c5fd" />
-              <circle cx="0" cy="0" r="3" fill="#ef4444" className="van-strobe-light" />
-            </g>
-
-            <rect x="-46" y="-32" width="92" height="18" rx="4" fill="#16a34a" />
-            <text x="0" y="-20" fontSize="8.5" fontWeight="800" fill="#ffffff" textAnchor="middle">
-              UNIT #04 ({speed} km/h)
-            </text>
-          </g>
-        </svg>
-
-        {/* Live GPS Telemetry Overlay */}
-        <div className="gps-live-road-footer">
-          <div className="road-name-chip">
-            <IonIcon icon={compassOutline} style={{ fontSize: '13px', color: '#0284c7' }} />
-            <span>{currentRoad}</span>
-          </div>
-          <div className="eta-live-chip">
-            <IonIcon icon={timeOutline} style={{ fontSize: '13px', color: '#b45309' }} />
-            <strong>ETA: {Math.max(1, Math.ceil(remainingSeconds / 60))} MINS</strong>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+  </div>, document.body)
 }

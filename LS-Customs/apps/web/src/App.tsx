@@ -3,7 +3,7 @@
  * (view routing, admin routes, toast, cart, sign-out) and delegates rendering to
  * small, single-purpose child components.
  */
-import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react'
+import { useState, useEffect, lazy, Component, type ErrorInfo, type ReactNode } from 'react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { X, AlertTriangle, RefreshCw, Home, ChevronDown, Copy, Check } from 'lucide-react'
@@ -20,15 +20,15 @@ import { AuthModal } from './components/auth/AuthModal'
 import { GuestWorkspace } from './components/views/GuestWorkspace'
 import { Dashboard } from './components/views/Dashboard'
 import { Rentals } from './components/views/Rentals'
-import { MechanicBookingFlow } from './components/views/mechanic/MechanicBookingFlow'
+const MechanicBookingFlow = lazy(() => import('./components/views/mechanic/MechanicBookingFlow').then(module => ({ default: module.MechanicBookingFlow })))
 import { ActiveBookingTracker } from './components/views/mechanic/ActiveBookingTracker'
-import { Bookings } from './components/views/Bookings'
-import { Profile } from './components/views/Profile'
+const Bookings = lazy(() => import('./components/views/Bookings').then(module => ({ default: module.Bookings })))
+const Profile = lazy(() => import('./components/views/Profile').then(module => ({ default: module.Profile })))
 import { ChatBot } from './components/chat/ChatBot'
 import { PublicLayout } from './components/layout/PublicLayout'
-import { AdminLayout } from './components/admin/AdminLayout'
+const AdminLayout = lazy(() => import('./components/admin/AdminLayout').then(module => ({ default: module.AdminLayout })))
 import { AdminLogin } from './components/admin/AdminLogin'
-import { CustomerSettingsEditor } from './components/admin/CustomerSettingsEditor'
+const CustomerSettingsEditor = lazy(() => import('./components/admin/CustomerSettingsEditor').then(module => ({ default: module.CustomerSettingsEditor })))
 import { TicketRealtimeProvider } from './components/common/TicketRealtimeProvider'
 import { AccountSetup } from './components/AccountSetup'
 import { HelpCenter } from './pages/public/HelpCenter'

@@ -15,7 +15,7 @@
  * usePaymentStatus should be used in parallel to catch async confirmations
  * (3DS redirects, bank delays, etc.).
  */
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { loadStripe, Stripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { CreditCard, Loader2, ExternalLink, ShieldCheck, Smartphone, QrCode, Wallet, RefreshCw } from 'lucide-react'
@@ -52,6 +52,8 @@ export function PaymentForm({
   onError,
   disabled,
 }: PaymentFormProps) {
+  const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
+  const stripePromise = useMemo(() => publishableKey ? loadStripe(publishableKey) : null, [publishableKey])
   if (provider === 'paymongo') {
     return (
       <PaymongoForm
@@ -67,9 +69,7 @@ export function PaymentForm({
   }
 
   // Default: Stripe
-  const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
   if (!publishableKey) {
-    onError?.('Stripe publishable key is not configured (VITE_STRIPE_PUBLISHABLE_KEY)')
     return (
       <div className="payment-form-error">
         <p>Stripe is not configured. Please contact support.</p>
@@ -77,7 +77,6 @@ export function PaymentForm({
     )
   }
 
-  const stripePromise = loadStripe(publishableKey)
 
   return (
     <Elements
@@ -235,15 +234,17 @@ function PaymongoForm({
   disabled,
 }: PaymongoFormProps) {
   const [waitingForPayment, setWaitingForPayment] = useState(false)
+  const popupTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  useEffect(() => () => { if (popupTimer.current) clearInterval(popupTimer.current) }, [])
 
   // Resolve checkout URL accurately
-  const resolvedUrl = providedCheckoutUrl ||
-    (clientSecret.startsWith('http://') || clientSecret.startsWith('https://')
-      ? clientSecret
-      : `https://checkout.paymongo.com/${clientSecret}`)
+  const resolvedUrl = providedCheckoutUrl || clientSecret
+  let safeCheckout = false
+  try { const url = new URL(resolvedUrl); safeCheckout = url.protocol === 'https:' && (url.hostname === 'checkout.paymongo.com' || url.hostname === 'paymongo.com' || url.hostname.endsWith('.paymongo.com')) } catch { /* Invalid checkout stays disabled. */ }
 
   const handlePay = (forceRedirect = false) => {
     if (disabled) return
+    if (!safeCheckout) { onError?.('Checkout is unavailable. Resume payment from your booking or contact support.'); return }
 
     setWaitingForPayment(true)
     localStorage.setItem('lsc_paymongo_checkout_start', Date.now().toString())
@@ -267,9 +268,12 @@ function PaymongoForm({
     }
 
     // Poll for popup closure
-    const interval = setInterval(() => {
+    if (popupTimer.current) clearInterval(popupTimer.current)
+    popupTimer.current = setInterval(() => {
       if (popup.closed) {
-        clearInterval(interval)
+        if (popupTimer.current) clearInterval(popupTimer.current)
+        popupTimer.current = null
+        setWaitingForPayment(false)
         onComplete('processing')
       }
     }, 1000)

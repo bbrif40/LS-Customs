@@ -14,6 +14,7 @@ interface MechanicServicesProps {
   cartCount: number
   onAdd: (name: string) => void
   onNotify: (message: string) => void
+  onEmergencyClick?: () => void
 }
 
 interface FeaturedMechanic {
@@ -39,8 +40,8 @@ function initialsOf(fullName: string): string {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicServicesProps) {
-  const { services, loading, source } = useServices()
+export function MechanicServices({ cartCount, onAdd, onNotify, onEmergencyClick }: MechanicServicesProps) {
+  const { services, loading, source, error, refetch } = useServices()
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [mechanic, setMechanic] = useState<FeaturedMechanic | null>(null)
 
@@ -50,26 +51,12 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
   // fake data — if the table is empty, hide the avatar block.
   useEffect(() => {
     let mounted = true
-    supabase
-      .from('mechanic_profiles')
-      .select('id, years_experience, rating_avg, is_available, profiles(full_name)')
-      .eq('is_available', true)
-      .order('rating_avg', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!mounted || !data) return
-        const row = data as { id: string; years_experience: number | null; rating_avg: number | null; profiles: { full_name: string | null } | { full_name: string | null }[] | null }
-        const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles
-        const name = profile?.full_name?.trim() || 'LS Customs Mechanic'
-        setMechanic({
-          id: row.id,
-          fullName: name,
-          initials: initialsOf(name),
-          rating: Number(row.rating_avg ?? 0),
-          yearsExperience: row.years_experience,
-        })
-      })
+    supabase.rpc('get_public_mechanics').then(({ data }) => {
+      if (!mounted || !Array.isArray(data) || !data.length) return
+      const row = [...data].sort((a, b) => Number(b.rating_avg) - Number(a.rating_avg))[0]
+      const name = row.full_name?.trim() || 'LS Customs Mechanic'
+      setMechanic({ id: row.id, fullName: name, initials: initialsOf(name), rating: Number(row.rating_avg ?? 0), yearsExperience: row.years_experience })
+    })
     return () => {
       mounted = false
     }
@@ -97,6 +84,7 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
 
   return (
     <div className={`page ${scrollRef.className}`} ref={scrollRef.ref as React.RefObject<HTMLDivElement>}>
+      {error && <p role="alert">Service catalog could not be loaded. <button type="button" onClick={() => void refetch()}>Retry</button></p>}
       <PageHeading
         eyebrow="MOBILE MECHANIC"
         title="Care that comes to you"
@@ -210,8 +198,7 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
           {mechanic ? (
             <>
               <p>
-                {mechanic.fullName.split(' ')[0]} {mechanic.fullName.split(' ').slice(-1)[0]?.[0] || ''}. is available and
-                ready for dispatch in your area.
+                {mechanic.fullName} is listed as available. Assignment will be confirmed after your request is saved.
               </p>
               <div className="mechanic-mini">
                 <div className="avatar mechanic-avatar">{mechanic.initials}</div>
@@ -232,7 +219,7 @@ export function MechanicServices({ cartCount, onAdd, onNotify }: MechanicService
           )}
           <button
             className="button dark-button full"
-            onClick={() => onNotify('Emergency mechanic request started')}
+            onClick={() => onEmergencyClick ? onEmergencyClick() : onNotify('Open Roadside assistance to save a request and check mechanic availability.')}
           >
             Request dispatch <ChevronRight size={16} />
           </button>

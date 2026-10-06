@@ -137,15 +137,15 @@ export function Sidebar({
 
             <div className="emergency-text-col">
               <div className="emergency-title-row">
-                <strong>{activeDispatch ? 'UNIT EN ROUTE' : 'Emergency Mechanic'}</strong>
+                <strong>{activeDispatch ? 'ACTIVE REQUEST' : 'Emergency Mechanic'}</strong>
                 <span className={`emergency-pill-tag ${activeDispatch ? 'pill-active' : ''}`}>
-                  {activeDispatch ? 'LIVE ETA' : 'SOS'}
+                  {activeDispatch ? 'STATUS' : 'SOS'}
                 </span>
               </div>
               <small>
                 {activeDispatch
                   ? `${activeDispatch.mechanic.unit} • Tap to view`
-                  : 'Instant Roadside Dispatch'}
+                  : 'Request roadside assistance'}
               </small>
             </div>
           </button>

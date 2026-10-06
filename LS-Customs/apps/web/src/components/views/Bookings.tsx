@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag, CreditCard, Check, Ban, CalendarX, BookOpen, ChevronLeft, ChevronRight, Ticket } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
+import { useDialog } from '../../hooks/useDialog'
+import { usePaymentIntent } from '../../hooks/usePaymentIntent'
 import { usePaymentStatus } from '../../hooks/usePaymentStatus'
 import { PaymentForm } from '../common/PaymentForm'
 import { PageHeading } from '../common/PageHeading'
@@ -145,6 +147,8 @@ type BookingDetails =
   | { kind: 'rental'; booking: CustomerVehicleBooking }
 
 function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: BookingDetails; userId: string | undefined; onClose: () => void; onNotify: (message: string) => void }) {
+  const dialogRef = useDialog(onClose)
+  const { createIntent } = usePaymentIntent()
   const isService = details.kind === 'service'
   const serviceNames = isService
     ? details.booking.service_booking_items?.map((item) => item.mechanic_services?.name).filter(Boolean).join(', ')
@@ -156,13 +160,6 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
   const mechName = isAssigned ? mech?.profiles?.full_name ?? null : null
   const mechPhone = isAssigned ? mech?.profiles?.phone ?? null : null
 
-  useEffect(() => {
-    const originalOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = originalOverflow
-    }
-  }, [])
 
   // Convenience ref for fields both kinds share (status, id, total_price).
   // Type-narrowed via the isService branch — TS understands the union
@@ -230,16 +227,27 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
     setSavingRating(false)
   }
 
+  async function preparePayment() {
+    if (retryingPayment) return
+    setRetryingPayment(true); setRetryError(null)
+    try {
+      const intent = await createIntent(isService ? 'service' : 'vehicle', shared.id)
+      if (!intent) setRetryError('Checkout could not be prepared. Please retry or contact support.')
+      else setRetryIntent(intent)
+    } finally { setRetryingPayment(false) }
+  }
+  async function emailReceipt() {
+    const { data, error } = await supabase.functions.invoke('send-receipt', { body: { paymentId: shared.payments?.id } })
+    onNotify(error || data?.error ? 'Receipt could not be sent. Please retry later or contact support.' : 'Receipt sent to your account email.')
+  }
+
   async function cancelBooking() {
     if (!userId) return
     setCancelling(true)
     setCancelError(null)
-    const table = isService ? 'service_bookings' : 'vehicle_bookings'
-    const { error: cancelErr } = await supabase
-      .from(table)
-      .update({ status: 'cancelled' })
-      .eq('id', shared.id)
-      .eq(isService ? 'user_id' : 'user_id', userId)
+    const { error: cancelErr } = await supabase.rpc('cancel_customer_booking', {
+      p_booking_type: isService ? 'service' : 'vehicle', p_booking_id: shared.id,
+    })
     if (cancelErr) {
       setCancelError(cancelErr.message)
     } else {
@@ -252,11 +260,11 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
 
   return createPortal(
     <div className="map-modal-backdrop" onClick={onClose}>
-      <div className="map-modal booking-details-modal" onClick={(event) => event.stopPropagation()}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="booking-details-title" tabIndex={-1} className="map-modal booking-details-modal" onClick={(event) => event.stopPropagation()}>
         <header>
           <div>
             <span className="booking-details-eyebrow">Transaction receipt · {isService ? 'Mobile service' : 'Vehicle rental'}</span>
-            <h3>{isService ? (serviceNames || 'Mobile mechanic service') : (details.booking.vehicles?.name ?? 'Vehicle rental')}</h3>
+            <h3 id="booking-details-title">{isService ? (serviceNames || 'Mobile mechanic service') : (details.booking.vehicles?.name ?? 'Vehicle rental')}</h3>
           </div>
           <button onClick={onClose} aria-label="Close details"><X size={18} /></button>
         </header>
@@ -265,6 +273,7 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
             <span className={`status-pill ${statusClass(shared.status)}`}>{statusLabel(shared.status)}</span>
             <span className="muted"><Hash size={11} /> {isService ? `service-${shared.id.slice(0, 8)}` : `booking-${shared.id.slice(0, 8)}`}</span>
           </div>
+          {details.kind === 'rental' && details.booking.hold_expires_at && (originalPaymentStatus?.status ?? shared.payments?.status) !== 'succeeded' && shared.status === 'pending' && <p>Unpaid reservation expires: {new Date(details.booking.hold_expires_at).toLocaleString()}</p>}
           <BookingTimeline status={shared.status} kind={isService ? 'service' : 'rental'} />
 
           {/* Payment section */}
@@ -272,31 +281,17 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
             <div className="booking-payment-section">
               <h4>Payment</h4>
               <div className="booking-payment-status-row">
-                <span className={`status-pill ${paymentStatusClass(shared.payments.status)}`}>{paymentStatusLabel(shared.payments.status)}</span>
+                <span className={`status-pill ${paymentStatusClass(originalPaymentStatus?.status ?? shared.payments.status)}`}>{paymentStatusLabel(originalPaymentStatus?.status ?? shared.payments.status)}</span>
                 <span className="muted">{shared.payments.provider ?? 'Unknown provider'} · ₱{Number(shared.payments.amount).toLocaleString()}</span>
               </div>
-              {shared.payments.status === 'failed' && !retryIntent && (
+              {['pending', 'failed'].includes(shared.payments.status) && !['cancelled', 'completed'].includes(shared.status) && !retryIntent && (
                 <button
                   className="button dark-button payment-retry-button"
                   disabled={retryingPayment}
-                  onClick={async () => {
-                    setRetryingPayment(true)
-                    setRetryError(null)
-                    const { data, error: invokeError } = await supabase.functions.invoke('create-payment-intent', {
-                      body: { booking_type: isService ? 'service' : 'vehicle', booking_id: shared.id },
-                    })
-                    const payload = (data as any)?.data?.payment_id ? (data as any).data : ((data as any)?.data ?? data)
-                    const wrappedError = (data as any)?.error?.message
-                    if (invokeError || wrappedError || !payload?.payment_id) {
-                      setRetryError(invokeError?.message ?? wrappedError ?? payload?.message ?? 'Could not create payment intent')
-                    } else {
-                      setRetryIntent(payload)
-                    }
-                    setRetryingPayment(false)
-                  }}
+                  onClick={() => void preparePayment()}
                 >
                   {retryingPayment ? <Loader2 size={14} className="spin" /> : <CreditCard size={14} />}
-                  {retryingPayment ? 'Preparing…' : 'Retry payment'}
+                  {retryingPayment ? 'Preparing…' : shared.payments.status === 'pending' ? 'Resume payment' : 'Retry payment'}
                 </button>
               )}
               {retryError && <p className="form-helper review-error">{retryError}</p>}
@@ -304,11 +299,13 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
           ) : (
             <div className="booking-payment-section">
               <h4>Payment</h4>
-              <p className="muted">No payment record found for this booking.</p>
+              <p className="muted">No payment has been recorded.</p>
+              {shared.status === 'pending' && !(details.kind === 'service' && details.booking.is_emergency) && !retryIntent && <button type="button" disabled={retryingPayment} onClick={() => void preparePayment()}>Pay now</button>}
             </div>
           )}
 
-          {/* Retry payment form */}
+          {(originalPaymentStatus?.status ?? shared.payments?.status) === 'succeeded' && <button type="button" onClick={() => void emailReceipt()}>Email payment receipt</button>}
+          {/* Resume payment form */}
           {retryIntent && retryPaymentInfo?.status !== 'succeeded' && retryPaymentInfo?.status !== 'refunded' && (
             <div className="payment-retry-form">
               <PaymentForm
@@ -318,9 +315,8 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
                 currency={retryIntent.currency}
                 provider={retryIntent.provider}
                 onComplete={(result) => {
-                  if (result === 'succeeded') {
-                    setRetryIntent(null)
-                    onNotify('Payment confirmed. Booking is now locked in.')
+                  if (result === 'succeeded' || result === 'processing') {
+                    onNotify('Payment is processing. Confirmation will appear after provider verification.')
                   } else if (result === 'failed') {
                     setRetryError('Payment failed. Please try a different card.')
                   }

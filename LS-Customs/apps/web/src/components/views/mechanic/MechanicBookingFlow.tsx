@@ -53,7 +53,7 @@ function generateLocalRef(): string {
 }
 
 function buildScheduledAt(date: string, time: string): string {
-  const d = new Date(`${date}T${time}:00`)
+  const d = new Date(`${date}T${time}:00+08:00`)
   return d.toISOString()
 }
 
@@ -62,9 +62,10 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     preloadMap()
   }, [])
   const { profile, defaultAddress, loading: profileLoading } = useProfile(userId)
-  const { services, loading: servicesLoading, source: servicesSource } = useServices()
+  const { services, loading: servicesLoading, source: servicesSource, error: catalogError, refetch: reloadCatalog } = useServices()
   const scrollRef = useScrollAnimation<HTMLDivElement>()
 
+  const [requestId, setRequestId] = useState(() => crypto.randomUUID())
   const [step, setStep] = useState<Step>('category')
   const [category, setCategory] = useState<string | null>(null)
   const [service, setService] = useState<Service | null>(null)
@@ -112,8 +113,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   // Determine customer coordinates from dropped pin or saved default address
-  const customerLat = address?.pin_lat ?? defaultAddress?.lat ?? 14.5995
-  const customerLng = address?.pin_lng ?? defaultAddress?.lng ?? 120.9842
+  const customerLat = address?.pin_lat ?? (address?.id === defaultAddress?.id ? defaultAddress?.lat : null) ?? null
+  const customerLng = address?.pin_lng ?? (address?.id === defaultAddress?.id ? defaultAddress?.lng : null) ?? null
 
   // Live distance and travel fee estimation (every 5km is 85 pesos)
   const {
@@ -123,6 +124,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     distanceFeeCents,
     formattedDistanceFee,
     formattedDistance,
+    loading: quoteLoading,
+    error: quoteError,
   } = useMechanicDistance(customerLat, customerLng)
 
   const activePromo = getActivePromo()
@@ -154,6 +157,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
   }, [])
 
   const reset = useCallback(() => {
+    setRequestId(crypto.randomUUID())
     setStep('category')
     setCategory(null)
     setService(null)
@@ -170,6 +174,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
       onNotify('You need to be signed in to book a service')
       return
     }
+    if (submitting) return
+    if (pendingPayment) { setStep('payment'); return }
     if (!service || !date || !time || !address) return
 
     const looksLikeUuid = typeof service.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(service.id)
@@ -181,9 +187,13 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     }
 
     const hasPin = address.pin_lat != null && address.pin_lng != null
-    const effectiveAddressId = address.id ?? (address.source === 'custom' && !hasPin ? defaultAddress?.id ?? null : null)
+    const effectiveAddressId = address.id ?? null
     if (!effectiveAddressId && !hasPin) {
       setSubmitError('Please pick a saved address or drop a pin on the map before confirming.')
+      return
+    }
+    if (quoteLoading || quoteError || customerLat == null || customerLng == null) {
+      setSubmitError(quoteError ?? 'Confirm a location and wait for travel pricing before continuing.')
       return
     }
 
@@ -196,36 +206,21 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     // Persist the booking and its selected service as one customer flow.
     let bookingId: string | null = null
     let status: ServiceBooking['status'] = 'pending'
+    let serverTotal = totalPricePesos
 
     try {
-      const { data, error: insertError } = await supabase
-        .from('service_bookings')
-        .insert({
-          customer_id: userId,
-          address_id: hasPin ? null : effectiveAddressId,
-          mechanic_id: null,
-          scheduled_at: scheduledAt,
-          status: 'pending',
-          total_price: totalPricePesos,
-          notes: `Address: ${address.line1}, ${address.city} | Base: ${formattedBasePrice} + Distance Fee: ${formattedDistanceFee} (${distanceKm.toFixed(1)} km)${promoNote}`,
-          pin_lat: hasPin ? address.pin_lat : null,
-          pin_lng: hasPin ? address.pin_lng : null,
-        })
-        .select('id, status')
-        .single()
-
-      if (insertError) throw insertError
-      if (data?.id) bookingId = data.id
-      if (data?.status) status = data.status as ServiceBooking['status']
-      if (!bookingId) throw new Error('Booking was not created')
-
-      const { error: itemError } = await supabase.from('service_booking_items').insert({
-        service_booking_id: bookingId,
-        mechanic_service_id: service.id,
-        quantity: 1,
-        price_at_booking: basePriceCents / 100,
+      const { data, error: insertError } = await supabase.rpc('create_service_booking', {
+        p_request_id: requestId, p_service_id: service.id, p_scheduled_at: scheduledAt,
+        p_address_id: hasPin ? null : effectiveAddressId,
+        p_lat: hasPin ? address.pin_lat : null, p_lng: hasPin ? address.pin_lng : null,
+        p_notes: 'Address: ' + address.line1 + ', ' + address.city,
+        p_promo_code: activePromo?.code ?? null,
       })
-      if (itemError) throw itemError
+      if (insertError) throw insertError
+      if (!data?.id) throw new Error('Booking was not created')
+      bookingId = data.id
+      status = data.status as ServiceBooking['status']
+      serverTotal = Number(data.total_price)
     } catch (err) {
       const e = err as { message?: string; hint?: string; details?: string } | null
       const raw = e?.message ?? (err instanceof Error ? err.message : String(err))
@@ -242,13 +237,13 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
 
     const custName = profile?.full_name?.trim() || 'Valued Customer'
     const custPhone = profile?.phone?.trim() || ''
-    const mechName = assignedMechanic?.full_name || 'Rico Hernandez'
-    const mechPhone = assignedMechanic?.phone || '+63 917 555 0192'
+    const mechName = assignedMechanic?.full_name ?? null
+    const mechPhone = assignedMechanic?.phone ?? null
 
     setPendingPayment({
       bookingId: bookingId ?? localRef,
       serviceName: service.name,
-      servicePrice: formattedTotalPrice,
+      servicePrice: `₱${serverTotal.toFixed(2)}`,
       baseServicePrice: formattedBasePrice,
       distanceFee: formattedDistanceFee,
       distanceKm: formattedDistance,
@@ -265,6 +260,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     setSubmitting(false)
     goTo('payment')
   }, [
+    requestId, submitting, pendingPayment, activePromo, quoteLoading, quoteError, customerLat, customerLng,
     userId,
     profile,
     service,
@@ -307,6 +303,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
 
   return (
     <div className={`page mechanic-flow ${scrollRef.className}`} ref={scrollRef.ref}>
+      {catalogError && <p role="alert">The service catalog could not be loaded. <button type="button" onClick={() => void reloadCatalog()}>Retry</button></p>}
       <PageHeading
         eyebrow="MOBILE MECHANIC"
         title="Book a mechanic"
