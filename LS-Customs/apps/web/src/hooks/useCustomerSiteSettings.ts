@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 
 export interface CustomerSiteSettings {
@@ -64,167 +64,50 @@ export const DEFAULT_SITE_SETTINGS: CustomerSiteSettings = {
   accentColor: '#e8a838',
 }
 
+// The hosted row is authoritative; local storage is only an offline cache.
 const STORAGE_KEY = 'ls_customs_site_settings'
-const EVENT_KEY = 'ls-site-settings-changed'
-const BC_NAME = 'ls_site_settings_broadcast_channel'
-
 function loadStoredSettings(): CustomerSiteSettings {
-  if (typeof window === 'undefined') return DEFAULT_SITE_SETTINGS
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT_SITE_SETTINGS
-    return { ...DEFAULT_SITE_SETTINGS, ...JSON.parse(raw) }
-  } catch (err) {
-    console.warn('[useCustomerSiteSettings] Error loading stored settings:', err)
-    return DEFAULT_SITE_SETTINGS
-  }
+  try { return { ...DEFAULT_SITE_SETTINGS, ...JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } }
+  catch { return DEFAULT_SITE_SETTINGS }
 }
-
 export function useCustomerSiteSettings() {
   const [settings, setSettings] = useState<CustomerSiteSettings>(loadStoredSettings)
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
-
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const apply = useCallback((value: CustomerSiteSettings) => {
+    setSettings(value)
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(value)) } catch { /* cache optional */ }
+  }, [])
+  const refresh = useCallback(async () => {
+    const { data, error } = await supabase.from('customer_site_settings').select('settings').eq('id', 1).single()
+    if (error) { setError('Unable to load the latest website settings.'); return }
+    apply({ ...DEFAULT_SITE_SETTINGS, ...data.settings })
+    setError('')
+  }, [apply])
   useEffect(() => {
-    if (typeof document !== 'undefined' && settings.accentColor) {
-      document.documentElement.style.setProperty('--brand-accent', settings.accentColor)
-      document.documentElement.style.setProperty('--accent', settings.accentColor)
-    }
+    void refresh()
+    const channel = supabase.channel('customer-site-settings-db')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_site_settings' }, () => { void refresh() })
+      .subscribe(status => { if (status === 'SUBSCRIBED') void refresh() })
+    const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
+    window.addEventListener('online', onVisible)
+    document.addEventListener('visibilitychange', onVisible)
+    const timer = window.setInterval(onVisible, 30000)
+    return () => { void supabase.removeChannel(channel); window.removeEventListener('online', onVisible); document.removeEventListener('visibilitychange', onVisible); window.clearInterval(timer) }
+  }, [refresh])
+  useEffect(() => {
+    document.documentElement.style.setProperty('--brand-accent', settings.accentColor)
+    document.documentElement.style.setProperty('--accent', settings.accentColor)
   }, [settings.accentColor])
-
-  // Synchronize across tabs and remote sessions
-  useEffect(() => {
-    const applyUpdatedSettings = (updated: CustomerSiteSettings) => {
-      setSettings(updated)
-      if (typeof document !== 'undefined' && updated.accentColor) {
-        document.documentElement.style.setProperty('--brand-accent', updated.accentColor)
-        document.documentElement.style.setProperty('--accent', updated.accentColor)
-      }
-    }
-
-    const handleSync = () => {
-      const updated = loadStoredSettings()
-      applyUpdatedSettings(updated)
-    }
-
-    // 1. Local window and storage event listeners
-    window.addEventListener(EVENT_KEY, handleSync)
-    window.addEventListener('storage', handleSync)
-
-    // 2. Browser BroadcastChannel for instant cross-tab sync
-    let bc: BroadcastChannel | null = null
+  const saveSettings = useCallback(async (value: CustomerSiteSettings) => {
+    setSaving(true); setError('')
     try {
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        bc = new BroadcastChannel(BC_NAME)
-        bc.onmessage = (event) => {
-          if (event.data) {
-            applyUpdatedSettings(event.data)
-            try {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(event.data))
-            } catch {
-              // ignore
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('[useCustomerSiteSettings] BroadcastChannel error:', e)
-    }
-
-    // 3. Supabase Realtime broadcast channel for cross-device/network live sync
-    try {
-      const rtChannel = supabase.channel('site_settings_live_sync')
-      channelRef.current = rtChannel
-      rtChannel
-        .on('broadcast', { event: 'settings_update' }, ({ payload }) => {
-          if (payload) {
-            applyUpdatedSettings(payload)
-            try {
-              localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
-            } catch {
-              // ignore
-            }
-          }
-        })
-        .subscribe()
-    } catch (e) {
-      console.warn('[useCustomerSiteSettings] Supabase realtime channel error:', e)
-    }
-
-    return () => {
-      window.removeEventListener(EVENT_KEY, handleSync)
-      window.removeEventListener('storage', handleSync)
-      if (bc) {
-        bc.close()
-      }
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current)
-      }
-    }
-  }, [])
-
-  const saveSettings = useCallback((newSettings: CustomerSiteSettings) => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings))
-      setSettings(newSettings)
-      window.dispatchEvent(new CustomEvent(EVENT_KEY, { detail: newSettings }))
-
-      // Broadcast across browser tabs
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        try {
-          const bc = new BroadcastChannel(BC_NAME)
-          bc.postMessage(newSettings)
-          bc.close()
-        } catch {
-          // ignore
-        }
-      }
-
-      // Broadcast over Supabase Realtime for external customer clients
-      if (channelRef.current) {
-        channelRef.current.send({
-          type: 'broadcast',
-          event: 'settings_update',
-          payload: newSettings,
-        }).catch((err) => {
-          console.warn('[useCustomerSiteSettings] Realtime broadcast send error:', err)
-        })
-      }
-    } catch (err) {
-      console.error('[useCustomerSiteSettings] Error saving settings:', err)
-    }
-  }, [])
-
-  const resetSettings = useCallback(() => {
-    try {
-      localStorage.removeItem(STORAGE_KEY)
-      setSettings(DEFAULT_SITE_SETTINGS)
-      window.dispatchEvent(new CustomEvent(EVENT_KEY, { detail: DEFAULT_SITE_SETTINGS }))
-
-      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-        try {
-          const bc = new BroadcastChannel(BC_NAME)
-          bc.postMessage(DEFAULT_SITE_SETTINGS)
-          bc.close()
-        } catch {
-          // ignore
-        }
-      }
-
-      if (channelRef.current) {
-        channelRef.current.send({
-          type: 'broadcast',
-          event: 'settings_update',
-          payload: DEFAULT_SITE_SETTINGS,
-        }).catch(() => {})
-      }
-    } catch (err) {
-      console.error('[useCustomerSiteSettings] Error resetting settings:', err)
-    }
-  }, [])
-
-  return {
-    settings,
-    saveSettings,
-    resetSettings,
-  }
+      const { error } = await supabase.from('customer_site_settings').update({ settings: value }).eq('id', 1).select('id').single()
+      if (error) { setError('Settings could not be saved. Check your admin access and connection.'); return false }
+      apply(value); return true
+    } catch { setError('Settings could not be saved. Check your connection.'); return false }
+    finally { setSaving(false) }
+  }, [apply])
+  const resetSettings = useCallback(() => saveSettings(DEFAULT_SITE_SETTINGS), [saveSettings])
+  return { settings, saveSettings, resetSettings, error, saving }
 }

@@ -3,14 +3,14 @@ import { Palette, X, Save, RefreshCcw } from 'lucide-react'
 import { useCustomerSiteSettings } from '../../hooks/useCustomerSiteSettings'
 
 export function CustomerSettingsEditor() {
-  const { settings, saveSettings, resetSettings } = useCustomerSiteSettings()
+  const { settings, saveSettings, resetSettings, error, saving } = useCustomerSiteSettings()
   const [isOpen, setIsOpen] = useState(false)
   const [draft, setDraft] = useState(settings)
 
   if (!isOpen) {
     return (
       <button
-        onClick={() => setIsOpen(true)}
+        onClick={() => { setDraft(settings); setIsOpen(true) }}
         style={{
           position: 'fixed',
           bottom: 24,
@@ -36,15 +36,13 @@ export function CustomerSettingsEditor() {
     )
   }
 
-  const handleSave = () => {
-    saveSettings(draft)
-    setIsOpen(false)
+  const handleSave = async () => {
+    if (await saveSettings(draft)) setIsOpen(false)
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
     if (window.confirm('Reset all settings to default?')) {
-      resetSettings()
-      setIsOpen(false)
+      if (await resetSettings()) setIsOpen(false)
     }
   }
 
@@ -66,6 +64,7 @@ export function CustomerSettingsEditor() {
         overflow: 'hidden'
       }}
     >
+      {error && <p role="alert" style={{ color: '#ff9d9d', padding: 12 }}>{error}</p>}
       <div style={{ padding: '16px 20px', borderBottom: '1px solid #2a3441', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ margin: 0, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, color: '#fff' }}>
           <Palette size={16} />
@@ -164,10 +163,10 @@ export function CustomerSettingsEditor() {
       </div>
 
       <div style={{ padding: 16, borderTop: '1px solid #2a3441', display: 'flex', gap: 12 }}>
-        <button onClick={handleReset} style={{ flex: 1, padding: '8px', background: 'transparent', border: '1px solid #2a3441', color: '#8fa09c', borderRadius: 6, fontSize: 12, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+        <button disabled={saving} onClick={handleReset} style={{ flex: 1, padding: '8px', background: 'transparent', border: '1px solid #2a3441', color: '#8fa09c', borderRadius: 6, fontSize: 12, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
           <RefreshCcw size={14} /> Reset
         </button>
-        <button onClick={handleSave} style={{ flex: 2, padding: '8px', background: '#e8a838', border: 'none', color: '#000', fontWeight: 600, borderRadius: 6, fontSize: 12, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+        <button disabled={saving} onClick={handleSave} style={{ flex: 2, padding: '8px', background: '#e8a838', border: 'none', color: '#000', fontWeight: 600, borderRadius: 6, fontSize: 12, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
           <Save size={14} /> Save Live
         </button>
       </div>

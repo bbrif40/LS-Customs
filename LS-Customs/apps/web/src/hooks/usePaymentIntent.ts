@@ -9,6 +9,7 @@
  * tracking is handled by usePaymentStatus (subscribe to the payments table).
  */
 import { useCallback, useState } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { supabase } from '../supabaseClient'
 
 export type BookingType = 'vehicle' | 'service'
@@ -44,7 +45,7 @@ export function usePaymentIntent(): UsePaymentIntentResult {
     setCreating(true)
     setError(null)
 
-    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const origin = Capacitor.isNativePlatform() ? 'https://ls-customs-web.vercel.app' : window.location.origin
     const defaultSuccess = `${origin}/bookings?payment=success&booking_id=${bookingId}&type=${bookingType}`
     const defaultCancel = `${origin}/bookings?payment=cancelled&booking_id=${bookingId}&type=${bookingType}`
 
