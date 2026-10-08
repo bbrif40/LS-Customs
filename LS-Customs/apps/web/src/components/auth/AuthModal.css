@@ -1,0 +1,63 @@
+.auth-backdrop { overflow-y: auto; z-index: 9999; }
+.auth-dialog.auth-account-dialog { width: min(100%, 440px); padding: 0; text-align: left; border-radius: 24px; overflow-y: auto; max-height: calc(100dvh - 40px); background: #fff; }
+.auth-dialog.auth-account-dialog--signup { width: min(100%, 560px); }
+.auth-account-dialog .auth-close { z-index: 1; top: 12px; right: 12px; border-radius: 50%; color: #657775; }
+.auth-account-dialog .auth-close:hover { background: #eaf0ed; }
+.auth-account-header { padding: 30px 32px 22px; }
+.auth-account-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #526b63; }
+.auth-account-brand img { width: 40px; height: 30px; object-fit: contain; }
+.auth-account-dialog h2 { margin: 0 0 12px; max-width: 390px; font-size: 32px; line-height: 1.15; letter-spacing: -1.1px; font-weight: 650; color: #18372e; }
+.auth-account-dialog .auth-description { margin: 0; font-size: 14px; line-height: 1.65; color: #697b76; }
+.auth-account-dialog--signup .auth-account-header { background: linear-gradient(125deg, #193f34, #2e6651); color: #fff; }
+.auth-account-dialog--signup h2 { color: #fff; font-size: 36px; }
+.auth-account-dialog--signup .auth-account-brand { color: #d1e6dc; margin-bottom: 20px; }
+.auth-account-dialog--signup .auth-description { color: #d8e6df; }
+.auth-account-dialog--signup .auth-close { color: #e0eee7; }
+.auth-account-dialog--signup .auth-close:hover { background: #ffffff18; }
+.auth-membership-label { display: inline-flex; align-items: center; gap: 7px; margin-bottom: 13px; color: #ead19c; font-size: 10px; letter-spacing: 1.5px; font-weight: 700; }
+.auth-signup-progress { display: flex; list-style: none; padding: 20px 0 0; margin: 20px 0 0; border-top: 1px solid #ffffff26; gap: 24px; }
+.auth-signup-progress li { display: flex; align-items: center; gap: 8px; color: #b0cabc; font-size: 12px; }
+.auth-signup-progress li > span { width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid #ffffff40; border-radius: 50%; font-size: 11px; }
+.auth-signup-progress .current, .auth-signup-progress .complete { color: #fff; }
+.auth-signup-progress .current > span { background: #ead19c; color: #214736; border-color: #ead19c; font-weight: 700; }
+.auth-signup-progress .complete > span { background: #ffffff20; }
+.auth-account-body { padding: 0 32px 28px; }
+.auth-account-dialog--signup .auth-account-body { padding-top: 22px; }
+.auth-membership-benefits { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 22px; }
+.auth-membership-benefits span { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #456d57; background: #edf5f0; padding: 8px 10px; border-radius: 8px; }
+.auth-account-form { display: grid; gap: 16px; }
+.auth-account-form label { display: grid; gap: 7px; font-size: 13px; font-weight: 600; color: #284537; }
+.auth-account-form input { width: 100%; min-height: 48px; margin: 0; padding: 12px 14px; border: 1px solid #d5e0d9; border-radius: 11px; background: #fcfdfc; color: #18372e; font-size: 14px; font-weight: 400; }
+.auth-account-form input::placeholder { color: #87968e; }
+.auth-field-hint { margin: -6px 0 1px; font-size: 12px; line-height: 1.55; color: #77877f; }
+.auth-account-form .auth-code-input { font-size: 23px; letter-spacing: 8px; text-align: center; font-variant-numeric: tabular-nums; }
+.auth-account-submit { min-height: 50px; width: 100%; padding: 12px 18px; border-radius: 11px; background: #2c644e; color: #fff; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; font-weight: 650; }
+.auth-account-submit:hover:not(:disabled) { background: #214d3b; }
+.auth-account-submit:disabled { background: #83958b; cursor: not-allowed; }
+.auth-account-divider { display: flex; align-items: center; gap: 14px; color: #8a988f; font-size: 12px; margin: 20px 0; }
+.auth-account-divider::before, .auth-account-divider::after { content: ''; height: 1px; background: #e0e7e2; flex: 1; }
+.auth-account-google { width: 100%; min-height: 48px; padding: 12px; border: 1px solid #dce5df; border-radius: 11px; color: #304d3f; background: #fff; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 13px; font-weight: 600; }
+.auth-account-google > span { color: #4285f4; font-size: 18px; font-weight: 700; }
+.auth-account-switch { text-align: center; margin: 22px 0 15px; color: #77867e; font-size: 13px; }
+.auth-account-switch button { color: #2c644e; background: transparent; padding: 7px 3px; font-weight: 700; }
+.auth-account-security { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0; color: #7b8d80; font-size: 11px; }
+.auth-account-legal { display: block; margin-top: 15px; text-align: center; color: #8c9891; font-size: 10px; line-height: 1.7; }
+.auth-account-legal a { color: #426958; text-decoration: underline; text-underline-offset: 2px; }
+.auth-account-error { margin: 0 0 17px; padding: 12px 14px; border: 1px solid #f0d2c8; border-radius: 10px; background: #fff5f0; color: #a3452c; font-size: 13px; line-height: 1.55; }
+.auth-code-actions { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 15px; }
+.auth-code-actions button { display: inline-flex; align-items: center; gap: 5px; min-height: 44px; padding: 5px 0; background: transparent; color: #37654c; font-size: 12px; }
+.auth-code-actions button:disabled { color: #8b9890; }
+.auth-account-dialog button:focus-visible, .auth-account-dialog a:focus-visible { outline: 3px solid #d49c3e; outline-offset: 3px; }
+@media (max-width: 480px) {
+  .auth-backdrop { padding: 12px; }
+  .auth-dialog.auth-account-dialog { max-height: calc(100dvh - 24px); border-radius: 20px; }
+  .auth-account-header { padding: 24px 22px 20px; }
+  .auth-account-body { padding: 0 22px 22px; }
+  .auth-account-dialog--signup h2 { font-size: 30px; }
+  .auth-account-dialog .auth-description { font-size: 13px; }
+  .auth-account-brand { margin-bottom: 20px; }
+  .auth-membership-benefits { gap: 6px; margin-bottom: 18px; }
+  .auth-membership-benefits span { font-size: 10px; padding: 7px; }
+  .auth-signup-progress { gap: 18px; margin-top: 16px; padding-top: 16px; }
+  .auth-account-form input { font-size: 16px; }
+}

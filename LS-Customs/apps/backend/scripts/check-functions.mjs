@@ -10,7 +10,7 @@ const endpoints = readdirSync('supabase/functions', { withFileTypes: true })
   .filter(entry => entry.isDirectory() && !entry.name.startsWith('_'))
   .map(entry => `supabase/functions/${entry.name}/index.ts`).filter(existsSync)
 const args = mode === 'test'
-  ? ['test', '--allow-env', '--allow-read=supabase/functions', 'supabase/functions/_shared/qa_test.ts', 'supabase/functions/_shared/edge_contract_test.ts']
+  ? ['test', '--allow-env', '--allow-read=supabase/functions', 'supabase/functions/_shared/qa_test.ts', 'supabase/functions/_shared/edge_contract_test.ts', 'supabase/functions/_shared/customer_phone_otp_test.ts']
   : mode === 'lint'
     ? ['lint', '--rules-exclude=no-explicit-any,no-unused-vars,require-await,no-empty', ...endpoints]
     : ['check', ...endpoints]

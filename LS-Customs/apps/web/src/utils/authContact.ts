@@ -1,6 +1,9 @@
 export function normalizeAuthContact(value: string): string {
   const contact = value.trim()
-  if (contact.includes('@')) return contact
+  if (contact.includes('@')) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact)) throw new Error('Enter a valid email address.')
+    return contact.toLowerCase()
+  }
   const digits = contact.replace(/[\s()-]/g, '')
   if (/^09\d{9}$/.test(digits)) return `+63${digits.slice(1)}`
   if (/^9\d{9}$/.test(digits)) return `+63${digits}`

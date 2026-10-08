@@ -78,6 +78,10 @@ export function useAuth(): UseAuthReturn {
       if (event === 'TOKEN_REFRESHED') {
         return
       }
+      // Resolve this session's original profile before rendering account setup.
+      // A login must not render with the guest/previous user's phone state.
+      setAuthLoading(true)
+      setProfileChecked(false)
       setSignedIn(Boolean(session))
       setUserId(session?.user?.id)
       // Don't await inside the auth callback (supabase-js can deadlock);
@@ -120,7 +124,7 @@ export function useAuth(): UseAuthReturn {
         console.error('[useAuth] failed to load profile:', error)
       } else {
         profile = data
-        profileOk = true
+        profileOk = Boolean(data)
       }
     } catch (err) {
       console.error('[useAuth] profile request crashed:', err)
@@ -129,20 +133,16 @@ export function useAuth(): UseAuthReturn {
     // A newer resolve started while we were waiting — drop this result.
     if (seq !== resolveSeq.current) return
 
-    const metadata = session.user.user_metadata as { full_name?: string; name?: string; phone?: string }
-    const name =
-      profile?.full_name ||
-      metadata.full_name ||
-      metadata.name ||
-      session.user.email?.split('@')[0] ||
-      'LS Customs user'
+    const metadata = session.user.user_metadata ?? {}
+    const name = [profile?.full_name, metadata.full_name, metadata.name, session.user.email?.split('@')[0]]
+      .find((value): value is string => typeof value === 'string' && value.trim().length > 0) || 'LS Customs user'
 
     setDisplayName(name)
     setDisplayEmail(session.user.email || '')
     setAvatarUrl(profile?.avatar_url ?? null)
     setRole(profile?.role ?? null)
     // Fall back to the phone on the auth user (phone OTP sign-ups) or metadata.
-    setPhone(profile?.phone || session.user.phone || metadata.phone || null)
+    setPhone(profile?.phone || session.user.phone || (typeof metadata.phone === 'string' ? metadata.phone : null) || null)
     setProfileChecked(profileOk)
     setInitials(
       name

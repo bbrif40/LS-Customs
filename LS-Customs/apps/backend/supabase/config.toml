@@ -451,3 +451,7 @@ verify_jwt = false
 # The dispatch endpoint authenticates a private Vault token itself.
 [functions.dispatch-notification]
 verify_jwt = false
+
+# Public OTP challenge endpoint; verified possession of the code authorizes login.
+[functions.customer-phone-otp]
+verify_jwt = false
