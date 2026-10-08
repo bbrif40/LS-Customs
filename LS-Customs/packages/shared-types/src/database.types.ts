@@ -46,8 +46,8 @@ export interface Database {
           label: string | null
           line1: string
           city: string
-          lat: number
-          lng: number
+          lat: number | null
+          lng: number | null
           is_default: boolean
           created_at: string
         }
@@ -57,8 +57,8 @@ export interface Database {
           label?: string | null
           line1: string
           city: string
-          lat: number
-          lng: number
+          lat: number | null
+          lng: number | null
           is_default?: boolean
           created_at?: string
         }
@@ -68,8 +68,8 @@ export interface Database {
           label?: string | null
           line1?: string
           city?: string
-          lat?: number
-          lng?: number
+          lat?: number | null
+          lng?: number | null
           is_default?: boolean
           created_at?: string
         }

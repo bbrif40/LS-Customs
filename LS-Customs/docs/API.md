@@ -613,3 +613,7 @@ Apply the new migrations before deploying these contracts. Booking creation uses
 `payment-webhook` requires a valid provider signature and reconciles state transactionally. Missing payment records or reconciliation failures are retryable. A late payment for a cancelled booking requires staff refund review and does not reopen the booking.
 
 `dispatch-notification` authenticates a private NOTIFICATION_DISPATCH_TOKEN or verified service/admin credentials. A record object is not authentication. The database trigger obtains its endpoint and token from Vault; configure both before delivery testing.
+
+## Approval confirmation (2026-10-08)
+
+`POST /functions/v1/send-booking-confirmation`: verified customer owning the booking or admin; JSON `{ "bookingId": "UUID", "bookingType": "vehicle" }` (or `service`). Requires approved status, derives recipient/total from backend, reserves a one-minute cooldown, returns standard envelope with `{ accepted: true, providerId, bookingId, documentKind: "confirmation" }`. This is not a paid receipt. Delivery failures return 502; cooldown 429. `send-receipt` still requires a succeeded payment. Notification dispatch retries must reference an existing server-authored notification; ordinary customers may retry only their own row and cannot override recipient/content. `dispatched`/channels indicate provider acceptance, not handset or inbox arrival; `simulated` is false.

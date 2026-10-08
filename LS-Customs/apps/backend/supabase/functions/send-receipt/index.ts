@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
     if (reserveError) throw reserveError;
     if (!reserved) return reply(null, { code: 'RATE_LIMITED', message: 'A receipt was recently requested. Please wait one minute before trying again.' }, 429);
     const result = await sendResendReceipt({
-      customerName: profile?.full_name ?? 'Customer', customerEmail: recipient.user.email,
+      documentKind: 'receipt', customerName: profile?.full_name ?? 'Customer', customerEmail: recipient.user.email,
       bookingId: payment.booking_id, bookingType: rental ? 'rental' : 'service',
       amount: Number(payment.amount), status: 'Payment received',
       scheduledDate: rental ? `${booking.start_date} – ${booking.end_date}` : booking.scheduled_at,

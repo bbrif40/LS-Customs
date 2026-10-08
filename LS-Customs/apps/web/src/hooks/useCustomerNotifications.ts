@@ -1,3 +1,4 @@
+let realtimeInstance = 0
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import type { CustomerNotification } from '../types'
@@ -56,7 +57,7 @@ export function useCustomerNotifications(userId: string | undefined, channelKey:
   useEffect(() => {
     if (!userId) return
     const channel = supabase
-      .channel(`customer-notifications:${channelKey}:${userId}`)
+      .channel(`customer-notifications:${channelKey}:${userId}:${++realtimeInstance}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}`,
       }, (payload) => {

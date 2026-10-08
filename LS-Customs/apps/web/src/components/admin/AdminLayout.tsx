@@ -17,6 +17,7 @@ import { AdminRevenue } from './AdminRevenue'
 import { AdminTickets } from './AdminTickets'
 
 import { AdminAuditLogs } from './AdminAuditLogs'
+import { AdminAccountSecurity } from './AdminAccountSecurity'
 import { useOpenTicketCount, useAdminBookingsCount } from '../../hooks/useAdminData'
 import type { AdminView } from './AdminSidebar'
 
@@ -62,7 +63,6 @@ const ALL_VIEWS: AdminView[] = [
   'bookings',
   'tickets',
   'revenue',
-  'settings',
   'audit-logs',
 ]
 
@@ -94,7 +94,7 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
       case 'audit-logs':
         return <AdminAuditLogs />
       default:
-        return <AdminOverview onViewChange={setCurrentView} />
+        return null
     }
   }
 
@@ -109,6 +109,7 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
         activeBookingsCount={activeBookingsCount}
       />
       <div className="admin-views">
+        <AdminAccountSecurity />
         {ALL_VIEWS.map((view) => (
           <div
             key={view}

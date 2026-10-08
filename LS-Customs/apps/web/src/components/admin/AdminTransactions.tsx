@@ -37,7 +37,7 @@ const statusLabels: Record<string, string> = {
 const PAGE_SIZE = 10
 
 export function AdminTransactions() {
-  const { payments, loading, error, updatePaymentStatus, refetch } = useAdminPayments()
+  const { payments, loading, error, warning, updatePaymentStatus, refetch } = useAdminPayments()
   const [page, setPage] = useState(1)
 
   const totalPages = Math.ceil(payments.length / PAGE_SIZE)
@@ -93,6 +93,7 @@ export function AdminTransactions() {
 
   return (
     <div className="admin-transactions">
+      {warning && <p role="status">{warning}</p>}
       {/* ── Toolbar ── */}
       <div className="admin-filter-row" style={{ marginBottom: 16 }}>
         <button

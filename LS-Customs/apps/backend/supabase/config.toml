@@ -455,3 +455,7 @@ verify_jwt = false
 # Public OTP challenge endpoint; verified possession of the code authorizes login.
 [functions.customer-phone-otp]
 verify_jwt = false
+
+# Verifies caller JWT and booking ownership internally (same as paid receipts).
+[functions.send-booking-confirmation]
+verify_jwt = false

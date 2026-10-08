@@ -5,9 +5,7 @@
  * row (line1, city) so the Profile screen can be a real two-way binding to
  * the database instead of a static form.
  *
- * Address is stored in the `addresses` table. Lat/lng are required columns
- * but we don't have a geocoder here, so they default to 0. Replace with a
- * real geocoding step when that's available.
+ * Text-only addresses have null coordinates; dispatch requires a confirmed map pin.
  */
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
@@ -120,6 +118,8 @@ export function useProfile(userId: string | undefined): UseProfileResult {
             .update({
               line1: input.line1,
               city: input.city,
+              lat: null,
+              lng: null,
               label: input.label ?? defaultAddress.label ?? 'Home',
             })
             .eq('id', defaultAddress.id)
@@ -141,8 +141,8 @@ export function useProfile(userId: string | undefined): UseProfileResult {
               customer_id: userId,
               line1: input.line1,
               city: input.city,
-              lat: 0,
-              lng: 0,
+              lat: null,
+              lng: null,
               is_default: true,
               label: input.label ?? 'Home',
             })

@@ -1,12 +1,13 @@
 /**
- * Shared Resend Email Client & Receipt Template Builder
+ * Shared Gmail Email Client & Receipt Template Builder
  *
- * Sends transactional receipt emails to customers via Resend (https://resend.com).
+ * Sends transactional email via Gmail SMTP; historical export names are retained.
  * Includes luxury brand styling, warm booking acknowledgment, receipt summary card,
  * and direct links to the LS Customs Help Center (https://ls-customs-web.vercel.app/help).
  */
 
 export interface ReceiptEmailData {
+  documentKind?: 'receipt' | 'confirmation';
   customerName: string;
   customerEmail: string;
   bookingId: string;
@@ -52,6 +53,9 @@ export async function sendResendEmail(
 
   const transporter = nodemailer.createTransport({
     service: 'gmail',
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 15000,
     auth: {
       user: user,
       pass: pass,
@@ -116,7 +120,7 @@ export function buildReceiptEmailHtml(data: ReceiptEmailData): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LS Customs Booking Confirmation & Receipt</title>
+  <title>LS Customs ${data.documentKind === 'confirmation' ? 'Booking Confirmation' : 'Payment Receipt'}</title>
   <style>
     body {
       margin: 0;
@@ -322,7 +326,7 @@ export function buildReceiptEmailHtml(data: ReceiptEmailData): string {
       <!-- Header -->
       <div class="header">
         <p class="brand-eyebrow">LS Customs Concierge</p>
-        <h1 class="brand-title">Booking Confirmation & Receipt</h1>
+        <h1 class="brand-title">${data.documentKind === 'confirmation' ? 'Booking Confirmation' : 'Payment Receipt'}</h1>
       </div>
 
       <!-- Main Body -->
@@ -355,7 +359,7 @@ export function buildReceiptEmailHtml(data: ReceiptEmailData): string {
             <span class="detail-value">${location}</span>
           </div>
           <div class="detail-row" style="margin-top: 8px; padding-top: 10px; border-top: 1px dashed rgba(255, 255, 255, 0.15);">
-            <span class="detail-label detail-total">Total Amount</span>
+            <span class="detail-label detail-total">${data.documentKind === 'confirmation' ? 'Booking total (not proof of payment)' : 'Amount paid'}</span>
             <span class="detail-value detail-total">${formattedAmount}</span>
           </div>
         </div>
@@ -405,9 +409,10 @@ export async function sendResendReceipt(
   data: ReceiptEmailData,
   apiKeyOverride?: string,
 ): Promise<{ success: boolean; id?: string; error?: string }> {
-  const subject = `LS Customs Receipt — ${data.bookingType === "rental" ? "Rental" : "Service"} #${data.bookingId}`;
+  const label = data.documentKind === 'confirmation' ? 'Booking Confirmation' : 'Payment Receipt';
+  const subject = `LS Customs ${label} — ${data.bookingType === "rental" ? "Rental" : "Service"} #${data.bookingId}`;
   const html = buildReceiptEmailHtml(data);
-  const text = `LS Customs Booking Confirmation & Receipt\n\nHello ${data.customerName},\n\nThank you for choosing LS Customs! Your ${data.bookingType} (ID: #${data.bookingId}) has been acknowledged.\n\nItem: ${data.itemTitle || "Service"}\nAmount: ${data.amount || "Paid"}\nSchedule: ${data.scheduledDate || "As Scheduled"}\n\nHave questions or need guidance? Visit our Help Center at ${HELP_CENTER_URL}`;
+  const text = `LS Customs ${label}\n\nHello ${data.customerName},\n\nBooking: #${data.bookingId}\nItem: ${data.itemTitle || 'Service'}\n${data.documentKind === 'confirmation' ? 'Booking total (not proof of payment)' : 'Amount paid'}: ${data.amount ?? 'Unavailable'}\nSchedule: ${data.scheduledDate || 'As Scheduled'}\nHelp: ${HELP_CENTER_URL}`;
 
   return await sendResendEmail(
     {

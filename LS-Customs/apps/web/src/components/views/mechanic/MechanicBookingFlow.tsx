@@ -211,8 +211,8 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     try {
       const { data, error: insertError } = await supabase.rpc('create_service_booking', {
         p_request_id: requestId, p_service_id: service.id, p_scheduled_at: scheduledAt,
-        p_address_id: hasPin ? null : effectiveAddressId,
-        p_lat: hasPin ? address.pin_lat : null, p_lng: hasPin ? address.pin_lng : null,
+        p_address_id: address.source === 'default' ? effectiveAddressId : null,
+        p_lat: address.source !== 'default' && hasPin ? address.pin_lat : null, p_lng: address.source !== 'default' && hasPin ? address.pin_lng : null,
         p_notes: 'Address: ' + address.line1 + ', ' + address.city,
         p_promo_code: activePromo?.code ?? null,
       })

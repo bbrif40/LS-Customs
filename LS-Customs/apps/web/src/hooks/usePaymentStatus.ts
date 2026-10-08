@@ -1,3 +1,4 @@
+let realtimeInstance = 0
 /**
  * usePaymentStatus — subscribe to a single payment's status in real time.
  *
@@ -82,7 +83,7 @@ export function usePaymentStatus(paymentId: string | null | undefined): UsePayme
     if (!paymentId) return
 
     const channel = supabase
-      .channel(`payment-status:${paymentId}`)
+      .channel(`payment-status:${paymentId}:${++realtimeInstance}`)
       .on('postgres_changes', {
         event: 'UPDATE',
         schema: 'public',

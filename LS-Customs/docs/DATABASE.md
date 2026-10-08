@@ -450,3 +450,7 @@ Forward migrations: `20261006120000_qa_booking_security.sql` and `20261006120100
 - Published seeded-admin passwords are conditionally disabled and admin roles removed. Rotated passwords are preserved; account recovery and restoring privilege require owner verification.
 
 See `QA_IMPLEMENTATION_2026-10-06.md` for verification scope and required deployment order. The PostgreSQL regression suite is `apps/backend/scripts/booking-security.test.mjs`.
+
+## 2026-10-08 delivery and coordinate integrity
+
+`20261008141000_notification_delivery.sql` adds service-only booking confirmation cooldowns, serialized notification dispatch claims, tested admin notification read access, and a guard limiting customer updates to `is_read`. `20261008142000_address_coordinate_integrity.sql` permits paired null address coordinates, clears historical zero-coordinate placeholders and constrains coordinate pairs/ranges. Existing service RPCs reject missing GPS. `20261008140000_disable_seeded_admin_passwords.sql` disables only published seed-password matches and their admin role/refresh sessions; privately rotated passwords are preserved.

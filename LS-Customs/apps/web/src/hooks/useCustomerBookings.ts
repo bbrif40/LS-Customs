@@ -1,3 +1,4 @@
+let realtimeInstance = 0
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -175,7 +176,7 @@ export function useCustomerActiveBookingsCount(userId: string | undefined): numb
 
     // Real-time listener on changes to customer bookings
     const channel = supabase
-      .channel(`customer-active-bookings-count-${userId}`)
+      .channel(`customer-active-bookings-count-${userId}:${++realtimeInstance}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'vehicle_bookings', filter: `customer_id=eq.${userId}` },

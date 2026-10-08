@@ -1,3 +1,4 @@
+let realtimeInstance = 0
 /**
  * useAdminPayments — fetches all payments for the admin transactions view.
  *
@@ -11,6 +12,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { requireFunctionData } from '../utils/functionResult'
 import type { Payment } from '@ls-customs/shared-types'
 
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'refunded'
@@ -24,6 +26,7 @@ interface UseAdminPaymentsResult {
   payments: AdminPayment[]
   loading: boolean
   error: string | null
+  warning: string | null
   updatePaymentStatus: (paymentId: string, status: PaymentStatus) => Promise<boolean>
   refund: (paymentId: string) => Promise<void>
   refetch: () => Promise<void>
@@ -33,6 +36,7 @@ export function useAdminPayments(): UseAdminPaymentsResult {
   const [payments, setPayments] = useState<AdminPayment[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [warning, setWarning] = useState<string | null>(null)
 
   const fetchPayments = useCallback(async () => {
     setLoading(true)
@@ -114,6 +118,17 @@ export function useAdminPayments(): UseAdminPaymentsResult {
     const original = payments.find((p) => p.id === paymentId)
     if (!original) return false
 
+    if (newStatus === 'refunded') {
+      try {
+        requireFunctionData(await supabase.functions.invoke('refund-payment', { body: { payment_id: paymentId } }), 'Refund provider request failed.')
+        await fetchPayments()
+        return true
+      } catch (refundError) {
+        setError(refundError instanceof Error ? refundError.message : 'Refund failed.')
+        return false
+      }
+    }
+
     // Optimistically update
     setPayments((current) =>
       current.map((p) => (p.id === paymentId ? { ...p, status: newStatus } : p)),
@@ -129,30 +144,11 @@ export function useAdminPayments(): UseAdminPaymentsResult {
         throw updateError
       }
 
-      // If marked as succeeded by the admin, trigger customer email receipt via Resend
       if (newStatus === 'succeeded') {
         try {
-          await supabase.functions.invoke('send-receipt', {
-            body: {
-              paymentId,
-              bookingId: original.booking_id,
-              bookingType: original.booking_type === 'vehicle' ? 'rental' : 'service',
-              amount: original.amount,
-            },
-          })
-        } catch (fnErr) {
-          console.warn('[useAdminPayments] send-receipt notice:', fnErr)
-        }
-      }
-
-      // If refund, try invoking edge function in the background
-      if (newStatus === 'refunded') {
-        try {
-          await supabase.functions.invoke('refund-payment', {
-            body: { payment_id: paymentId },
-          })
-        } catch (fnErr) {
-          console.warn('[useAdminPayments] edge refund notice:', fnErr)
+          requireFunctionData(await supabase.functions.invoke('send-receipt', { body: { paymentId } }), 'Payment saved, but receipt delivery failed.')
+        } catch (receiptError) {
+          setWarning(receiptError instanceof Error ? receiptError.message : 'Payment saved, but receipt delivery failed.')
         }
       }
 
@@ -167,7 +163,7 @@ export function useAdminPayments(): UseAdminPaymentsResult {
       )
       return false
     }
-  }, [payments])
+  }, [payments, fetchPayments])
 
   const refund = useCallback(async (paymentId: string): Promise<void> => {
     await updatePaymentStatus(paymentId, 'refunded')
@@ -176,7 +172,7 @@ export function useAdminPayments(): UseAdminPaymentsResult {
   // Subscribe to payment status changes in real time
   useEffect(() => {
     const channel = supabase
-      .channel('admin-payments-changes')
+      .channel(`admin-payments-changes:${++realtimeInstance}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
@@ -207,5 +203,5 @@ export function useAdminPayments(): UseAdminPaymentsResult {
 
   useEffect(() => { void fetchPayments() }, [fetchPayments])
 
-  return { payments, loading, error, updatePaymentStatus, refund, refetch: fetchPayments }
+  return { payments, loading, error, warning, updatePaymentStatus, refund, refetch: fetchPayments }
 }

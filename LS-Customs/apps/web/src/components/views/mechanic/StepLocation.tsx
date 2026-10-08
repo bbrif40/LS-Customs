@@ -124,14 +124,20 @@ export function StepLocation({
   function pickDefault() {
     setMode('default')
     if (defaultAddress) {
-      const lat = defaultAddress.lat && defaultAddress.lat !== 0 ? defaultAddress.lat : 14.5995
-      const lng = defaultAddress.lng && defaultAddress.lng !== 0 ? defaultAddress.lng : 120.9842
+      const lat = defaultAddress.lat === 0 && defaultAddress.lng === 0 ? null : defaultAddress.lat ?? null
+      const lng = defaultAddress.lat === 0 && defaultAddress.lng === 0 ? null : defaultAddress.lng ?? null
+      if (lat == null || lng == null) {
+        setMode('custom')
+        setLine1(defaultAddress.line1)
+        setCity(defaultAddress.city)
+        setPin(null)
+      }
       onChange({
         id: defaultAddress.id,
         line1: defaultAddress.line1,
         city: defaultAddress.city,
         label: defaultAddress.label ?? undefined,
-        source: 'default',
+        source: lat != null && lng != null ? 'default' : 'custom',
         pin_lat: lat,
         pin_lng: lng,
       })
@@ -197,7 +203,7 @@ export function StepLocation({
     }
   }
 
-  const canProceed = value !== null && (value.line1.trim() !== '' && value.city.trim() !== '')
+  const canProceed = value !== null && value.pin_lat != null && value.pin_lng != null && value.line1.trim() !== '' && value.city.trim() !== ''
   const basePriceNum = service?.priceCents != null ? service.priceCents / 100 : 0
   const estimatedTotalNum = basePriceNum + distanceFeePesos
 
@@ -333,7 +339,7 @@ export function StepLocation({
                 </div>
                 <div className="driver-distance-stat">
                   <span>Estimated Distance</span>
-                  <strong>{distanceKm > 0 ? `${distanceKm.toFixed(1)} km` : '3.5 km'}</strong>
+                  <strong>{`${distanceKm.toFixed(1)} km`}</strong>
                 </div>
               </div>
 

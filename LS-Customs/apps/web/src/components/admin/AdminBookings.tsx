@@ -12,6 +12,7 @@ import {
   useAdminServiceBookings,
 } from '../../hooks/useAdminData'
 import { supabase } from '../../supabaseClient'
+import { requireFunctionData } from '../../utils/functionResult'
 import { MapView, type MapPin } from '../common/map'
 import { AdminBookingDetail } from './AdminBookingDetail'
 import { AdminTransactions } from './AdminTransactions'
@@ -93,8 +94,28 @@ export function AdminBookings() {
   const [availableMechanics, setAvailableMechanics] = useState<AvailableMechanic[]>([])
   const [assignOpenFor, setAssignOpenFor] = useState<string | null>(null)
   const [assigning, setAssigning] = useState(false)
+  const [editingBooking, setEditingBooking] = useState<VehicleBooking | ServiceBooking | null>(null)
+  const [editingText, setEditingText] = useState('')
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [paymentSummary, setPaymentSummary] = useState<number | null>(null)
+  const [paymentSummaryError, setPaymentSummaryError] = useState(false)
+
   const [completionBooking, setCompletionBooking] = useState<VehicleBooking | ServiceBooking | null>(null)
   const [viewingBooking, setViewingBooking] = useState<VehicleBookingWithDetails | ServiceBookingWithDetails | null>(null)
+  useEffect(() => {
+    let active = true
+    setPaymentSummary(null)
+    setPaymentSummaryError(false)
+    if (!viewingBooking) return
+    const type = 'vehicle_id' in viewingBooking ? 'vehicle' : 'service'
+    void supabase.from('payments').select('amount, status').eq('booking_id', viewingBooking.id).eq('booking_type', type)
+      .then(({ data, error }) => {
+        if (!active) return
+        if (error) setPaymentSummaryError(true)
+        else setPaymentSummary((data ?? []).filter(row => row.status === 'succeeded').reduce((sum, row) => sum + Number(row.amount), 0))
+      })
+    return () => { active = false }
+  }, [viewingBooking])
   const [violationPaymentRequired, setViolationPaymentRequired] = useState(false)
   const [violationAmount, setViolationAmount] = useState('')
   const [violationNotes, setViolationNotes] = useState('')
@@ -227,17 +248,18 @@ export function AdminBookings() {
       const isVehicle = 'vehicle_id' in booking || activeTab === 'vehicles'
       if (isVehicle) {
         await updateVehicleBookingStatus(booking.id, nextStatus)
-        if (nextStatus === 'confirmed') {
-          supabase.functions.invoke('send-receipt', {
-            body: {
-              bookingId: booking.id,
-              bookingType: 'rental',
-              amount: booking.total_price,
-            }
-          }).catch(err => console.error('[admin] failed to send email receipt on confirmation', err))
-        }
       } else {
         await updateServiceBookingStatus(booking.id, nextStatus)
+      }
+      if (nextStatus === 'confirmed') {
+        try {
+          requireFunctionData(await supabase.functions.invoke('send-booking-confirmation', {
+            body: { bookingId: booking.id, bookingType: isVehicle ? 'vehicle' : 'service' },
+          }), 'Booking approved, but confirmation email could not be sent. Retry from booking details.')
+          setAssignmentNotice({ type: 'success', text: 'Booking approved. Confirmation email accepted by the email provider.' })
+        } catch (emailError) {
+          setAssignmentNotice({ type: 'warning', text: getAdminErrorMessage(emailError, 'Booking approved; confirmation email failed.') })
+        }
       }
       return true
     } catch (err) {
@@ -265,52 +287,8 @@ export function AdminBookings() {
     if (!completionBooking) return
     setCompleting(true)
     try {
-      const isVehicle = 'vehicle_id' in completionBooking || activeTab === 'vehicles'
-      const bookingType = isVehicle ? 'vehicle' : 'service'
       const success = await handleStatusChange(completionBooking, 'completed')
-      if (success) {
-        try {
-          const { data: existingPayment } = await supabase
-            .from('payments')
-            .select('id, status')
-            .eq('booking_type', bookingType)
-            .eq('booking_id', completionBooking.id)
-            .maybeSingle()
-
-          if (existingPayment) {
-            if (existingPayment.status !== 'succeeded') {
-              await supabase
-                .from('payments')
-                .update({ status: 'succeeded' })
-                .eq('id', existingPayment.id)
-            }
-          } else {
-            await supabase.from('payments').insert({
-              booking_type: bookingType,
-              booking_id: completionBooking.id,
-              customer_id: completionBooking.customer_id,
-              amount: completionBooking.total_price,
-              currency: 'PHP',
-              status: 'succeeded',
-              provider: 'paymongo',
-            })
-          }
-
-          if (isVehicle) {
-            supabase.functions.invoke('send-receipt', {
-              body: {
-                bookingId: completionBooking.id,
-                bookingType: 'rental',
-                amount: completionBooking.total_price,
-              }
-            }).catch(err => console.error('[admin] failed to send email receipt on completion', err))
-          }
-
-        } catch (paymentSyncErr) {
-          console.warn('[admin] payment status update warning:', paymentSyncErr)
-        }
-        closeCompletionModal()
-      }
+      if (success) closeCompletionModal()
     } catch (err) {
       console.error('[admin] failed to complete booking', err)
       alert(getAdminErrorMessage(err, 'Failed to complete booking'))
@@ -366,7 +344,7 @@ export function AdminBookings() {
         .eq('id', bookingId)
         .single()
       if (probeErr) throw probeErr
-      if (probe.status !== 'pending') {
+      if (!['pending', 'confirmed'].includes(probe.status)) {
         throw new Error(`Booking is already ${probe.status}; reload to see the latest.`)
       }
 
@@ -422,73 +400,28 @@ export function AdminBookings() {
       const contactDetail = mechanicPhone ? ` (Contact: ${mechanicPhone})` : ''
       const smsMessage = `Hi ${customerName}! Your LS Customs mobile mechanic service (Booking #${bookingRef}) has been assigned to ${mechanicName}${contactDetail}. They will arrive at your scheduled time.`
 
-      // 6. Insert in-app & SMS notification row into public.notifications
-      let notifId: string | undefined
-      if (customerId) {
-        const { data: insertedNotif } = await supabase
-          .from('notifications')
-          .insert({
-            user_id: customerId,
-            type: 'booking_status_changed',
-            title: 'Mechanic Assigned',
-            body: smsMessage,
-            channels: ['sms', 'in_app'],
-            metadata: {
-              booking_id: bookingId,
-              booking_type: 'service',
-              status: 'assigned',
-              customer_name: customerName,
-              customer_phone: customerPhone,
-              mechanic_id: mechanicId,
-              mechanic_name: mechanicName,
-              mechanic_phone: mechanicPhone,
-              dispatch_sms: true,
-            },
-            is_read: false,
-          })
-          .select('id')
-          .maybeSingle()
-
-        if (insertedNotif?.id) {
-          notifId = insertedNotif.id
+      const { data: notification, error: notificationError } = await supabase.from('notifications')
+        .select('id').eq('user_id', customerId).contains('metadata', { booking_id: bookingId, new_status: 'assigned' })
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      let smsStatusMsg = ' Assignment saved. SMS delivery is not yet verified.'
+      if (!notificationError && notification) {
+        try {
+          const dispatch = requireFunctionData<{ channels: string[]; dispatched: boolean; simulated?: boolean; reason?: string }>(
+            await supabase.functions.invoke('dispatch-notification', { body: { notification_id: notification.id } }),
+            'SMS provider request failed.',
+          )
+          if (dispatch.dispatched && !dispatch.simulated && dispatch.channels.some(channel => channel.startsWith('sms_')))
+            smsStatusMsg = ' SMS accepted by the provider; recipient delivery is not yet verified.'
+          else if (dispatch.reason === 'in_progress') smsStatusMsg = ' Notification dispatch is in progress.'
+          else smsStatusMsg = ' Assignment saved, but SMS was not accepted by a provider.'
+        } catch (dispatchError) {
+          smsStatusMsg = ' ' + getAdminErrorMessage(dispatchError, 'Assignment saved, but SMS dispatch failed.')
         }
-      }
-
-      // 7. Directly invoke dispatch-notification Edge Function
-      let smsStatusMsg = ''
-      try {
-        const { data: dispatchResult, error: dispatchErr } = await supabase.functions.invoke('dispatch-notification', {
-          body: {
-            notification_id: notifId,
-            phone: customerPhone,
-            message: smsMessage,
-            user_id: customerId,
-            title: 'Mechanic Assigned',
-            booking_id: bookingId,
-            mechanic_name: mechanicName,
-            mechanic_phone: mechanicPhone,
-          },
-        })
-
-        if (dispatchErr) {
-          console.warn('[admin] SMS dispatch error:', dispatchErr)
-          smsStatusMsg = customerPhone
-            ? ` (SMS dispatch queued for ${customerPhone})`
-            : ` (Customer has no phone number on profile)`
-        } else if (dispatchResult?.recipient_phone) {
-          smsStatusMsg = ` (SMS notification sent to ${dispatchResult.recipient_phone})`
-        } else if (customerPhone) {
-          smsStatusMsg = ` (SMS notification queued for ${customerPhone})`
-        } else {
-          smsStatusMsg = ` (Note: Customer profile has no phone number)`
-        }
-      } catch (invokeErr) {
-        console.warn('[admin] dispatch-notification invocation failed:', invokeErr)
       }
 
       setAssignOpenFor(null)
       setAssignmentNotice({
-        type: customerPhone ? 'success' : 'warning',
+        type: smsStatusMsg.includes('accepted by the provider') ? 'success' : 'warning',
         text: `Mechanic ${mechanicName} assigned to booking #${bookingRef}!${smsStatusMsg}`,
       })
       setTimeout(() => setAssignmentNotice(null), 7000)
@@ -563,11 +496,8 @@ export function AdminBookings() {
     const contactNum = profile?.phone || 'No contact number'
     const total = viewingBooking.total_price
     
-    // Generate amount paid ALWAYS >= total
-    const seed = viewingBooking.id.charCodeAt(0) + viewingBooking.id.charCodeAt(viewingBooking.id.length - 1)
-    const ratio = 1.0 + (seed % 50) / 100 // Between 100% and 149%
-    const amountPaid = Math.floor(total * ratio)
-    const change = amountPaid - total
+    const amountPaid = paymentSummary
+    const outstanding = amountPaid == null ? null : Math.max(0, total - amountPaid)
 
     let displayId = ''
     let dateStr = ''
@@ -583,7 +513,7 @@ export function AdminBookings() {
       const vb = viewingBooking as VehicleBookingWithDetails
       displayId = 'b' + vb.id.slice(0, 5)
       dateStr = `${vb.start_date} to ${vb.end_date}`
-      timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      timeStr = new Date(vb.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       timeLabel = 'Time of booking of rental:'
       pickupStr = vb.pickup_location || 'Showroom'
       dropoffStr = 'Showroom' // Default
@@ -665,10 +595,10 @@ export function AdminBookings() {
             <span style={{ fontWeight: 700, color: '#d97706' }}>₱{total.toLocaleString()}</span>
             
             <span style={{ color: '#64748b' }}>Amount Paid:</span>
-            <span style={{ fontWeight: 700, color: '#059669' }}>₱{amountPaid.toLocaleString()}</span>
+            <span style={{ fontWeight: 700, color: '#059669' }}>₱{amountPaid == null ? (paymentSummaryError ? 'Unavailable' : 'Loading…') : amountPaid.toLocaleString()}</span>
 
-            <span style={{ color: '#64748b' }}>Change:</span>
-            <span style={{ fontWeight: 700, color: '#0284c7' }}>₱{change.toLocaleString()}</span>
+            <span style={{ color: '#64748b' }}>Outstanding:</span>
+            <span style={{ fontWeight: 700, color: '#0284c7' }}>₱{outstanding == null ? '—' : outstanding.toLocaleString()}</span>
             
             <span style={{ color: '#64748b' }}>Status:</span>
             <span style={{ textTransform: 'capitalize', color: statusColors[viewingBooking.status] || '#1e293b', fontWeight: 600 }}>
@@ -676,6 +606,19 @@ export function AdminBookings() {
             </span>
           </div>
 
+          {['confirmed', 'assigned', 'en_route', 'in_progress', 'completed'].includes(viewingBooking.status) && (
+            <button onClick={async () => {
+              try {
+                requireFunctionData(await supabase.functions.invoke('send-booking-confirmation', { body: {
+                  bookingId: viewingBooking.id, bookingType: isVehicle ? 'vehicle' : 'service',
+                } }), 'Confirmation email could not be sent.')
+                setAssignmentNotice({ type: 'success', text: 'Confirmation email accepted by the provider. This is not proof of payment.' })
+              } catch (error) {
+                setAssignmentNotice({ type: 'warning', text: error instanceof Error ? error.message : 'Confirmation email failed.' })
+              }
+              setViewingBooking(null)
+            }}>Retry confirmation email</button>
+          )}
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end' }}>
             <button onClick={() => setViewingBooking(null)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#f8fafc', color: '#334155', cursor: 'pointer', fontWeight: 500 }}>Close</button>
           </div>
@@ -999,6 +942,8 @@ export function AdminBookings() {
                           title="Edit"
                           onClick={(e) => {
                             e.stopPropagation()
+                            setEditingBooking(booking)
+                            setEditingText('vehicle_id' in booking ? booking.pickup_location ?? '' : booking.notes ?? '')
                           }}
                           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                         >
@@ -1031,7 +976,7 @@ export function AdminBookings() {
                                 <X size={14} />
                               </button>
                             )}
-                            {booking.status === 'pending' && activeTab === 'services' && (
+                            {['pending', 'confirmed'].includes(booking.status) && activeTab === 'services' && (
                               <div style={{ position: 'relative', display: 'inline-block' }}>
                                 <button
                                   title="Assign Mechanic"
@@ -1225,6 +1170,26 @@ export function AdminBookings() {
         </>
       )}
       
+      {editingBooking && <div className="admin-modal-overlay"><form className="admin-modal" role="dialog" aria-label="Edit booking instructions" onSubmit={event => {
+        event.preventDefault()
+        if (savingEdit) return
+        setSavingEdit(true)
+        const rental = 'vehicle_id' in editingBooking
+        void Promise.resolve(supabase.from(rental ? 'vehicle_bookings' : 'service_bookings')
+          .update(rental ? { pickup_location: editingText.trim() } : { notes: editingText.trim() })
+          .eq('id', editingBooking.id).select('id').single()).then(async ({ error }) => {
+            if (error) { setAssignmentNotice({ type: 'warning', text: error.message }); return }
+            setEditingBooking(null)
+            await Promise.all([refetchVehicles(), refetchServices()])
+          }).finally(() => setSavingEdit(false))
+      }}>
+        <h2>Edit booking instructions</h2>
+        <label>{'vehicle_id' in editingBooking ? 'Pickup instructions' : 'Service notes'}
+          <textarea aria-label="Booking instructions" value={editingText} onChange={event => setEditingText(event.target.value)} maxLength={2000} required />
+        </label>
+        <button type="button" disabled={savingEdit} onClick={() => setEditingBooking(null)}>Cancel</button>
+        <button type="submit" disabled={savingEdit}>Save instructions</button>
+      </form></div>}
       {renderBookingDetailsModal()}
     </div>
   )

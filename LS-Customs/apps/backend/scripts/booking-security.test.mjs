@@ -53,6 +53,7 @@ before(async () => {
     '20260902190000_mechanic_profiles_read_for_assigned_customer.sql',
     '20260902200000_available_vehicles_rpc.sql','20260909170000_add_emergency_flag.sql',
     '20260921130000_get_dispatch_mechanics.sql','20261006120000_qa_booking_security.sql',
+    '20261008141000_notification_delivery.sql', '20261008142000_address_coordinate_integrity.sql',
   ]) {
     try { await db.exec(await readFile(`supabase/migrations/${file}`, 'utf8')) }
     catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }) }
@@ -238,7 +239,7 @@ isolated('published seeded-admin password is disabled while a rotated password i
   await db.query("update profiles set role='admin' where id in ($1,$2)", [exposed,rotated])
   await db.query('insert into auth.sessions(user_id) values($1),($2)', [exposed,rotated])
   await db.query('insert into auth.refresh_tokens(user_id) values($1),($2)', [exposed,rotated])
-  await db.exec(await readFile('supabase/migrations/20261006120100_disable_seeded_admin_passwords.sql','utf8'))
+  await db.exec(await readFile('supabase/migrations/20261008140000_disable_seeded_admin_passwords.sql','utf8'))
   const disabled = (await db.query('select encrypted_password from auth.users where id=$1', [exposed])).rows[0]
   const kept = (await db.query('select encrypted_password from auth.users where id=$1', [rotated])).rows[0]
   assert.equal(disabled.encrypted_password, '')
@@ -260,3 +261,41 @@ isolated('promotion reads hide disabled/expired offers from public customers but
   await as('authenticated',admin)
   assert.equal((await db.query("select * from booking_promotions where code in ('QAINACTIVE','QAEXPIRED')")).rows.length, 2)
 })
+
+isolated('notification dispatch claims are service-only and serialized', async () => {
+  await as('service_role');
+  const { rows: [row] } = await db.query(`insert into notifications(user_id,type,title,body) values('${customer}','booking_status','QA','QA') returning id`);
+  assert.equal((await db.query(`select reserve_notification_dispatch('${row.id}') as claimed`)).rows[0].claimed,true);
+  assert.equal((await db.query(`select reserve_notification_dispatch('${row.id}') as claimed`)).rows[0].claimed,false);
+  await as('authenticated',customer);
+  await fails(`select reserve_notification_dispatch('${row.id}')`,/permission denied/);
+});
+isolated('customer can mark own notifications read but cannot forge dispatch metadata', async () => {
+  await as('service_role');
+  const { rows: [row] } = await db.query(`insert into notifications(user_id,type,title,body) values('${customer}','booking_status','QA','QA') returning id`);
+  await as('authenticated',customer);
+  await db.query(`update notifications set is_read=true where id='${row.id}'`);
+  await fails(`update notifications set metadata='{"dispatch_sms":true}' where id='${row.id}'`,/Only notification read state/);
+});
+isolated('confirmation retry cooldown is enforced in SQL', async () => {
+  await as('service_role');
+  const id=randomUUID();
+  assert.equal((await db.query(`select reserve_booking_confirmation('vehicle','${id}') as claimed`)).rows[0].claimed,true);
+  assert.equal((await db.query(`select reserve_booking_confirmation('vehicle','${id}') as claimed`)).rows[0].claimed,false);
+});
+
+isolated('admin can inspect all notification delivery outcomes while customer is scoped', async () => {
+  await as('service_role');
+  const { rows: [row] } = await db.query(`insert into notifications(user_id,type,title,body) values('${stranger}','booking_status','QA','QA') returning id`);
+  await as('authenticated',customer);
+  assert.equal((await db.query(`select id from notifications where id='${row.id}'`)).rows.length,0);
+  await as('authenticated',admin);
+  assert.equal((await db.query(`select id from notifications where id='${row.id}'`)).rows.length,1);
+});
+
+isolated('text-only saved address cannot be silently used as a dispatch pin', async () => {
+  await as('service_role');
+  const { rows: [address] }=await db.query(`insert into addresses(customer_id,line1,city,lat,lng) values('${customer}','QA street','QA city',null,null) returning id`);
+  await as('authenticated',customer);
+  await fails(`select create_service_booking('${randomUUID()}','${service}',now()+interval '2 days','${address.id}',null,null,'QA',null,null)`,/Invalid map coordinates/);
+});

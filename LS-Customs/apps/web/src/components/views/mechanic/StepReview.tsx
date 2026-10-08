@@ -115,13 +115,13 @@ export function StepReview({
             value={
               assignedMechanic
                 ? `${assignedMechanic.full_name} (★ ${assignedMechanic.rating_avg.toFixed(1)})`
-                : 'Closest Active Driver'
+                : 'Assigned by admin after confirmation'
             }
             action={null}
           />
           <SummaryRow
             label="Est. Distance"
-            value={`${distanceKm > 0 ? distanceKm.toFixed(1) : '3.5'} km from mechanic`}
+            value={`${distanceKm.toFixed(1)} km from dispatch hub`}
             action={null}
           />
           <SummaryRow

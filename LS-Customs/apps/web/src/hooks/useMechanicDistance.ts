@@ -14,7 +14,7 @@ export function useMechanicDistance(customerLat?: number | null, customerLng?: n
     let active = true
     setQuote(null)
     setError(null)
-    if (customerLat == null || customerLng == null) return
+    if (customerLat == null || customerLng == null) { setLoading(false); return }
     setLoading(true)
     void supabase.rpc('get_dispatch_quote', { p_lat: customerLat, p_lng: customerLng }).then(({ data, error: queryError }) => {
       if (!active) return

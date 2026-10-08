@@ -47,7 +47,7 @@ export function useAdminAuth(): UseAdminAuthReturn {
 
         if (session?.user) {
           const userRole = await resolveRole(session)
-          applyAdminSession(userRole, session, false)
+          if (mounted) applyAdminSession(userRole, session, false)
         }
       } catch {
         // Session check failed
@@ -58,15 +58,18 @@ export function useAdminAuth(): UseAdminAuthReturn {
 
     void checkSession()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Leave the Auth callback before requesting a token-dependent profile query.
+      setTimeout(() => { void (async () => {
       if (!mounted) return
       if (session?.user) {
         const userRole = await resolveRole(session)
-        applyAdminSession(userRole, session, false)
+        if (mounted) applyAdminSession(userRole, session, false)
       } else {
         clearAdminSession()
       }
       if (mounted) setIsLoading(false)
+      })() }, 0)
     })
 
     return () => {

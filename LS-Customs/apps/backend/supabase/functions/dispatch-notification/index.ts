@@ -94,6 +94,7 @@ async function fetchUserEmail(
   try {
     const res = await fetch(`${supabaseUrl}/auth/v1/admin/user?id=${userId}`, {
       method: "GET",
+      signal: AbortSignal.timeout(15000),
       headers: {
         apikey: serviceRoleKey,
         Authorization: `Bearer ${serviceRoleKey}`,
@@ -125,6 +126,7 @@ async function sendEmail(
   try {
     const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
       method: "POST",
+      signal: AbortSignal.timeout(15000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
@@ -138,7 +140,7 @@ async function sendEmail(
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "(no body)");
-      return { success: false, error: `HTTP ${res.status}: ${errText}` };
+      return { success: false, error: `HTTP ${res.status}` };
     }
     return { success: true };
   } catch (err: unknown) {
@@ -163,6 +165,7 @@ async function sendSmsTwilio(
   try {
     const res = await fetch(url, {
       method: "POST",
+      signal: AbortSignal.timeout(15000),
       headers: {
         Authorization: `Basic ${auth}`,
         "Content-Type": "application/x-www-form-urlencoded",
@@ -176,7 +179,7 @@ async function sendSmsTwilio(
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "(no body)");
-      return { success: false, error: `HTTP ${res.status}: ${errText}` };
+      return { success: false, error: `HTTP ${res.status}` };
     }
     return { success: true };
   } catch (err: unknown) {
@@ -204,6 +207,7 @@ async function sendSmsTextBee(
 
     const res = await fetch(url, {
       method: "POST",
+      signal: AbortSignal.timeout(15000),
       headers: {
         "Content-Type": "application/json",
         "x-api-key": apiKey,
@@ -216,7 +220,7 @@ async function sendSmsTextBee(
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "(no body)");
-      return { success: false, error: `HTTP ${res.status}: ${errText}` };
+      return { success: false, error: `HTTP ${res.status}` };
     }
     return { success: true };
   } catch (err: unknown) {
@@ -237,6 +241,7 @@ async function sendSmsSemaphore(
   try {
     const res = await fetch("https://api.semaphore.co/api/v4/messages", {
       method: "POST",
+      signal: AbortSignal.timeout(15000),
       headers: {
         "Content-Type": "application/json",
       },
@@ -250,7 +255,7 @@ async function sendSmsSemaphore(
 
     if (!res.ok) {
       const errText = await res.text().catch(() => "(no body)");
-      return { success: false, error: `HTTP ${res.status}: ${errText}` };
+      return { success: false, error: `HTTP ${res.status}` };
     }
     return { success: true };
   } catch (err: unknown) {
@@ -280,8 +285,8 @@ Deno.serve(async (req: Request) => {
     const record = rawBody.record ?? null;
     const notificationId = rawBody.notification_id || record?.id;
     const hasNotificationId = Boolean(notificationId && UUID_REGEX.test(notificationId));
-    const rawPhone = rawBody.phone || record?.phone;
-    const rawMessage = rawBody.message || rawBody.body || record?.body;
+    let rawPhone = rawBody.phone || record?.phone;
+    let rawMessage = rawBody.message || rawBody.body || record?.body;
     const hasDirectSms = Boolean(rawPhone && rawMessage);
 
     if (!hasNotificationId && !hasDirectSms && !rawBody.booking_id && !record?.metadata?.booking_id) {
@@ -300,6 +305,7 @@ Deno.serve(async (req: Request) => {
     const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : "";
 
     let isAuthenticated = false;
+    let ownerRestrictedId: string | undefined;
 
     // Check 1: Service-role key (DB webhook / trigger invocation)
     if (bearerToken && (bearerToken === supabaseServiceKey || bearerToken === Deno.env.get("NOTIFICATION_DISPATCH_TOKEN"))) {
@@ -318,6 +324,9 @@ Deno.serve(async (req: Request) => {
           .maybeSingle();
         if (callerProfile?.role === "admin") {
           isAuthenticated = true;
+        } else if (hasNotificationId) {
+          isAuthenticated = true;
+          ownerRestrictedId = authUser.user.id;
         }
       }
     }
@@ -354,8 +363,17 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    if (ownerRestrictedId) {
+      if (!notification || notification.user_id !== ownerRestrictedId)
+        return jsonResponse(null, { code: "FORBIDDEN", message: "Notification access denied" }, 403);
+      // Customer retries use only the original server-generated content/recipient.
+      rawPhone = undefined;
+      rawMessage = undefined;
+      metadata = (notification.metadata as Record<string, unknown>) ?? {};
+    }
+
     // Idempotency: check if already successfully dispatched
-    if (metadata.dispatched === true) {
+    if (metadata.dispatched === true && metadata.simulated !== true && metadata.delivery_state !== "failed") {
       console.log(`[dispatch-notification] Notification ${notificationId} already dispatched`);
       return jsonResponse({
         notification_id: notificationId,
@@ -365,9 +383,15 @@ Deno.serve(async (req: Request) => {
       } as DispatchNotificationResponse, null, 200);
     }
 
+    if (notification?.id) {
+      const { data: reserved, error: reservationError } = await supabase.rpc('reserve_notification_dispatch', { p_id: notification.id });
+      if (reservationError) throw new Error('Notification reservation failed');
+      if (!reserved) return jsonResponse({ dispatched: false, simulated: false, channels: [], reason: 'in_progress' }, null, 202);
+    }
+
     // Resolve target recipient phone number
     let targetPhone = rawPhone ?? null;
-    const recipientUserId = (rawBody.user_id || record?.user_id || notification?.user_id) as string | undefined;
+    const recipientUserId = (notification?.user_id || rawBody.user_id || record?.user_id) as string | undefined;
 
     if (!targetPhone && recipientUserId) {
       const { data: profile } = await supabase
@@ -430,14 +454,15 @@ Deno.serve(async (req: Request) => {
 
     const normalizedPhone = normalizePhoneNumber(targetPhone);
     const smsMessage = rawMessage || (notification?.body as string) || "LS Customs: Your booking status has been updated.";
-    const notificationTitle = rawBody.title || record?.title || (notification?.title as string) || "Notification";
+    const notificationTitle = notification?.title || rawBody.title || record?.title || "Notification";
 
-    const channels: string[] = [];
+    const channels: string[] = metadata.simulated !== true && Array.isArray(metadata.channels_dispatched)
+      ? metadata.channels_dispatched.filter((channel): channel is string => typeof channel === "string") : [];
     const errors: string[] = [];
-    let simulated = false;
+    const simulated = false;
 
     // --- 1. Email via SendGrid (if user_id exists) ---
-    if (recipientUserId) {
+    if (recipientUserId && !channels.includes("email")) {
       const email = await fetchUserEmail(supabaseUrl, serviceRoleKey, recipientUserId);
       const sendgridKey = Deno.env.get("SENDGRID_API_KEY");
       const sendgridFrom = Deno.env.get("SENDGRID_FROM_EMAIL");
@@ -452,7 +477,7 @@ Deno.serve(async (req: Request) => {
         );
         if (emailResult.success) {
           channels.push("email");
-          console.log(`[dispatch-notification] Email sent to ${email}`);
+          console.log("[dispatch-notification] Email accepted");
         } else {
           errors.push(`email_failed: ${emailResult.error}`);
         }
@@ -468,7 +493,7 @@ Deno.serve(async (req: Request) => {
       String(notificationTitle || "").toLowerCase().includes("assign") ||
       String(rawMessage || "").toLowerCase().includes("assigned");
 
-    if (normalizedPhone && isAssigned) {
+    if (normalizedPhone && isAssigned && !channels.some(channel => channel.startsWith("sms_"))) {
       const textbeeKey = Deno.env.get("TEXTBEE_API_KEY");
       const textbeeDeviceId = Deno.env.get("TEXTBEE_DEVICE_ID");
       const twilioSid = Deno.env.get("TWILIO_ACCOUNT_SID");
@@ -481,56 +506,49 @@ Deno.serve(async (req: Request) => {
 
       // Option A: TextBee (Primary SMS Gateway Device)
       if (isRealSecret(textbeeKey)) {
-        console.log(`[dispatch-notification] Attempting SMS dispatch via TextBee to ${normalizedPhone}`);
+        console.log("[dispatch-notification] SMS provider request");
         const result = await sendSmsTextBee(normalizedPhone, smsMessage, textbeeKey!, textbeeDeviceId);
         if (result.success) {
           channels.push("sms_textbee");
           smsSent = true;
-          console.log(`[dispatch-notification] TextBee SMS delivered to ${normalizedPhone}`);
+          console.log("[dispatch-notification] SMS provider request");
         } else {
           errors.push(`textbee_failed: ${result.error}`);
-          console.error(`[dispatch-notification] TextBee error:`, result.error);
+          console.error("[dispatch-notification] TextBee provider request failed");
         }
       }
 
       // Option B: Semaphore (Philippines SMS gateway)
       if (!smsSent && isRealSecret(semaphoreKey)) {
-        console.log(`[dispatch-notification] Attempting SMS dispatch via Semaphore to ${normalizedPhone}`);
+        console.log("[dispatch-notification] SMS provider request");
         const result = await sendSmsSemaphore(normalizedPhone, smsMessage, semaphoreKey!, semaphoreSender);
         if (result.success) {
           channels.push("sms_semaphore");
           smsSent = true;
-          console.log(`[dispatch-notification] Semaphore SMS delivered to ${normalizedPhone}`);
+          console.log("[dispatch-notification] SMS provider request");
         } else {
           errors.push(`semaphore_failed: ${result.error}`);
-          console.error(`[dispatch-notification] Semaphore error:`, result.error);
+          console.error("[dispatch-notification] Semaphore provider request failed");
         }
       }
 
       // Option C: Twilio
       if (!smsSent && isRealSecret(twilioSid) && isRealSecret(twilioToken) && twilioFrom) {
-        console.log(`[dispatch-notification] Attempting SMS dispatch via Twilio to ${normalizedPhone}`);
+        console.log("[dispatch-notification] SMS provider request");
         const result = await sendSmsTwilio(normalizedPhone, twilioFrom, smsMessage, twilioSid!, twilioToken!);
         if (result.success) {
           channels.push("sms_twilio");
           smsSent = true;
-          console.log(`[dispatch-notification] Twilio SMS delivered to ${normalizedPhone}`);
+          console.log("[dispatch-notification] SMS provider request");
         } else {
           errors.push(`twilio_failed: ${result.error}`);
-          console.error(`[dispatch-notification] Twilio error:`, result.error);
+          console.error("[dispatch-notification] Twilio provider request failed");
         }
       }
 
-      // Option D: Simulated Fallback
-      if (!smsSent) {
-        simulated = true;
-        channels.push("simulated_sms");
-        console.log(
-          `[dispatch-notification] [SIMULATED SMS] Recipient: ${normalizedPhone} | Message: "${smsMessage}".`
-        );
-      }
+      if (!smsSent) errors.push('sms_not_accepted');
     } else if (normalizedPhone && !isAssigned) {
-      console.log(`[dispatch-notification] Skipping SMS delivery: not an assigned event (title="${notificationTitle}")`);
+      console.log("[dispatch-notification] SMS skipped for non-assignment event");
     } else {
       errors.push("no_valid_phone_number");
       console.warn(`[dispatch-notification] No valid phone number provided for recipient`);
@@ -543,6 +561,8 @@ Deno.serve(async (req: Request) => {
         dispatched: channels.length > 0,
         simulated,
         dispatched_at: new Date().toISOString(),
+        dispatch_started_at: null,
+        delivery_state: channels.some(channel => channel.startsWith("sms_")) ? "accepted" : (isAssigned ? "failed" : "skipped"),
         channels_dispatched: channels,
         recipient_phone: normalizedPhone,
       };
@@ -551,10 +571,11 @@ Deno.serve(async (req: Request) => {
         updatedMetadata.dispatch_errors = errors;
       }
 
-      await supabase
+      const { error: metadataError } = await supabase
         .from("notifications")
         .update({ metadata: updatedMetadata })
         .eq("id", notification.id);
+      if (metadataError) throw new Error("Delivery outcome could not be recorded");
     }
 
     const isSuccess = channels.length > 0;

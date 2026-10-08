@@ -1,3 +1,4 @@
+let realtimeInstance = 0
 /**
  * useAdminRevenueData — live revenue metrics for the Revenue Reports page.
  *
@@ -176,94 +177,8 @@ export function useAdminRevenueData(
         }
       }
 
-      // Also incorporate completed vehicle bookings in this period that don't have a payments row
-      const existingVehicleBookingIds = new Set(vehicleBookingIds)
-      const { data: standaloneVb } = await supabase
-        .from('vehicle_bookings')
-        .select('id, status, customer_id, total_price, created_at, vehicles(name)')
-        .eq('status', 'completed')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-
-      if (standaloneVb) {
-        for (const vb of (standaloneVb as unknown as { id: string; status: string; customer_id: string; total_price: number; created_at: string; vehicles: { name: string } | null }[])) {
-          if (!existingVehicleBookingIds.has(vb.id)) {
-            existingVehicleBookingIds.add(vb.id)
-            if (vb.vehicles?.name) {
-              vehicleNames.set(vb.id, vb.vehicles.name)
-            }
-            bookingStatusMap.set(`vehicle:${vb.id}`, 'completed')
-            typedPayments.push({
-              id: `vb-${vb.id}`,
-              booking_type: 'vehicle',
-              booking_id: vb.id,
-              customer_id: vb.customer_id,
-              amount: Number(vb.total_price),
-              currency: 'PHP',
-              provider: 'completed_rental',
-              provider_reference: null,
-              status: 'succeeded',
-              created_at: vb.created_at,
-              updated_at: vb.created_at,
-            })
-          }
-        }
-      }
-
-      // Also incorporate completed service bookings in this period that don't have a payments row
-      const existingServiceBookingIds = new Set(serviceBookingIds)
-      const { data: standaloneSb } = await supabase
-        .from('service_bookings')
-        .select('id, status, customer_id, total_price, created_at')
-        .eq('status', 'completed')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-
-      if (standaloneSb) {
-        for (const sb of (standaloneSb as unknown as { id: string; status: string; customer_id: string; total_price: number; created_at: string }[])) {
-          if (!existingServiceBookingIds.has(sb.id)) {
-            existingServiceBookingIds.add(sb.id)
-            bookingStatusMap.set(`service:${sb.id}`, 'completed')
-            typedPayments.push({
-              id: `sb-${sb.id}`,
-              booking_type: 'service',
-              booking_id: sb.id,
-              customer_id: sb.customer_id,
-              amount: Number(sb.total_price),
-              currency: 'PHP',
-              provider: 'completed_service',
-              provider_reference: null,
-              status: 'succeeded',
-              created_at: sb.created_at,
-              updated_at: sb.created_at,
-            })
-          }
-        }
-      }
-
-      // Ensure any newly added customer IDs from standalone bookings are fetched
-      const missingCustomerIds = Array.from(
-        new Set(typedPayments.map((p) => p.customer_id).filter((id) => id && !customersById.has(id)))
-      )
-      if (missingCustomerIds.length > 0) {
-        const { data: newProfiles } = await supabase
-          .from('profiles')
-          .select('id, full_name')
-          .in('id', missingCustomerIds)
-        if (newProfiles) {
-          for (const p of newProfiles as { id: string; full_name: string | null }[]) {
-            customersById.set(p.id, p.full_name ?? 'Unknown Customer')
-          }
-        }
-      }
-
-      // Succeeded revenue requires payment to be succeeded or booking completed, but never if refunded/failed
-      const isPaymentSucceeded = (p: Payment) => {
-        if (p.status === 'refunded' || p.status === 'failed') return false
-        if (p.status === 'succeeded') return true
-        const bStatus = bookingStatusMap.get(`${p.booking_type}:${p.booking_id}`)
-        return bStatus === 'completed'
-      }
+      // Revenue is derived only from succeeded payment records. Booking completion is not payment evidence.
+      const isPaymentSucceeded = (p: Payment) => p.status === 'succeeded'
 
       // ── 5. Compute revenue stats ────────────────────────────────
       const currentRevenue = typedPayments
@@ -383,10 +298,6 @@ export function useAdminRevenueData(
         const bookingId = p.booking_id ? `#${p.booking_id.slice(0, 8)}` : '—'
         const succeeded = isPaymentSucceeded(p)
 
-        if (succeeded && p.status !== 'succeeded' && p.status !== 'refunded' && p.status !== 'failed' && !p.id.startsWith('vb-')) {
-          void supabase.from('payments').update({ status: 'succeeded' }).eq('id', p.id)
-        }
-
         const vName = vehicleNames.get(p.booking_id)
         const vehicleLabel = vName ? `${vName} Rental` : 'Premium Sedan Rental'
 
@@ -461,7 +372,7 @@ export function useAdminRevenueData(
   // ── Realtime: refresh when payments or bookings change ──────
   useEffect(() => {
     const channel = supabase
-      .channel('admin-revenue-changes')
+      .channel(`admin-revenue-changes:${++realtimeInstance}`)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',

@@ -13,7 +13,7 @@ let captured: Handler | undefined;
 Deno.serve = ((handler: Handler) => { captured = handler; return {}; }) as unknown as typeof Deno.serve;
 const handlers: Record<string, Handler> = {};
 try {
-  for (const name of ['dispatch-notification', 'send-receipt', 'create-payment-intent', 'assign-mechanic']) {
+  for (const name of ['dispatch-notification', 'send-receipt', 'create-payment-intent', 'assign-mechanic', 'send-booking-confirmation']) {
     await import(`../${name}/index.ts`);
     if (!captured) throw new Error('Handler was not registered');
     handlers[name] = captured; captured = undefined;
@@ -30,6 +30,8 @@ async function call(name: string, body: unknown, rows: Record<string, unknown[]>
   globalThis.fetch = ((input: RequestInfo | URL) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
     if (url.pathname === '/auth/v1/user') return Promise.resolve(response({ id: caller, email: 'qa@example.test' }));
+    if (url.pathname === `/auth/v1/admin/users/${caller}`) return Promise.resolve(response({ user: { id: caller, email: 'qa@example.test' } }));
+    if (url.pathname === '/rest/v1/rpc/reserve_booking_confirmation') return Promise.resolve(response(true));
     const table = url.pathname.match(/^\/rest\/v1\/(\w+)$/)?.[1];
     if (table && table in rows) return Promise.resolve(response(rows[table]));
     throw new Error(`Unexpected external request: ${url.pathname}`);
@@ -76,4 +78,44 @@ Deno.test('assignment rejects another customer booking', async () => {
       service_bookings: [{ customer_id: other }], profiles: [{ role: 'customer' }],
     }), 403);
   } finally { Deno.env.delete('SUPABASE_URL'); }
+});
+
+Deno.test('confirmation rejects another customer booking', async () => {
+  status(await call('send-booking-confirmation', { bookingId, bookingType: 'vehicle' }, {
+    vehicle_bookings: [{ id: bookingId, customer_id: other, status: 'confirmed' }], profiles: [{ role: 'customer' }],
+  }), 403);
+});
+Deno.test('confirmation rejects unapproved booking without contacting email provider', async () => {
+  status(await call('send-booking-confirmation', { bookingId, bookingType: 'service' }, {
+    service_bookings: [{ id: bookingId, customer_id: caller, status: 'pending' }], profiles: [{ role: 'customer' }],
+  }), 409);
+});
+Deno.test('confirmation rejects missing login', async () => {
+  status(await call('send-booking-confirmation', { bookingId, bookingType: 'vehicle' }, {}, false), 401);
+});
+
+Deno.test('approved unpaid booking sends only an approval confirmation from authoritative data', async () => {
+  const { createConfirmationHandler } = await import('../send-booking-confirmation/index.ts');
+  let emailed: import('./resend.ts').ReceiptEmailData | undefined;
+  const original = handlers['send-booking-confirmation'];
+  handlers['send-booking-confirmation'] = createConfirmationHandler(async data => { emailed = data; return { success: true, id: 'fixture-email' }; });
+  try {
+    status(await call('send-booking-confirmation', { bookingId, bookingType: 'vehicle', customerEmail: 'attacker@example.test', amount: 1 }, {
+      vehicle_bookings: [{ id: bookingId, customer_id: caller, status: 'confirmed', total_price: 2800, start_date: '2026-12-10', end_date: '2026-12-12' }], profiles: [{ role: 'customer', full_name: 'QA Customer' }],
+    }), 200);
+    if (emailed?.documentKind !== 'confirmation' || emailed.customerEmail !== 'qa@example.test' || emailed.amount !== 2800 || !emailed.status?.includes('payment not certified'))
+      throw new Error('Approval mail used caller-provided payment or identity fields');
+  } finally { handlers['send-booking-confirmation'] = original; }
+});
+
+Deno.test('missing SMS provider never reports simulated success', async () => {
+  const result = await call('dispatch-notification', { phone: '+639171234567', message: 'QA assigned', metadata: { dispatch_sms: true } }, { profiles: [{ role: 'admin' }] });
+  const body = await result.json();
+  if (body.data?.dispatched !== false || body.data?.simulated !== false || body.data?.channels.length !== 0)
+    throw new Error('Missing provider was reported as delivery success');
+});
+Deno.test('customer cannot dispatch another customer notification even with override content', async () => {
+  status(await call('dispatch-notification', { notification_id: bookingId, phone: '+639171234567', message: 'Spoofed' }, {
+    profiles: [{ role: 'customer' }], notifications: [{ id: bookingId, user_id: other, metadata: {} }],
+  }), 403);
 });

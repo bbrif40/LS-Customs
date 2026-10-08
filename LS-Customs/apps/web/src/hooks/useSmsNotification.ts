@@ -20,6 +20,7 @@
  */
 import { useCallback, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { requireFunctionData } from '../utils/functionResult'
 
 export interface SmsNotificationParams {
   userId: string
@@ -45,48 +46,17 @@ export function useSmsNotification(): UseSmsNotificationResult {
     setError(null)
 
     try {
-      // 1. Insert notification row into public.notifications
-      const { data: notif, error: insertError } = await supabase
-        .from('notifications')
-        .insert({
-          user_id: params.userId,
-          type: params.type,
-          title: params.title,
-          body: params.body,
-          channels: ['sms', 'in_app'],
-          metadata: {
-            ...(params.metadata || {}),
-            dispatch_sms: true,
-            phone: params.phone,
-          },
-          is_read: false,
-        })
-        .select('id')
-        .maybeSingle()
-
-      if (insertError) {
-        console.warn('[useSmsNotification] notification insert error:', insertError)
-      }
-
-      // 2. Invoke dispatch-notification Edge Function
-      const { data: dispatchResult, error: dispatchError } = await supabase.functions.invoke(
-        'dispatch-notification',
-        {
-          body: {
-            notification_id: notif?.id,
-            user_id: params.userId,
-            phone: params.phone,
-            message: params.body,
-            title: params.title,
-          },
-        },
+      if (typeof params.metadata?.booking_id !== 'string') throw new Error('A booking reference is required for notification dispatch.')
+      const { data: notif, error: lookupError } = await supabase.from('notifications').select('id')
+        .eq('user_id', params.userId).contains('metadata', { booking_id: params.metadata?.booking_id })
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (lookupError || !notif) throw new Error('Booking notification is not available yet.')
+      const dispatch = requireFunctionData<{ dispatched: boolean; simulated?: boolean; channels: string[] }>(
+        await supabase.functions.invoke('dispatch-notification', { body: { notification_id: notif.id } }),
+        'SMS dispatch failed.',
       )
-
-      if (dispatchError) {
-        console.warn('[useSmsNotification] dispatch-notification error:', dispatchError)
-      } else {
-        console.log('[useSmsNotification] SMS dispatch result:', dispatchResult)
-      }
+      if (!dispatch.dispatched || dispatch.simulated || !dispatch.channels.some(channel => channel.startsWith('sms_')))
+        throw new Error('SMS was not accepted by a provider.')
 
       return true
     } catch (err) {

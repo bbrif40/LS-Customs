@@ -1,3 +1,4 @@
+let realtimeInstance = 0
 /**
  * useRecentBookings — fetches the 5 most recent bookings (vehicle + service)
  * for the overview dashboard's "Recent Bookings" table.
@@ -160,7 +161,7 @@ export function useRecentBookings(limit: number = 5): UseRecentBookingsResult {
   // ── Realtime: refresh when any booking status changes ───────────
   useEffect(() => {
     const channel = supabase
-      .channel('overview-recent-bookings')
+      .channel(`overview-recent-bookings:${++realtimeInstance}`)
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',

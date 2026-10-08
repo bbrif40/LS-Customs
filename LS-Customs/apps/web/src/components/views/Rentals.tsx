@@ -1,3 +1,4 @@
+import { VehicleImage } from '../common/VehicleImage'
 /**
  * Rentals — fleet collection page with filters and search.
  * Pulls the active fleet from Supabase via useCustomerVehicles.
@@ -379,7 +380,7 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
               <button type="button" onClick={() => setPreviewVehicle(null)} aria-label="Close vehicle details"><X size={20} /></button>
             </header>
             <div className="vehicle-preview-content">
-              <img src={previewVehicle.galleryImages?.[0] || previewVehicle.image} alt={previewVehicle.name} />
+              <VehicleImage src={previewVehicle.galleryImages?.[0] || previewVehicle.image} name={previewVehicle.name} />
               <div className="vehicle-preview-copy">
                 <div className="vehicle-preview-rating"><Star size={15} fill="currentColor" /> {previewVehicle.rating} rating</div>
                 <p>{previewVehicle.description || previewVehicle.detail}</p>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title">
+  <title id="title">Vehicle illustration. Actual photo unavailable.</title>
+  <rect width="640" height="360" fill="#edf3ef"/>
+  <path d="M110 224h420l-16-52-75-16-62-56H223l-58 74-42 12z" fill="#396653"/>
+  <path d="M232 115h61v58h-105zm76 0h61l54 58H308z" fill="#d5e3dc"/>
+  <rect x="111" y="202" width="420" height="41" rx="13" fill="#294c3e"/>
+  <circle cx="202" cy="239" r="34" fill="#20332c"/><circle cx="449" cy="239" r="34" fill="#20332c"/>
+  <circle cx="202" cy="239" r="17" fill="#d5e3dc"/><circle cx="449" cy="239" r="17" fill="#d5e3dc"/>
+  <text x="320" y="316" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#526b5f">Vehicle illustration · Actual photo unavailable</text>
+</svg>

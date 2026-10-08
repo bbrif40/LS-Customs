@@ -2,6 +2,7 @@
  * VehicleCard — compact vehicle listing with image, tag, and booking action.
  */
 import { ArrowUpRight, Heart, Star, Lock } from 'lucide-react'
+import { VehicleImage } from './VehicleImage'
 import type { Vehicle } from '../../types'
 
 interface VehicleCardProps {
@@ -24,31 +25,7 @@ export function VehicleCard({ vehicle, onBook, onView, unavailable, isFavorite =
       onClick={onView}
     >
       <div className="vehicle-image">
-        {vehicle.image ? (
-          <img
-            src={vehicle.image}
-            alt={vehicle.name}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-            }}
-          />
-        ) : (
-          <div
-            style={{
-              display: 'grid',
-              placeItems: 'center',
-              height: '100%',
-              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-              color: '#94a3b8',
-              fontSize: '11px',
-              fontWeight: 600,
-              letterSpacing: '0.8px',
-              textTransform: 'uppercase',
-            }}
-          >
-            Photo coming soon
-          </div>
-        )}
+        <VehicleImage src={vehicle.image} name={vehicle.name} />
         <span className="vehicle-tag">{vehicle.tag}</span>
         <button
           className={`heart-button ${isFavorite ? 'is-favorite' : ''}`}

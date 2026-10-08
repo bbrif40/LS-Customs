@@ -1,9 +1,9 @@
+import { VehicleImage } from '../common/VehicleImage'
 import { useState, useEffect } from 'react'
 import { ArrowLeft, CheckCircle2, CreditCard, Fuel, Gauge, Loader2, LockKeyhole, MapPin, Settings2, Star, Users, Zap, AlertTriangle, Ticket } from 'lucide-react'
 import { useProfile } from '../../hooks/useProfile'
 import { usePaymentIntent } from '../../hooks/usePaymentIntent'
 import { usePaymentStatus } from '../../hooks/usePaymentStatus'
-import { useSmsNotification } from '../../hooks/useSmsNotification'
 import { PaymentForm } from '../common/PaymentForm'
 import { PaymentMethodBadges } from '../common/PaymentMethodBadges'
 import type { Vehicle } from '../../types'
@@ -31,7 +31,6 @@ export function RentalPayment({ vehicle, bookingId, holdExpiresAt, startDate, en
   const [formStatus, setFormStatus] = useState<'idle' | 'processing' | 'succeeded' | 'failed' | 'refunded'>('idle')
   const { profile, defaultAddress, loading } = useProfile(userId)
   const { creating, error: intentError, createIntent } = usePaymentIntent()
-  const { sendSms: sendSmsNotification } = useSmsNotification()
 
   // Subscribe to the payment row's status for async webhook confirmations
   const paymentId = payment?.payment_id ?? null
@@ -43,15 +42,6 @@ export function RentalPayment({ vehicle, bookingId, holdExpiresAt, startDate, en
     if (paymentStatus?.status === 'succeeded') {
       setFormStatus('succeeded')
       onNotify('Payment confirmed. Your booking is now locked in.')
-      // Send SMS confirmation
-      if (userId) {
-        void sendSmsNotification({
-          userId,
-          type: 'payment_confirmed',
-          title: 'Payment confirmed',
-          body: `Hi ${profile?.full_name || 'there'}! Your rental of ${vehicle.name} is confirmed. Booking ref: booking-${bookingId.slice(0, 8)}. See you soon!`,
-        })
-      }
     } else if (paymentStatus?.status === 'failed') {
       setFormStatus('failed')
       onNotify('Payment could not be processed. Please try a different payment method.')
@@ -89,8 +79,8 @@ export function RentalPayment({ vehicle, bookingId, holdExpiresAt, startDate, en
       <button className="text-button" onClick={onBack}><ArrowLeft size={15} /> Back to rentals</button>
       {holdExpiresAt && formStatus !== 'succeeded' && <p role="status">Unpaid reservation expires at {new Date(holdExpiresAt).toLocaleString()}. Complete payment before expiry, or resume it from Bookings.</p>}
       <section className="rental-detail-gallery">
-        {gallery.slice(0, 5).map((image, index) => <img key={`${image}-${index}`} className={index === 0 ? 'is-featured' : ''} src={image} alt={`${vehicle.name} view ${index + 1}`} />)}
-        {gallery.length === 0 && <div className="rental-gallery-empty">Vehicle images coming soon</div>}
+        {gallery.slice(0, 5).map((image, index) => <VehicleImage key={`${image}-${index}`} className={index === 0 ? 'is-featured' : ''} src={image} name={`${vehicle.name} view ${index + 1}`} />)}
+        {gallery.length === 0 && <VehicleImage className="is-featured" name={vehicle.name} />}
       </section>
       <div className="rental-detail-heading">
         <div>
