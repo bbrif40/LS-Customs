@@ -66,6 +66,7 @@ export const DEFAULT_SITE_SETTINGS: CustomerSiteSettings = {
 
 // The hosted row is authoritative; local storage is only an offline cache.
 const STORAGE_KEY = 'ls_customs_site_settings'
+let nextSettingsSubscriptionId = 0
 function loadStoredSettings(): CustomerSiteSettings {
   try { return { ...DEFAULT_SITE_SETTINGS, ...JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}') } }
   catch { return DEFAULT_SITE_SETTINGS }
@@ -86,7 +87,9 @@ export function useCustomerSiteSettings() {
   }, [apply])
   useEffect(() => {
     void refresh()
-    const channel = supabase.channel('customer-site-settings-db')
+    // Each effect owns its channel, including StrictMode effect replays.
+    // Supabase reuses topics, so a shared name would add listeners after subscribe.
+    const channel = supabase.channel(`customer-site-settings-db-${++nextSettingsSubscriptionId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'customer_site_settings' }, () => { void refresh() })
       .subscribe(status => { if (status === 'SUBSCRIBED') void refresh() })
     const onVisible = () => { if (document.visibilityState === 'visible') void refresh() }
