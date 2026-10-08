@@ -38,7 +38,7 @@ Vercel hosts the SPA. Supabase owns the database, Auth, Realtime and Edge Functi
 
 ## 2. Startup, routing and sessions
 
-`apps/web/index.html` loads `src/main.tsx`. The entry point mounts StrictMode, Ionic, the toast provider and Suspense. `App.tsx` resolves URLs and switches customer/admin/public views. Large booking/profile/admin panels use lazy imports. `components/common/ErrorBoundary.tsx` and admin pane boundaries render recovery UI when a React render throws; the generic error screenshot alone cannot identify the underlying exception.
+`apps/web/index.html` loads `src/main.tsx`. The entry point mounts StrictMode, Ionic, the toast provider and Suspense. `App.tsx` resolves URLs and switches customer/admin/public views. Large booking/profile/admin panels use lazy imports. `RootErrorBoundary` in `App.tsx:76` and admin pane boundaries render recovery UI when a React render throws; the generic error screenshot alone cannot identify the underlying exception.
 
 **Location:** `apps/web/src/main.tsx:14`
 
@@ -241,7 +241,7 @@ The debug APK is under `apps/web/android/app/build/outputs/apk/debug`. Release d
 
 ## 10. Deployment and verification
 
-Deploy forward-only migrations using `supabase db push --workdir apps/backend`, and deploy affected Edge Functions separately. Use `--dry-run` first. Historical published seeded passwords are disabled only when the stored password still matches a published value; rotated private passwords are preserved. Arrange private admin access before applying that migration.
+Deploy forward-only migrations using `supabase db push --workdir apps/backend`, and deploy affected Edge Functions separately. Use `--dry-run` first. Historical published seeded passwords are disabled only when the stored password still matches a published value; rotated private passwords are preserved. Arrange private admin access before applying that migration. Because delivery/GPS migrations are already applied, the remaining earlier security migration needs `supabase db push --include-all --workdir apps/backend` after private access is confirmed.
 
 Push reviewed application changes to Git `main`; the connected Vercel project builds `apps/web` and rewrites SPA URLs to index.html. Verify a READY production deployment whose Git SHA matches the pushed commit. A successful CLI push is not itself proof of a successful deployment. Re-run isolated browser tests against the deployed bundle and inspect the live route.
 

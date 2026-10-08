@@ -29,7 +29,7 @@
 
 ## Deployment record
 
-Supabase delivery and coordinate migrations were applied successfully to `reyghhsjiwyabhgbgubt`. `dispatch-notification`, `send-booking-confirmation`, and `send-receipt` deployed successfully. Git/main and Vercel production verification will be recorded after publication. Seeded-admin revocation remains pending until the user confirms a private admin password is ready.
+Supabase delivery and coordinate migrations were applied successfully to `reyghhsjiwyabhgbgubt`. `dispatch-notification`, `send-booking-confirmation`, and `send-receipt` deployed successfully. Fix commit `5fdbef8967a89cfd3f9fb522011bf6740cbc3a7f` was pushed to Git `main`. Vercel deployment `ls-customs-dsf43obnv-ls-customs.vercel.app` is READY for that exact SHA and aliased to `https://ls-customs-web.vercel.app/`. All isolated production-bundle browser tests passed: 8 OTP scenarios, 21 customer checkpoints and 7 admin checks. A normal signed-in production admin reload loaded without the error screen; the actual simulation rental displayed amount paid 0 and outstanding 2,800, matching its unpaid database state. No resend/payment action was clicked. Seeded-admin revocation remains pending until the user confirms a private admin password is ready.
 
 ## Limits and data requiring review
 
