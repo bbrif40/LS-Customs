@@ -607,7 +607,7 @@ export function AdminBookings() {
           </div>
 
           {['confirmed', 'assigned', 'en_route', 'in_progress', 'completed'].includes(viewingBooking.status) && (
-            <button onClick={async () => {
+            <button className="admin-modal-btn secondary admin-booking-confirmation-btn" onClick={async () => {
               try {
                 requireFunctionData(await supabase.functions.invoke('send-booking-confirmation', { body: {
                   bookingId: viewingBooking.id, bookingType: isVehicle ? 'vehicle' : 'service',
@@ -1170,7 +1170,7 @@ export function AdminBookings() {
         </>
       )}
       
-      {editingBooking && <div className="admin-modal-overlay"><form className="admin-modal" role="dialog" aria-label="Edit booking instructions" onSubmit={event => {
+      {editingBooking && <div className="admin-modal-overlay"><form className="admin-modal admin-booking-edit-modal" role="dialog" aria-modal="true" aria-label="Edit booking instructions" onSubmit={event => {
         event.preventDefault()
         if (savingEdit) return
         setSavingEdit(true)
@@ -1183,12 +1183,21 @@ export function AdminBookings() {
             await Promise.all([refetchVehicles(), refetchServices()])
           }).finally(() => setSavingEdit(false))
       }}>
-        <h2>Edit booking instructions</h2>
-        <label>{'vehicle_id' in editingBooking ? 'Pickup instructions' : 'Service notes'}
-          <textarea aria-label="Booking instructions" value={editingText} onChange={event => setEditingText(event.target.value)} maxLength={2000} required />
-        </label>
-        <button type="button" disabled={savingEdit} onClick={() => setEditingBooking(null)}>Cancel</button>
-        <button type="submit" disabled={savingEdit}>Save instructions</button>
+        <header className="admin-modal-header">
+          <h2>Edit booking instructions</h2>
+          <button className="admin-modal-close" type="button" aria-label="Close booking instructions" disabled={savingEdit} onClick={() => setEditingBooking(null)}><X size={18} /></button>
+        </header>
+        <div className="admin-modal-body">
+          <p className="admin-modal-subtitle">Update the instructions for this booking.</p>
+          <div className="admin-form-field">
+            <label htmlFor="booking-instructions">{'vehicle_id' in editingBooking ? 'Pickup instructions' : 'Service notes'}</label>
+            <textarea id="booking-instructions" aria-label="Booking instructions" rows={5} value={editingText} onChange={event => setEditingText(event.target.value)} maxLength={2000} required />
+          </div>
+        </div>
+        <footer className="admin-modal-footer">
+          <button className="admin-modal-btn secondary" type="button" disabled={savingEdit} onClick={() => setEditingBooking(null)}>Cancel</button>
+          <button className="admin-modal-btn primary" type="submit" disabled={savingEdit}>{savingEdit ? 'Saving…' : 'Save instructions'}</button>
+        </footer>
       </form></div>}
       {renderBookingDetailsModal()}
     </div>

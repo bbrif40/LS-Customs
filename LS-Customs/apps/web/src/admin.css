@@ -1603,6 +1603,48 @@
   background: var(--admin-bg);
 }
 
+.admin-booking-edit-modal {
+  max-width: 560px;
+}
+
+.admin-booking-confirmation-btn {
+  margin-top: 20px;
+  min-height: 44px;
+  align-self: flex-start;
+}
+
+.admin-booking-edit-modal button:focus-visible,
+.admin-booking-confirmation-btn:focus-visible {
+  outline: 3px solid var(--admin-accent);
+  outline-offset: 3px;
+}
+
+@media (max-width: 540px) {
+  .admin-booking-edit-modal .admin-modal-header,
+  .admin-booking-edit-modal .admin-modal-body {
+    padding: 18px;
+  }
+
+  .admin-booking-edit-modal .admin-modal-header h2 {
+    font-size: 17px;
+  }
+
+  .admin-booking-edit-modal .admin-modal-footer {
+    padding: 16px 18px;
+    flex-wrap: wrap;
+  }
+
+  .admin-booking-edit-modal .admin-modal-footer button {
+    flex: 1 1 140px;
+    min-height: 44px;
+  }
+
+  .admin-booking-confirmation-btn {
+    width: 100%;
+    white-space: normal;
+  }
+}
+
 .admin-modal-btn {
   display: inline-flex;
   align-items: center;
