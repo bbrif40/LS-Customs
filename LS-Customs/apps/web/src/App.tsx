@@ -41,6 +41,7 @@ import { EmergencyMechanicModal, type EmergencyDispatchData } from './components
 import type { View, PublicView } from './types'
 import { useCustomerNotifications } from './hooks/useCustomerNotifications'
 import { useCustomerActiveBookingsCount } from './hooks/useCustomerBookings'
+import { MechanicDispatch } from './components/views/MechanicDispatch'
 
 /** Maps URL path prefixes to their public page view. */
 const PUBLIC_ROUTES: { prefix: string; view: PublicView }[] = [
@@ -449,6 +450,7 @@ export function App() {
               onSelectBooking={(id) => { setSelectedBookingId(id); setView('bookings') }}
             />
 
+            {identity.role === 'mechanic' && userId && <MechanicDispatch userId={userId} />}
             {view === 'home' && (
               <Dashboard
                 userId={userId}

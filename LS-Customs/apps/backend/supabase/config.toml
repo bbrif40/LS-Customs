@@ -459,3 +459,6 @@ verify_jwt = false
 # Verifies caller JWT and booking ownership internally (same as paid receipts).
 [functions.send-booking-confirmation]
 verify_jwt = false
+
+[functions.booking-route]
+verify_jwt = false

@@ -2356,7 +2356,7 @@
 .admin-map-panel h3 { margin: 0 0 4px; font-size: 14px; color: var(--admin-ink); }
 .admin-map-panel .admin-map-panel-sub { color: var(--admin-muted); font-size: 12px; margin: 0 0 12px; }
 .admin-map-panel .map-skeleton { background: #f3f4f6; }
-.admin-map-panel .leaflet-container { border: 1px solid var(--admin-border); border-radius: 8px; }
+.admin-map-panel .maplibregl-map { border: 1px solid var(--admin-border); border-radius: 8px; }
 
 /* ═══════════════════════════════════════════════════════════════════
    Admin Booking Detail Drawer

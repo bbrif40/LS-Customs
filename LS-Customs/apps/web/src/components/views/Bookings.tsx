@@ -326,11 +326,12 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
             </div>
           )}
 
-          {/* Virtual Mechanic En Route Live Simulation */}
-          {isService && details.booking.status === 'en_route' && (
+          {/* Booking-scoped mechanic GPS and arrival estimate. */}
+          {isService && ['assigned', 'en_route', 'in_progress'].includes(details.booking.status) && (
             <div style={{ marginBottom: 16 }}>
               <VirtualMechanicTracker
-                status="en_route"
+                bookingId={details.booking.id}
+                status={details.booking.status}
                 mechanicName={mechName ?? 'Assigned Mechanic'}
                 mechanicPhone={mechPhone ?? null}
                 customerAddress={extractAddressFromNotes(details.booking.notes)}
@@ -339,9 +340,6 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
                     ? { lat: details.booking.pin_lat, lng: details.booking.pin_lng }
                     : null
                 }
-                initialDistanceKm={4.5}
-                etaMinutes={12}
-                unitName="UNIT #04 • LS DISPATCH"
                 isLightMode={true}
               />
             </div>
@@ -797,22 +795,21 @@ export function Bookings({
       )}
       {liveBooking && (() => {
         const mech = liveBooking.mechanic_profiles
-        const lat = mech?.current_lat ?? liveBooking.pin_lat!
-        const lng = mech?.current_lng ?? liveBooking.pin_lng!
         const customerAddress = extractAddressFromNotes(liveBooking.notes)
         const isEnRoute = liveBooking.status === 'en_route'
         return createPortal(
           <div className="map-modal-backdrop" onClick={() => setLiveBooking(null)}>
             <div className="map-modal" onClick={(event) => event.stopPropagation()} style={{ maxWidth: isEnRoute ? 640 : 540 }}>
               <header>
-                <h3>{isEnRoute ? 'Live Virtual Mechanic En Route' : 'Service location'}</h3>
+                <h3>{isEnRoute ? 'Mechanic location' : 'Service location'}</h3>
                 <button onClick={() => setLiveBooking(null)} aria-label="Close map"><X size={18} /></button>
               </header>
               <div style={{ padding: '12px 16px' }}>
-                {isEnRoute && (
+                {['assigned', 'en_route', 'in_progress'].includes(liveBooking.status) && (
                   <div style={{ marginBottom: 14 }}>
                     <VirtualMechanicTracker
-                      status="en_route"
+                      bookingId={liveBooking.id}
+                      status={liveBooking.status}
                       mechanicName={mech?.profiles?.full_name ?? 'Assigned Mechanic'}
                       mechanicPhone={mech?.profiles?.phone ?? null}
                       customerAddress={customerAddress}
@@ -821,19 +818,20 @@ export function Bookings({
                           ? { lat: liveBooking.pin_lat, lng: liveBooking.pin_lng }
                           : null
                       }
-                      initialDistanceKm={4.5}
-                      etaMinutes={12}
-                      unitName="UNIT #04 • LS DISPATCH"
                       isLightMode={true}
                     />
                   </div>
                 )}
-                <MapView
-                  pins={[{ id: liveBooking.id, lat, lng, title: 'Your service location' }]}
-                  center={{ lat, lng }}
+                {!['assigned', 'en_route', 'in_progress'].includes(liveBooking.status) && <MapView
+                  pins={[
+                    ...(liveBooking.pin_lat != null && liveBooking.pin_lng != null
+                      ? [{ id: 'destination', lat: liveBooking.pin_lat, lng: liveBooking.pin_lng, title: 'Service destination', color: '#e8a838' }] : []),
+                    ...(['assigned', 'en_route', 'in_progress'].includes(liveBooking.status) && mech?.current_lat != null && mech.current_lng != null
+                      ? [{ id: 'mechanic', lat: mech.current_lat, lng: mech.current_lng, title: 'Mechanic recorded location', color: '#416e5b' }] : []),
+                  ]}
                   zoom={15}
                   height={isEnRoute ? 240 : 420}
-                />
+                />}
               </div>
             </div>
           </div>,

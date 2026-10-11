@@ -13,7 +13,7 @@ let captured: Handler | undefined;
 Deno.serve = ((handler: Handler) => { captured = handler; return {}; }) as unknown as typeof Deno.serve;
 const handlers: Record<string, Handler> = {};
 try {
-  for (const name of ['dispatch-notification', 'send-receipt', 'create-payment-intent', 'assign-mechanic', 'send-booking-confirmation']) {
+  for (const name of ['dispatch-notification', 'send-receipt', 'create-payment-intent', 'assign-mechanic', 'send-booking-confirmation', 'booking-route']) {
     await import(`../${name}/index.ts`);
     if (!captured) throw new Error('Handler was not registered');
     handlers[name] = captured; captured = undefined;
@@ -47,6 +47,17 @@ function status(actual: Response, expected: number) { if (actual.status !== expe
 Deno.test('notification record shape cannot authenticate an unsigned caller', async () => {
   status(await call('dispatch-notification', { record: { id: bookingId, metadata: { dispatch_sms: true } } }, {}, false), 401);
 });
+Deno.test('booking routing requires login and active booking visibility before contacting a provider', async () => {
+  const previousKey = Deno.env.get('SUPABASE_ANON_KEY')
+  Deno.env.set('SUPABASE_ANON_KEY', 'test-anon')
+  try {
+  status(await call('booking-route', { bookingId }, {}, false), 401)
+  status(await call('booking-route', { bookingId }, { service_bookings: [], booking_locations: [] }), 403)
+  status(await call('booking-route', { bookingId }, {
+    service_bookings: [{ id: bookingId, status: 'completed', mechanic_id: other }], booking_locations: [],
+  }), 403)
+  } finally { if (previousKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY'); else Deno.env.set('SUPABASE_ANON_KEY', previousKey) }
+})
 Deno.test('receipt rejects missing transaction even if a recipient and amount are supplied', async () => {
   status(await call('send-receipt', { bookingId, customerEmail: 'attacker@example.test', amount: 1 }, { payments: [] }), 404);
 });

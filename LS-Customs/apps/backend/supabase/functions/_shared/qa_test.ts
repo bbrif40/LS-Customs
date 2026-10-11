@@ -86,3 +86,25 @@ Deno.test('rental calendar arithmetic preserves return dates across month and le
   equal(addCalendarDays('2026-10-06', 30), '2026-11-05');
   equal(addCalendarDays('2028-02-28', 1), '2028-02-29');
 });
+import { routeRequest, parseTrackingRoute } from './trackingRoute.ts'
+
+Deno.test('Geoapify motorcycle routing uses latitude/longitude input and normalizes its road geometry', () => {
+  const request = routeRequest({ geoapifyKey: 'test-key' }, [121, 14.6], [121.01, 14.61])
+  if (request.url.searchParams.get('waypoints') !== '14.6,121|14.61,121.01' || request.url.searchParams.get('mode') !== 'motorcycle') throw new Error('Incorrect routing parameters')
+  const route = parseTrackingRoute({ features: [{ properties: { time: 120, distance: 900 }, geometry: { type: 'MultiLineString', coordinates: [[[121, 14.6], [121.01, 14.61]]] } }] }, 'geoapify')
+  if (route.durationSeconds !== 120 || route.geometry.type !== 'LineString' || route.geometry.coordinates.length !== 2) throw new Error('Incorrect routing normalization')
+})
+Deno.test('routing rejects invalid geometry, invalid durations and insecure custom endpoints', () => {
+  for (const body of [
+    { code: 'Ok', routes: [{ duration: -1, distance: 10, geometry: { type: 'LineString', coordinates: [[121, 14], [122, 15]] } }] },
+    { code: 'Ok', routes: [{ duration: 10, distance: 10, geometry: { type: 'LineString', coordinates: [[181, 14], [122, 15]] } }] },
+    { code: 'NoRoute' },
+  ]) {
+    let failed = false
+    try { parseTrackingRoute(body, 'osrm') } catch { failed = true }
+    if (!failed) throw new Error('Invalid provider response accepted')
+  }
+  let failed = false
+  try { routeRequest({ osrmBase: 'http://insecure.example.test' }, [121, 14], [122, 15]) } catch { failed = true }
+  if (!failed) throw new Error('Insecure routing accepted')
+})

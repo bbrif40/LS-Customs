@@ -54,6 +54,7 @@ before(async () => {
     '20260902200000_available_vehicles_rpc.sql','20260909170000_add_emergency_flag.sql',
     '20260921130000_get_dispatch_mechanics.sql','20261006120000_qa_booking_security.sql',
     '20261008141000_notification_delivery.sql', '20261008142000_address_coordinate_integrity.sql',
+    '20261011120000_booking_tracking.sql',
   ]) {
     try { await db.exec(await readFile(`supabase/migrations/${file}`, 'utf8')) }
     catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }) }
@@ -67,6 +68,50 @@ before(async () => {
   `)
 })
 after(async () => { await db.close() })
+
+isolated('booking GPS is assigned-mechanic writable and active-owner readable only', async () => {
+  await as('authenticated', customer)
+  const booking = (await db.query(serviceSql(undefined, "'battery'"))).rows[0]
+  await as('service_role'); await db.query(`select assign_booking_mechanic('${booking.id}')`)
+  const publish = `select * from publish_booking_location('${booking.id}',14.6,121.0,10,clock_timestamp())`
+  await as('authenticated', customer)
+  await fails(publish, /assigned travelling mechanic/)
+  await as('authenticated', stranger)
+  await fails(publish, /assigned travelling mechanic/)
+  await as('authenticated', mechanic)
+  await db.query(publish)
+  await fails(`update booking_locations set lat=0`, /permission denied/)
+  await fails(publish, /rate exceeded/)
+  await fails(`select publish_booking_location('${booking.id}',91,121,10,clock_timestamp())`, /Invalid/)
+  await fails(`select publish_booking_location('${booking.id}',14.6,121,10,clock_timestamp()-interval '1 minute')`, /stale/)
+  await as('authenticated', stranger)
+  assert.equal((await db.query('select * from booking_locations')).rows.length, 0)
+  await as('authenticated', customer)
+  assert.equal((await db.query('select * from booking_locations')).rows.length, 1)
+  await as('anon'); await fails('select * from booking_locations', /permission denied/)
+  await as('authenticated', customer)
+  await db.query(`select cancel_customer_booking('service','${booking.id}')`)
+  await as('authenticated', mechanic)
+  await fails(publish, /assigned travelling mechanic/)
+  await as('postgres')
+  assert.equal((await db.query('select * from booking_locations')).rows.length, 0)
+})
+
+isolated('GPS rejects older fixes and implausible jumps; route claims are server-only', async () => {
+  await as('authenticated', customer)
+  const booking = (await db.query(serviceSql(undefined, "'battery'"))).rows[0]
+  await as('service_role'); await db.query(`select assign_booking_mechanic('${booking.id}')`)
+  await as('authenticated', mechanic)
+  await db.query(`select publish_booking_location('${booking.id}',14.6,121,10,clock_timestamp()-interval '10 seconds')`)
+  await fails(`select publish_booking_location('${booking.id}',14.6,121,10,clock_timestamp()-interval '15 seconds')`, /Out-of-order/)
+  await as('postgres'); await db.exec(`update booking_locations set received_at=clock_timestamp()-interval '6 seconds'`)
+  await as('authenticated', mechanic)
+  await fails(`select publish_booking_location('${booking.id}',15.6,121,10,clock_timestamp())`, /jump/)
+  await fails(`select claim_booking_route('${booking.id}')`, /permission denied/)
+  await as('service_role')
+  assert.equal((await db.query(`select claim_booking_route('${booking.id}') as claimed`)).rows[0].claimed, true)
+  assert.equal((await db.query(`select claim_booking_route('${booking.id}') as claimed`)).rows[0].claimed, false)
+})
 
 isolated('customer cannot promote their profile; admin can change roles', async () => {
   await as('authenticated', customer)

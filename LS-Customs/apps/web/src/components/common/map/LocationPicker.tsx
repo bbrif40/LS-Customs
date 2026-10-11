@@ -20,10 +20,10 @@ import {
 } from 'lucide-react'
 import { MapBoundary } from './MapBoundary'
 import { locateUser, hasLocationPermission, type LocateError } from './geolocation'
-import type { MapSurfacePin } from './lazyMap'
+import type { MapSurfacePin } from './OpenStreetMapSurface'
 
 const MapSurface = lazy(() =>
-  import('./lazyMap').catch((err) => {
+  import('./OpenStreetMapSurface').catch((err) => {
     // Surface lazy-load failures loudly so they don't manifest as a white page.
     // eslint-disable-next-line no-console
     console.error('[LocationPicker] failed to load map chunk:', err)

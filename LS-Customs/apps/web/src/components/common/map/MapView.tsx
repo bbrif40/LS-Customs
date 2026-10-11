@@ -1,18 +1,18 @@
 /**
  * MapView — read-only map that renders N pins.
  *
- * Wraps the lazy MapSurface in a Suspense so Leaflet only ships when
+ * Wraps the lazy MapSurface in a Suspense so MapLibre only ships when
  * a map is actually mounted. Callers can pass any number of pins; the
  * map auto-fits bounds when more than one is present and no explicit
  * center is set. A `MapBoundary` error boundary ensures a runtime error
  * inside the map shows a skeleton instead of white-screening the page.
  */
 import { Suspense, lazy } from 'react'
-import type { MapSurfacePin } from './lazyMap'
+import type { MapSurfacePin } from './OpenStreetMapSurface'
 import { MapBoundary } from './MapBoundary'
 
 const MapSurface = lazy(() =>
-  import('./lazyMap').catch((err) => {
+  import('./OpenStreetMapSurface').catch((err) => {
     // Surface lazy-load failures loudly so they don't manifest as a white page.
     // eslint-disable-next-line no-console
     console.error('[MapView] failed to load map chunk:', err)
@@ -37,9 +37,12 @@ export interface MapViewProps {
   /** Default 320 (px). Number = pixels; string = any CSS height. */
   height?: number | string
   className?: string
+  route?: { type: 'LineString'; coordinates: [number, number][] } | null
+  follow?: boolean
+  recenterKey?: number
 }
 
-const FALLBACK_CENTER: [number, number] = [34.0522, -118.2437] // Los Santos
+const FALLBACK_CENTER: [number, number] = [14.5995, 120.9842] // Manila
 
 export function MapView({
   pins,
@@ -47,6 +50,9 @@ export function MapView({
   zoom = 13,
   height = 320,
   className,
+  route,
+  follow,
+  recenterKey,
 }: MapViewProps) {
   const c: [number, number] = center
     ? [center.lat, center.lng]
@@ -63,6 +69,9 @@ export function MapView({
             zoom={zoom}
             pins={pins as ReadonlyArray<MapSurfacePin>}
             height={height}
+            route={route}
+            follow={follow}
+            recenterKey={recenterKey}
           />
         </Suspense>
       </MapBoundary>

@@ -369,10 +369,11 @@ function AdminBookingDetailInner({ booking, onClose, onPaymentDetails }: AdminBo
             })()}
           </section>
 
-          {/* En Route Virtual Mechanic Live Road Simulation */}
+          {/* Booking-scoped mechanic tracking. */}
           {booking.status === 'en_route' && (
             <section className="admin-booking-detail-section" style={{ padding: '8px 0 16px' }}>
               <VirtualMechanicTracker
+                bookingId={booking.id}
                 status={booking.status}
                 mechanicName={getMechanicName(booking)}
                 mechanicPhone={booking.mechanic_profiles?.[0]?.profiles?.[0]?.phone ?? null}
@@ -382,13 +383,6 @@ function AdminBookingDetailInner({ booking, onClose, onPaymentDetails }: AdminBo
                     ? { lat: booking.pin_lat, lng: booking.pin_lng }
                     : null
                 }
-                initialDistanceKm={
-                  getNotesBreakdown(booking.notes)?.dist
-                    ? parseFloat(getNotesBreakdown(booking.notes)!.dist!)
-                    : 4.2
-                }
-                etaMinutes={12}
-                unitName="UNIT #04 • LS DISPATCH"
               />
             </section>
           )}

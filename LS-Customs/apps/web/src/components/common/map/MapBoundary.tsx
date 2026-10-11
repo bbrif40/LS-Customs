@@ -1,7 +1,7 @@
 /**
  * MapBoundary — shared error boundary for the map components.
  *
- * Without this, a runtime error inside Leaflet (e.g. a tile fetch
+ * Without this, a React runtime error inside the map (e.g.
  * failure, a malformed pin) would bubble up to the nearest error
  * boundary (or none, in which case the whole page white-screens).
  * With it, the map shows a "Map unavailable" skeleton and, in dev
