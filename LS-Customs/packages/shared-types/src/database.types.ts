@@ -195,6 +195,8 @@ export interface Database {
       mechanic_profiles: {
         Row: {
           id: string
+          motorcycle_model: string | null
+          motorcycle_plate: string | null
           specialties: string[] | null
           is_available: boolean
           current_lat: number | null
@@ -207,6 +209,8 @@ export interface Database {
         }
         Insert: {
           id: string
+          motorcycle_model?: string | null
+          motorcycle_plate?: string | null
           specialties?: string[] | null
           is_available?: boolean
           current_lat?: number | null
@@ -219,6 +223,8 @@ export interface Database {
         }
         Update: {
           id?: string
+          motorcycle_model?: string | null
+          motorcycle_plate?: string | null
           specialties?: string[] | null
           is_available?: boolean
           current_lat?: number | null

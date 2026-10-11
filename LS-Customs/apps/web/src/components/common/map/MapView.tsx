@@ -8,6 +8,7 @@
  * inside the map shows a skeleton instead of white-screening the page.
  */
 import { Suspense, lazy } from 'react'
+import { LoadingMessage } from '../LoadingMessage'
 import type { MapSurfacePin } from './OpenStreetMapSurface'
 import { MapBoundary } from './MapBoundary'
 
@@ -64,7 +65,7 @@ export function MapView({
   return (
     <div className={className} style={{ width: '100%', height: typeof height === 'string' && height.endsWith('%') ? height : '100%' }}>
       <MapBoundary height={height}>
-        <Suspense fallback={<div className="map-skeleton" style={{ height: typeof height === 'number' ? height : '100%' }}>Loading map…</div>}>
+        <Suspense fallback={<div className="map-skeleton" style={{ height: typeof height === 'number' ? height : '100%' }}><LoadingMessage label="Loading map…" /></div>}>
           <MapSurface
             center={c}
             zoom={zoom}

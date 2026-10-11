@@ -5,7 +5,7 @@ export function routeRequest(config: RouteConfig, origin: [number, number], dest
     url.searchParams.set('waypoints', `${origin[1]},${origin[0]}|${destination[1]},${destination[0]}`)
     url.searchParams.set('mode', config.mode === 'drive' ? 'drive' : 'motorcycle')
     url.searchParams.set('units', 'metric')
-    url.searchParams.set('traffic', 'free_flow')
+    url.searchParams.set('traffic', 'approximated')
     url.searchParams.set('apiKey', config.geoapifyKey)
     return { url, headers: {}, provider: 'geoapify' as const }
   }

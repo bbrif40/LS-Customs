@@ -14,6 +14,7 @@ export interface TrackingRoute {
   geometry: { type: 'LineString'; coordinates: [number, number][] }
   durationSeconds: number; distanceMeters: number; calculatedAt: string
   provider?: 'geoapify' | 'osrm'
+  trafficModel?: 'approximated' | 'none'
   mode?: 'virtual'; startedAt?: string; serverTime?: string
   destinationLat?: number; destinationLng?: number; destinationSource?: 'live' | 'saved'
 }
@@ -76,7 +77,7 @@ export function useBookingTracking(bookingId?: string) {
       if (busy) return
       busy = true
       try {
-        const { data, error: invokeError } = await supabase.functions.invoke('booking-route', { body: { bookingId } })
+        const { data, error: invokeError } = await supabase.functions.invoke('booking-route', { body: { bookingId }, timeout: 15000 })
         if (cancelled) return
         if (invokeError || data?.error || !data?.data) {
           let message = data?.error?.message || invokeError?.message || 'Arrival estimate unavailable'

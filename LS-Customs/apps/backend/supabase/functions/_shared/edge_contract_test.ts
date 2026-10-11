@@ -68,7 +68,7 @@ Deno.test('virtual route resumes cached time and targets recent customer GPS wit
   try {
     const result = await call('booking-route', { bookingId }, {
       service_bookings: { id: bookingId, status: 'en_route', mechanic_id: other, pin_lat: 14.6, pin_lng: 121, current_lat: 14.62, current_lng: 121.02, location_updated_at: new Date().toISOString() },
-      booking_route_cache: { route: { mode: 'virtual', mechanicId: other, startedAt, destinationLat: 14.62, destinationLng: 121.02 } },
+      booking_route_cache: { route: { mode: 'virtual', trafficModel: Deno.env.get('GEOAPIFY_API_KEY') ? 'approximated' : 'none', mechanicId: other, startedAt, destinationLat: 14.62, destinationLng: 121.02 } },
     });
     status(result, 200);
     const body = await result.json();

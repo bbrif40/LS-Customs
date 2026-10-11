@@ -56,6 +56,7 @@ before(async () => {
     '20261008141000_notification_delivery.sql', '20261008142000_address_coordinate_integrity.sql',
     '20261011120000_booking_tracking.sql',
     '20261011150000_virtual_journey_lifecycle.sql',
+    '20261011170000_mechanic_details.sql',
   ]) {
     try { await db.exec(await readFile(`supabase/migrations/${file}`, 'utf8')) }
     catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }) }
@@ -69,6 +70,28 @@ before(async () => {
   `)
 })
 after(async () => { await db.close() })
+
+isolated('mechanic details require admin access and scope payments to assigned service bookings', async () => {
+  await as('authenticated', customer)
+  const booking = (await db.query(serviceSql())).rows[0]
+  await fails(`select get_admin_mechanic_records('${mechanic}','activities',0)`, /Administrator access/)
+  await as('authenticated', mechanic)
+  await fails(`select get_admin_mechanic_records('${mechanic}','reviews',0)`, /Administrator access/)
+  await as('postgres')
+  await db.query(`update service_bookings set mechanic_id='${mechanic}' where id='${booking.id}'`)
+  await db.query(`insert into payments(booking_type,booking_id,customer_id,amount,status) values('service','${booking.id}','${customer}',1000,'succeeded')`)
+  await as('authenticated', admin)
+  const records = async section => (await db.query(`select get_admin_mechanic_records('${mechanic}','${section}',0) as records`)).rows[0].records
+  assert.equal((await records('activities'))[0].id, booking.id)
+  assert.equal((await records('transactions'))[0].booking_id, booking.id)
+  assert.equal((await records('transactions'))[0].amount, 1000)
+  assert.equal((await db.query(`select get_admin_mechanic_records('${stranger}','transactions',0) as records`)).rows[0].records.length, 0)
+  assert.equal((await records('reviews')).length, 0)
+  await fails(`select get_admin_mechanic_records('${mechanic}','activities',-1)`, /Invalid offset/)
+  await db.query(`update mechanic_profiles set motorcycle_model='Honda Click 125i', motorcycle_plate='ABC 1234' where id='${mechanic}'`)
+  assert.equal((await db.query(`select motorcycle_plate from mechanic_profiles where id='${mechanic}'`)).rows[0].motorcycle_plate, 'ABC 1234')
+  await fails(`update mechanic_profiles set motorcycle_plate='' where id='${mechanic}'`, /check constraint/)
+})
 
 isolated('booking GPS is assigned-mechanic writable and active-owner readable only', async () => {
   await as('authenticated', customer)

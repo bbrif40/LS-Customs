@@ -25,7 +25,9 @@ Deno.serve(async req => {
     const { data: cache } = await supabaseAdmin.from('booking_route_cache').select('route').eq('booking_id', bookingId).maybeSingle()
     const previous = cache?.route
     const sameJourney = previous?.mode === 'virtual' && previous.mechanicId === booking.mechanic_id
-    if (sameJourney && distanceBetween([previous.destinationLng, previous.destinationLat], destination) < 100)
+    const trafficModel = Deno.env.get('GEOAPIFY_API_KEY') ? 'approximated' : 'none'
+    const alreadyArrived = sameJourney && previous.geometry?.coordinates && virtualJourney(previous.geometry.coordinates, previous.durationSeconds, previous.startedAt, Date.now()).arrived
+    if (sameJourney && (previous.trafficModel === trafficModel || alreadyArrived) && distanceBetween([previous.destinationLng, previous.destinationLat], destination) < 100)
       return jsonResponse({ ...previous, serverTime: new Date().toISOString() }, null, 200, req)
     const endpoint = Deno.env.get('OSRM_BASE_URL')
     const geoapifyKey = Deno.env.get('GEOAPIFY_API_KEY')
@@ -56,7 +58,7 @@ Deno.serve(async req => {
     const { data: current } = await client.from('service_bookings').select('status,mechanic_id').eq('id', bookingId).single()
     if (!current || current.status !== 'en_route' || current.mechanic_id !== booking.mechanic_id)
       return jsonResponse(null, { code: 'UNAVAILABLE', message: 'Dispatch ended' }, 409, req)
-    const result = { ...route, mode: 'virtual', startedAt: new Date().toISOString(),
+    const result = { ...route, trafficModel, mode: 'virtual', startedAt: new Date().toISOString(),
       calculatedAt: new Date().toISOString(), mechanicId: booking.mechanic_id, destinationLat: destination[1], destinationLng: destination[0], destinationSource: live ? 'live' : 'saved' }
     const { data: saved, error: saveError } = await supabaseAdmin.from('booking_route_cache').update({ route: result }).eq('booking_id', bookingId).select('booking_id').maybeSingle()
     if (saveError || !saved) throw new Error('Journey could not be saved')

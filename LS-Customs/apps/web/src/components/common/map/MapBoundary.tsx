@@ -46,7 +46,9 @@ export class MapBoundary extends Component<Props, State> {
           }}
         >
           <div>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>Map unavailable</div>
+            <div role="alert" style={{ fontWeight: 600, marginBottom: 4 }}>We couldn’t open the map</div>
+            <p>Please check your connection and reload to restore your route.</p>
+            <button type="button" className="outline-button" onClick={() => window.location.reload()}>Reload map</button>
             {import.meta.env.DEV && this.state.message && (
               <div style={{ fontSize: 11, color: '#666', maxWidth: 400 }}>
                 {this.state.message}

@@ -106,6 +106,7 @@ import { routeRequest, parseTrackingRoute } from './trackingRoute.ts'
 
 Deno.test('Geoapify motorcycle routing uses latitude/longitude input and normalizes its road geometry', () => {
   const request = routeRequest({ geoapifyKey: 'test-key' }, [121, 14.6], [121.01, 14.61])
+  equal(request.url.searchParams.get('traffic'), 'approximated')
   if (request.url.searchParams.get('waypoints') !== '14.6,121|14.61,121.01' || request.url.searchParams.get('mode') !== 'motorcycle') throw new Error('Incorrect routing parameters')
   const route = parseTrackingRoute({ features: [{ properties: { time: 120, distance: 900 }, geometry: { type: 'MultiLineString', coordinates: [[[121, 14.6], [121.01, 14.61]]] } }] }, 'geoapify')
   if (route.durationSeconds !== 120 || route.geometry.type !== 'LineString' || route.geometry.coordinates.length !== 2) throw new Error('Incorrect routing normalization')

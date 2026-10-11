@@ -4,6 +4,8 @@
  * Admins can view all mechanics with full details and deactivate them.
  */
 import { useState } from 'react'
+import { MechanicDetailsModal, mechanicSections, type MechanicSection } from './MechanicDetailsModal'
+import { LoadingMessage } from '../common/LoadingMessage'
 import {
   Search,
   MapPin,
@@ -120,6 +122,7 @@ function getMechanicProfile(mechanic: MechanicWithProfile): Profile | null {
 
 export function AdminMechanics() {
   const { data: mechanics, loading, error, refetch, deactivateMechanic } = useAdminMechanics()
+  const [selected, setSelected] = useState<{ mechanic: MechanicWithProfile; section: MechanicSection } | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [availabilityFilter, setAvailabilityFilter] = useState<'all' | 'available' | 'unavailable'>('all')
 
@@ -172,11 +175,10 @@ export function AdminMechanics() {
     return `${lat.toFixed(4)}, ${lng.toFixed(4)}`
   }
 
-  if (loading) {
+  if (loading && !mechanics) {
     return (
       <div className="admin-main" style={{ display: 'grid', placeItems: 'center', minHeight: '60vh' }}>
-        <Loader2 size={32} className="spin" style={{ color: '#e8a838' }} />
-        <p style={{ marginTop: 12, color: 'var(--admin-muted)' }}>Loading mechanics...</p>
+        <LoadingMessage label="Loading mechanics…" />
       </div>
     )
   }
@@ -184,8 +186,8 @@ export function AdminMechanics() {
   if (error) {
     return (
       <div className="admin-main" style={{ display: 'grid', placeItems: 'center', minHeight: '60vh', textAlign: 'center' }}>
-        <div style={{ color: '#ef4444' }}>Failed to load mechanics</div>
-        <p style={{ color: 'var(--admin-muted)', marginTop: 8 }}>{error}</p>
+        <div role="alert">We couldn’t load your mechanics</div>
+        <p style={{ marginTop: 8 }}>Please check your connection and try again. Your mechanic records are safe.</p>
         <button onClick={refetch} className="admin-add-btn" style={{ marginTop: 16 }}>
           Retry
         </button>
@@ -195,6 +197,7 @@ export function AdminMechanics() {
 
   return (
     <div className="admin-main">
+      {selected && <MechanicDetailsModal key={selected.mechanic.id} mechanic={mechanics?.find(item => item.id === selected.mechanic.id) || selected.mechanic} initialSection={selected.section} onClose={() => setSelected(null)} onSaved={refetch} />}
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="admin-fleet-header">
         <div>
@@ -400,15 +403,18 @@ export function AdminMechanics() {
                         </span>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <div className="mechanic-action-buttons">
+                          {mechanicSections.map(item => <button key={item.id} type="button" title={item.label} aria-label={`${item.label} for ${fullName}`} onClick={() => setSelected({ mechanic, section: item.id })}><item.icon size={16} /> <span>{item.label}</span></button>)}
                           <button
-                            title="View"
+                            title="View mechanic details"
+                            onClick={() => setSelected({ mechanic, section: 'activities' })}
                             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                           >
                             <Eye size={14} />
                           </button>
                           <button
-                            title="Edit"
+                            title="Edit motorcycle"
+                            onClick={() => setSelected({ mechanic, section: 'motorcycle' })}
                             style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                           >
                             <Edit size={14} />

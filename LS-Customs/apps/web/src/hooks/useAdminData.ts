@@ -81,7 +81,7 @@ function useAdminList<T>(
       if (orderBy) {
         query = query.order(orderBy.column, { ascending: orderBy.ascending ?? false })
       }
-      const { data: result, error: queryError } = await query
+      const { data: result, error: queryError } = await query.abortSignal(AbortSignal.timeout(25000))
       if (queryError) throw queryError
       setData(result as T[])
     } catch (err) {
@@ -191,6 +191,8 @@ export function useAdminMechanics() {
           years_experience,
           rating_avg,
           rating_count,
+          motorcycle_model,
+          motorcycle_plate,
           created_at,
           updated_at,
           profiles!inner (
@@ -203,8 +205,9 @@ export function useAdminMechanics() {
             updated_at
           )
         `)
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: false }).abortSignal(AbortSignal.timeout(25000))
 
+      if (queryError) throw queryError
       setData(result as unknown as MechanicWithProfile[])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch mechanics')

@@ -1,3 +1,4 @@
+import { LoadingMessage } from './components/common/LoadingMessage'
 /**
  * App â€” root component. Thin orchestrator that manages global state
  * (view routing, admin routes, toast, cart, sign-out) and delegates rendering to
@@ -310,7 +311,7 @@ export function App() {
     if (adminAuth.isLoading) {
       return (
         <RootErrorBoundary>
-          <div className="auth-loading">Loading Command Center...</div>
+          <div className="auth-loading"><LoadingMessage label="Opening your command center…" /></div>
         </RootErrorBoundary>
       )
     }

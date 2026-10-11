@@ -39,8 +39,8 @@ class AdminPaneBoundary extends Component<{ children: ReactNode; paneName: strin
     if (this.state.error) {
       return (
         <div style={{ padding: 48, textAlign: 'center', color: '#f87171' }}>
-          <h3 style={{ fontSize: 18, marginBottom: 8 }}>Failed to load {this.props.paneName}</h3>
-          <p style={{ fontSize: 13, color: '#9ca3af', marginBottom: 16 }}>{this.state.error.message}</p>
+          <h3 style={{ fontSize: 18, marginBottom: 8 }}>This section hit an unexpected problem</h3>
+          <p style={{ fontSize: 13, marginBottom: 16 }}>We couldn’t display {this.props.paneName}. Please try again. Your saved records haven’t been changed.</p>
           <button
             className="admin-add-btn"
             onClick={() => this.setState({ error: null })}

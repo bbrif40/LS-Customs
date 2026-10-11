@@ -368,3 +368,20 @@ input, select, textarea { accent-color: var(--green); }
   .admin-overview-workspace .admin-table-service-icon { display: none; }
   .admin-overview-workspace .admin-table-service-name { font-size: 13px; }
 }
+
+.custom-loading { display:flex; flex-direction:column; align-items:center; gap:12px; padding:28px; text-align:center; color:var(--admin-ink, #142026); }
+.custom-loading p { max-width:420px; margin:0; color:var(--admin-muted, #526963); }
+.mechanic-action-buttons { display:flex; flex-wrap:wrap; gap:6px; min-width:240px; }
+.mechanic-action-buttons button, .mechanic-detail-tabs button { display:inline-flex; align-items:center; gap:6px; border:1px solid #d6e2dc; border-radius:8px; padding:8px; background:#f4f8f5; color:#285b44; cursor:pointer; }
+.mechanic-action-buttons button span { font-size:11px; }
+.mechanic-detail-tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:24px; }
+.mechanic-detail-tabs button[aria-pressed=true] { background:#285b44; color:white; }
+.mechanic-records { display:grid; gap:12px; margin:16px 0; }
+.mechanic-records article { padding:16px; border:1px solid #d6e2dc; border-radius:12px; background:#f7faf8; overflow-wrap:anywhere; }
+.mechanic-records article > div { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+.mechanic-records time, .mechanic-records small { color:#526963; font-size:12px; }
+.mechanic-detail-pagination { display:flex; justify-content:space-between; align-items:center; gap:8px; margin:20px 0; }
+.mechanic-motorcycle-form { display:grid; gap:16px; margin-bottom:24px; }
+.mechanic-motorcycle-form label { display:grid; gap:8px; font-weight:600; }
+.mechanic-motorcycle-form input { width:100%; padding:12px; border:1px solid #d6e2dc; border-radius:8px; background:white; color:#142026; }
+.mechanic-details .admin-modal-header p { font-size:13px; margin-top:8px; color:#526963; }

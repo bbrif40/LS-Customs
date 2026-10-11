@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Crosshair, Navigation, Phone } from 'lucide-react'
 import { MapView } from './map'
 import { useBookingTracking } from '../../hooks/useBookingTracking'
+import { LoadingMessage } from './LoadingMessage'
 
 export interface VirtualMechanicTrackerProps {
   bookingId?: string; status: string; mechanicName?: string | null; mechanicPhone?: string | null
@@ -29,12 +30,13 @@ export function VirtualMechanicTracker(props: VirtualMechanicTrackerProps) {
     <MapView pins={pins} route={remainingRoute} follow={follow} recenterKey={recenter} height={360} />
     <div className="arrival-tracker-controls"><label><input type="checkbox" checked={follow} onChange={event => setFollow(event.target.checked)} /> Follow mechanic</label><button type="button" className="outline-button" onClick={() => setRecenter(value => value + 1)}><Crosshair size={14} /> Recenter</button></div>
     <div className="arrival-tracker-card">
-      <div className="arrival-estimate"><strong>{tracking.journey?.arrived ? 'Arrived' : minutes != null ? minutes < 1 ? 'Less than 1 min' : `${minutes} min` : '—'}</strong><span>{tracking.journey ? 'Simulated ETA · traffic not included' : status === 'en_route' ? tracking.routeError || 'Preparing virtual journey…' : 'Arrival estimate available when on the way'}</span></div>
+      {status === 'en_route' && !tracking.journey && !tracking.routeError && !tracking.error && <LoadingMessage label="Preparing your route and arrival estimate…" />}
+      <div className="arrival-estimate"><strong>{tracking.journey?.arrived ? 'Arrived' : minutes != null ? minutes < 1 ? 'Less than 1 min' : `${minutes} min` : '—'}</strong><span>{tracking.journey ? tracking.route?.trafficModel === 'approximated' ? 'ETA · estimated traffic included' : 'Estimated arrival' : status === 'en_route' ? tracking.routeError || 'Preparing arrival estimate…' : 'Arrival estimate available when on the way'}</span></div>
       <p><strong>{props.mechanicName || 'Awaiting mechanic assignment'}</strong></p>
       {props.customerAddress && <p className="muted">{props.customerAddress}</p>}
       <p role="status">{tracking.journey ? tracking.journey.arrived ? 'Virtual journey complete. The booking remains En route until its status is updated.' : 'Virtual mechanic moving along the road route.' : tracking.error || 'Waiting for a routable customer location.'}</p>
       {tracking.route && tracking.journey && <p className="muted">{(tracking.route.distanceMeters * tracking.journey.remainingFraction / 1000).toFixed(1)} km remaining · {tracking.route.destinationSource === 'live' ? 'Customer’s recent GPS location' : 'Saved booking location'}</p>}
-      <p className="muted">This is a virtual dispatch, not a real mechanic GPS feed.</p>
+
       {tracking.route?.provider === 'geoapify' && <p className="muted">Routing by <a href="https://www.geoapify.com/" target="_blank" rel="noreferrer">Geoapify</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">© OpenStreetMap contributors</a></p>}
       {props.mechanicPhone && <a className="outline-button" href={`tel:${props.mechanicPhone.replace(/[^+\d]/g, '')}`}><Phone size={14} /> Call mechanic</a>}
     </div>
