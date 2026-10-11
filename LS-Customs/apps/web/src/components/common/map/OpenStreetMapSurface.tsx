@@ -8,6 +8,7 @@ export interface MapSurfacePin {
   title?: string
   description?: string
   color?: string
+  kind?: 'mechanic'
 }
 
 export interface MapSurfaceProps {
@@ -97,7 +98,14 @@ export default function OpenStreetMapSurface(props: MapSurfaceProps) {
         }
         return
       }
-      const marker = new Marker({ color: pin.color || '#e8a838', draggable }).setLngLat([pin.lng, pin.lat])
+      let entity: HTMLDivElement | undefined
+      if (pin.kind === 'mechanic') {
+        entity = document.createElement('div')
+        entity.className = 'virtual-mechanic-marker'
+        entity.textContent = '🛵'
+        entity.setAttribute('aria-label', 'Virtual mechanic')
+      }
+      const marker = new Marker({ ...(entity ? { element: entity } : { color: pin.color || '#e8a838' }), draggable }).setLngLat([pin.lng, pin.lat])
       if (pin.title || pin.description) {
         const content = document.createElement('div')
         if (pin.title) {

@@ -333,6 +333,7 @@ input, select, textarea { accent-color: var(--green); }
 .admin-mechanic-overview > div { min-width: 0; }
 .admin-mechanic-overview .admin-tech-list { max-height: 340px; overflow-y: auto; }
 .admin-user-avatar-button { border: 0; cursor: pointer; color: inherit; }
+.virtual-mechanic-marker { width: 44px; height: 44px; border-radius: 50%; border: 4px solid white; background: #1976e9; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 2px 12px #142e4255; }
 .admin-user-avatar-button:focus-visible { outline: 2px solid var(--admin-accent); outline-offset: 3px; }
 .admin-user-details { max-width: 720px; }
 .admin-user-details-identity { display: flex; align-items: center; gap: 16px; }

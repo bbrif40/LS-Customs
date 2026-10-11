@@ -25,7 +25,7 @@ try {
   }
 }
 function response(data: unknown) { return Response.json(data); }
-async function call(name: string, body: unknown, rows: Record<string, unknown[]> = {}, authenticated = true) {
+async function call(name: string, body: unknown, rows: Record<string, unknown> = {}, authenticated = true) {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = ((input: RequestInfo | URL) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
@@ -60,6 +60,20 @@ Deno.test('booking routing requires login and active booking visibility before c
 })
 Deno.test('receipt rejects missing transaction even if a recipient and amount are supplied', async () => {
   status(await call('send-receipt', { bookingId, customerEmail: 'attacker@example.test', amount: 1 }, { payments: [] }), 404);
+});
+Deno.test('virtual route resumes cached time and targets recent customer GPS without mechanic GPS', async () => {
+  const previousKey = Deno.env.get('SUPABASE_ANON_KEY');
+  Deno.env.set('SUPABASE_ANON_KEY', 'test-anon');
+  const startedAt = '2026-10-11T00:00:00Z';
+  try {
+    const result = await call('booking-route', { bookingId }, {
+      service_bookings: { id: bookingId, status: 'en_route', mechanic_id: other, pin_lat: 14.6, pin_lng: 121, current_lat: 14.62, current_lng: 121.02, location_updated_at: new Date().toISOString() },
+      booking_route_cache: { route: { mode: 'virtual', mechanicId: other, startedAt, destinationLat: 14.62, destinationLng: 121.02 } },
+    });
+    status(result, 200);
+    const body = await result.json();
+    if (body.data.startedAt !== startedAt || body.data.destinationLat !== 14.62 || !body.data.serverTime) throw new Error('Journey restarted or ignored customer location');
+  } finally { if (previousKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY'); else Deno.env.set('SUPABASE_ANON_KEY', previousKey); }
 });
 Deno.test('receipt rejects another customer successful payment', async () => {
   status(await call('send-receipt', { paymentId: bookingId }, { payments: [{ id: bookingId, customer_id: other, status: 'succeeded' }], profiles: [{ role: 'customer' }] }), 403);

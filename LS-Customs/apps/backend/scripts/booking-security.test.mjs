@@ -55,6 +55,7 @@ before(async () => {
     '20260921130000_get_dispatch_mechanics.sql','20261006120000_qa_booking_security.sql',
     '20261008141000_notification_delivery.sql', '20261008142000_address_coordinate_integrity.sql',
     '20261011120000_booking_tracking.sql',
+    '20261011150000_virtual_journey_lifecycle.sql',
   ]) {
     try { await db.exec(await readFile(`supabase/migrations/${file}`, 'utf8')) }
     catch (error) { throw new Error(`Migration ${file}: ${error.message}`, { cause: error }) }
@@ -343,4 +344,20 @@ isolated('text-only saved address cannot be silently used as a dispatch pin', as
   const { rows: [address] }=await db.query(`insert into addresses(customer_id,line1,city,lat,lng) values('${customer}','QA street','QA city',null,null) returning id`);
   await as('authenticated',customer);
   await fails(`select create_service_booking('${randomUUID()}','${service}',now()+interval '2 days','${address.id}',null,null,'QA',null,null)`,/Invalid map coordinates/);
+});
+
+isolated('virtual journey cache clears when En route ends and cannot be forged by customers', async () => {
+  await as('authenticated', customer)
+  const booking = (await db.query(serviceSql())).rows[0]
+  await as('authenticated', admin)
+  await db.query(`update service_bookings set mechanic_id='${mechanic}',status='en_route' where id='${booking.id}'`)
+  await as('service_role')
+  await db.query(`select claim_booking_route('${booking.id}')`)
+  await db.query(`update booking_route_cache set route='{"mode":"virtual"}' where booking_id='${booking.id}'`)
+  await as('authenticated', customer)
+  await fails(`update booking_route_cache set route='{}' where booking_id='${booking.id}'`, /permission denied/)
+  await as('authenticated', admin)
+  await db.query(`update service_bookings set status='in_progress' where id='${booking.id}'`)
+  await as('service_role')
+  assert.equal((await db.query(`select * from booking_route_cache where booking_id='${booking.id}'`)).rows.length, 0)
 });

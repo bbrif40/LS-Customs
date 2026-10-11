@@ -27,6 +27,7 @@ export interface MapPin {
   title?: string
   description?: string
   color?: string
+  kind?: 'mechanic'
 }
 
 export interface MapViewProps {

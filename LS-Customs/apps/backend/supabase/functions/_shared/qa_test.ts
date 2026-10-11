@@ -3,6 +3,22 @@ import { escapeHtml } from './html.ts';
 import { computeHmacSha256, normalizeWebhookEvent, retrievePaymentIntent, verifyWebhookSignature } from './paymentProvider.ts';
 import { normalizeAuthContact } from '../../../../web/src/utils/authContact.ts';
 import { addCalendarDays } from '../../../../web/src/utils/bookingDates.ts';
+import { virtualJourney } from './virtualJourney.ts';
+
+Deno.test('virtual mechanic follows road bends and weights unequal segments by distance', () => {
+  const journey = virtualJourney([[0, 0], [.01, 0], [.01, .03]], 100, '2026-10-11T00:00:00Z', Date.parse('2026-10-11T00:00:50Z'));
+  if (Math.abs(journey.position[0] - .01) > .000001 || Math.abs(journey.position[1] - .01) > .000001) throw new Error('Entity cut across the road');
+  equal(journey.remainingSeconds, 50); equal(journey.arrived, false);
+});
+Deno.test('virtual journey clamps to start and arrival without looping', () => {
+  const points: [number, number][] = [[121, 14.6], [121.01, 14.61]];
+  const start = '2026-10-11T00:00:00Z', now = Date.parse(start) + 40000;
+  equal(virtualJourney(points, 100, start, Date.parse(start) - 1000).position, points[0]);
+  equal(virtualJourney(points, 100, start, now).remainingSeconds, 60);
+  const arrived = virtualJourney(points, 100, start, Date.parse(start) + 200000);
+  equal(arrived.position, points[1]); equal(arrived.remainingSeconds, 0); equal(arrived.arrived, true);
+  equal(virtualJourney(points, 0, start, now).arrived, true);
+});
 
 function equal(actual: unknown, expected: unknown) {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`Expected ${JSON.stringify(expected)}, received ${JSON.stringify(actual)}`);

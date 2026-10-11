@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
+import { virtualJourney } from '../../../backend/supabase/functions/_shared/virtualJourney'
 
 export interface TrackingFix {
   booking_id: string; mechanic_id: string; lat: number; lng: number
@@ -13,6 +14,8 @@ export interface TrackingRoute {
   geometry: { type: 'LineString'; coordinates: [number, number][] }
   durationSeconds: number; distanceMeters: number; calculatedAt: string
   provider?: 'geoapify' | 'osrm'
+  mode?: 'virtual'; startedAt?: string; serverTime?: string
+  destinationLat?: number; destinationLng?: number; destinationSource?: 'live' | 'saved'
 }
 
 export function useBookingTracking(bookingId?: string) {
@@ -23,6 +26,7 @@ export function useBookingTracking(bookingId?: string) {
   const [now, setNow] = useState(Date.now())
   const [route, setRoute] = useState<TrackingRoute | null>(null)
   const [routeError, setRouteError] = useState<string | null>(null)
+  const [clockOffset, setClockOffset] = useState(0)
 
   useEffect(() => {
     setBooking(null); setFix(null); setRoute(null); setConnected(false); setError(null)
@@ -75,7 +79,10 @@ export function useBookingTracking(bookingId?: string) {
         const { data, error: invokeError } = await supabase.functions.invoke('booking-route', { body: { bookingId } })
         if (cancelled) return
         if (invokeError || data?.error || !data?.data) { setRouteError('Arrival estimate unavailable'); setRoute(null) }
-        else { setRoute(data.data as TrackingRoute); setRouteError(null) }
+        else {
+          setRoute(data.data as TrackingRoute); setRouteError(null)
+          if (data.data.serverTime) setClockOffset(Date.parse(data.data.serverTime) - Date.now())
+        }
       } catch { if (!cancelled) { setRoute(null); setRouteError('Arrival estimate unavailable') } }
       finally { busy = false }
     }
@@ -84,6 +91,8 @@ export function useBookingTracking(bookingId?: string) {
     return () => { cancelled = true; clearInterval(interval) }
   }, [bookingId, booking?.status, booking?.mechanic_id, booking?.pin_lat, booking?.pin_lng])
 
-  return { booking, fix: currentFix, connected, error, ageSeconds, fresh,
-    route: fresh && route && now - Date.parse(route.calculatedAt) <= 60_000 ? route : null, routeError }
+  const virtualRoute = booking?.status === 'en_route' && route?.mode === 'virtual' && route.startedAt ? route : null
+  const journey = virtualRoute ? virtualJourney(virtualRoute.geometry.coordinates, virtualRoute.durationSeconds, virtualRoute.startedAt!, now + clockOffset) : null
+  return { booking, fix: currentFix, connected, error, ageSeconds, fresh, journey,
+    route: virtualRoute || (fresh && route && now - Date.parse(route.calculatedAt) <= 60_000 ? route : null), routeError }
 }
