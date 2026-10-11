@@ -78,7 +78,13 @@ export function useBookingTracking(bookingId?: string) {
       try {
         const { data, error: invokeError } = await supabase.functions.invoke('booking-route', { body: { bookingId } })
         if (cancelled) return
-        if (invokeError || data?.error || !data?.data) { setRouteError('Arrival estimate unavailable'); setRoute(null) }
+        if (invokeError || data?.error || !data?.data) {
+          let message = data?.error?.message || invokeError?.message || 'Arrival estimate unavailable'
+          if (invokeError && 'context' in invokeError && invokeError.context instanceof Response) {
+            try { const body = await invokeError.context.json(); message = body?.error?.message || body?.message || message } catch { /* Retain the safe SDK message. */ }
+          }
+          if (!cancelled) { setRouteError(message); setRoute(null) }
+        }
         else {
           setRoute(data.data as TrackingRoute); setRouteError(null)
           if (data.data.serverTime) setClockOffset(Date.parse(data.data.serverTime) - Date.now())

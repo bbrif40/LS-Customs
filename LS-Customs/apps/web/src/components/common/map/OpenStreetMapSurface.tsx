@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Map, Marker, Popup, NavigationControl, LngLatBounds, type GeoJSONSource } from 'maplibre-gl'
+import { Map, Marker, Popup, NavigationControl, LngLatBounds, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl'
+import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
+
+// MapLibre 6 resolves its worker beside the library by default. Vite hashes
+// the library chunk, so emit the worker as a real asset and use its URL.
+setWorkerUrl(mapWorkerUrl)
 
 export interface MapSurfacePin {
   id: string
