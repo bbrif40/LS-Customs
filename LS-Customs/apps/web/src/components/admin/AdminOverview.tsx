@@ -21,7 +21,7 @@ export function AdminOverview({ onViewChange, ticketCount, bookingCount }: Admin
   const { technicians, mechanicPins, loading: techLoading, error: techError, updatedAt: techUpdatedAt, refetch: refetchTech } = useLiveTechnicians()
   const { bookings, loading: bookingsLoading, error: bookingsError, updatedAt: bookingsUpdatedAt, refetch: refetchBookings } = useRecentBookings(5)
 
-  const [mapOpen, setMapOpen] = useState(false)
+  const [mapOpen, setMapOpen] = useState(true)
   const loading = statsLoading || techLoading || bookingsLoading
   const error = statsError || techError || bookingsError
 
@@ -98,6 +98,7 @@ export function AdminOverview({ onViewChange, ticketCount, bookingCount }: Admin
 
       </section>
 
+      <section className="admin-mechanic-overview" aria-label="Mechanic locations and availability">
         <div className="admin-map-card">
           <button className="admin-map-toggle" type="button" aria-expanded={mapOpen} aria-controls="overview-map" onClick={() => setMapOpen(!mapOpen)}>{mapOpen ? 'Hide mechanic locations' : 'Show mechanic locations'} <ChevronRight size={16} /></button>
           {mapOpen && <div id="overview-map">
@@ -128,6 +129,54 @@ export function AdminOverview({ onViewChange, ticketCount, bookingCount }: Admin
           </div>}
         </div>
 
+
+        {/* Mechanic availability */}
+        <div className="admin-tech-card">
+          <div className="admin-section-header">
+            <h3 className="admin-section-title">
+              <span className="admin-section-title-dot" />
+              Mechanic availability
+            </h3>
+          </div>
+          <SectionState label="Mechanic availability" loading={techLoading} error={techError} updatedAt={techUpdatedAt} onRetry={refetchTech} />
+          {techLoading && !techUpdatedAt ? (
+            <div style={{ padding: 24, color: 'var(--admin-muted)', fontSize: 13, textAlign: 'center' }}>
+              <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
+              Loading technicians…
+            </div>
+          ) : (
+            <div className="admin-tech-list">
+              {!techLoading && !techError && technicians.length === 0 && <p className="overview-empty">No mechanics to display.</p>}
+              {technicians.map((tech) => (
+                <div className="admin-tech-item" key={tech.name}>
+                  <div className={`admin-tech-avatar ${tech.status}`}>
+                    {tech.avatar}
+                  </div>
+                  <div className="admin-tech-info">
+                    <div className="admin-tech-name">{tech.name}</div>
+                    <div className="admin-tech-role">{tech.role}</div>
+                    <span className={`admin-tech-status ${tech.status}`}>
+                      {tech.status === 'on-job' && 'On Job'}
+                      {tech.status === 'available' && 'Available'}
+                      {tech.status === 'en-route' && 'En Route'}
+                    </span>
+                  </div>
+                  <div className="admin-tech-right">
+                    <div className="admin-tech-rating">
+                      <Star size={14} className="admin-tech-rating-star" fill="currentColor" />
+                      {tech.rating > 0 ? tech.rating.toFixed(1) : '—'}
+                    </div>
+                    <div className="admin-tech-distance">
+                      <MapPinIcon size={10} /> {tech.distance}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+      </section>
 
       {/* ── Manage Schedule CTA ──────────────────────────────── */}
       <button className="admin-manage-schedule" onClick={() => onViewChange('mechanics')}>
@@ -198,52 +247,6 @@ export function AdminOverview({ onViewChange, ticketCount, bookingCount }: Admin
           </div>
         )}
       </div>
-
-        {/* Mechanic availability */}
-        <div className="admin-tech-card">
-          <div className="admin-section-header">
-            <h3 className="admin-section-title">
-              <span className="admin-section-title-dot" />
-              Mechanic availability
-            </h3>
-          </div>
-          <SectionState label="Mechanic availability" loading={techLoading} error={techError} updatedAt={techUpdatedAt} onRetry={refetchTech} />
-          {techLoading && !techUpdatedAt ? (
-            <div style={{ padding: 24, color: 'var(--admin-muted)', fontSize: 13, textAlign: 'center' }}>
-              <Loader2 size={20} className="spin" style={{ margin: '0 auto 8px' }} />
-              Loading technicians…
-            </div>
-          ) : (
-            <div className="admin-tech-list">
-              {!techLoading && !techError && technicians.length === 0 && <p className="overview-empty">No mechanics to display.</p>}
-              {technicians.map((tech) => (
-                <div className="admin-tech-item" key={tech.name}>
-                  <div className={`admin-tech-avatar ${tech.status}`}>
-                    {tech.avatar}
-                  </div>
-                  <div className="admin-tech-info">
-                    <div className="admin-tech-name">{tech.name}</div>
-                    <div className="admin-tech-role">{tech.role}</div>
-                    <span className={`admin-tech-status ${tech.status}`}>
-                      {tech.status === 'on-job' && 'On Job'}
-                      {tech.status === 'available' && 'Available'}
-                      {tech.status === 'en-route' && 'En Route'}
-                    </span>
-                  </div>
-                  <div className="admin-tech-right">
-                    <div className="admin-tech-rating">
-                      <Star size={14} className="admin-tech-rating-star" fill="currentColor" />
-                      {tech.rating > 0 ? tech.rating.toFixed(1) : '—'}
-                    </div>
-                    <div className="admin-tech-distance">
-                      <MapPinIcon size={10} /> {tech.distance}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
 
       {/* ── Footer ───────────────────────────────────────────── */}
       <div className="admin-footer">

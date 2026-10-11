@@ -1,8 +1,7 @@
 /**
  * AdminUsers — All Users View.
  * - Read-only by default.
- * - Clicking a row opens the user's transaction logbook (rentals + mechanic
- *   services, paginated 10/page, newest first).
+ * - Clicking a row or view icon opens account details with an audit trail.
  * - Per-row "Flag user" button. Clicking it opens a confirmation modal;
  *   confirming calls the `flag-user` Edge Function which bans the auth user
  *   (sets banned_until ~100 years out) and deletes the profiles row
@@ -21,7 +20,7 @@ import {
   flagUser,
 } from '../../hooks/useAdminData'
 import type { Profile } from '@ls-customs/shared-types'
-import { UserLogbookModal } from './UserLogbookModal'
+import { UserDetailsModal } from './UserDetailsModal'
 
 const roleIcons = {
   admin: Shield,
@@ -37,7 +36,7 @@ const roleLabels = {
 
 export function AdminUsers() {
   const { data: users, loading, error, refetch } = useAdminUsers()
-  const { addressesByCustomerId } = useAdminUserAddresses()
+  const { addressesByCustomerId, loading: addressesLoading, error: addressesError, refetch: refetchAddresses } = useAdminUserAddresses()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'mechanic' | 'customer'>('all')
@@ -47,8 +46,7 @@ export function AdminUsers() {
   const [flagSubmitting, setFlagSubmitting] = useState(false)
   const [flagError, setFlagError] = useState<string | null>(null)
 
-  // Logbook modal state (opens on row click)
-  const [logbookUser, setLogbookUser] = useState<Profile | null>(null)
+  const [detailsUser, setDetailsUser] = useState<Profile | null>(null)
 
   const filteredUsers = users?.filter((u) => {
     if (roleFilter !== 'all' && u.role !== roleFilter) return false
@@ -155,7 +153,7 @@ export function AdminUsers() {
       <div className="admin-fleet-header">
         <div>
           <h1>All Users</h1>
-          <p>Complete user directory — enabled by admin RLS policy.</p>
+          <p>View account details, contact information, and access audits.</p>
         </div>
         <span className="admin-status-badge active" style={{ fontSize: 12 }}>
           Read-Only View
@@ -236,15 +234,15 @@ export function AdminUsers() {
                   return (
                     <tr
                       key={user.id}
-                      onClick={() => setLogbookUser(user)}
+                      onClick={() => setDetailsUser(user)}
                       style={{ cursor: 'pointer' }}
-                      title="Click to view transaction logbook"
+                      title="Click to view user details"
                     >
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <div className="admin-tech-avatar" style={{ width: 40, height: 40, fontSize: 14 }}>
+                          <button type="button" aria-label={`View user details for ${user.full_name || 'unnamed user'}`} className="admin-tech-avatar admin-user-avatar-button" onClick={event => { event.stopPropagation(); setDetailsUser(user) }} style={{ width: 40, height: 40, fontSize: 14 }}>
                             {getInitials(user.full_name)}
-                          </div>
+                          </button>
                           <div>
                             <div style={{ fontWeight: 600 }}>{user.full_name || 'Unnamed'}</div>
                             <div style={{ fontSize: 11, color: 'var(--admin-muted)', fontFamily: 'monospace' }}>
@@ -282,6 +280,7 @@ export function AdminUsers() {
                         </div>
                       </td>
                       <td style={{ textAlign: 'center' }}>
+                        <button type="button" className="admin-user-avatar-button" aria-label={`View profile for ${user.full_name || 'unnamed user'}`} onClick={event => { event.stopPropagation(); setDetailsUser(user) }} style={{ background: 'none', padding: 0 }}>
                         {user.avatar_url ? (
                           <img src={user.avatar_url} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
                         ) : (
@@ -289,6 +288,7 @@ export function AdminUsers() {
                             {getInitials(user.full_name)}
                           </div>
                         )}
+                        </button>
                       </td>
                       <td style={{ whiteSpace: 'nowrap', color: 'var(--admin-muted)' }}>
                         {formatDate(user.created_at)}
@@ -304,10 +304,12 @@ export function AdminUsers() {
                         ) : (
                           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                             <button
-                              title="View Logbook"
+                              type="button"
+                              title="View user details"
+                              aria-label={`View account details for ${user.full_name || 'unnamed user'}`}
                               onClick={(e) => {
                                 e.stopPropagation()
-                                setLogbookUser(user)
+                                setDetailsUser(user)
                               }}
                               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                             >
@@ -412,11 +414,15 @@ export function AdminUsers() {
         )}
       </div>
 
-      {/* ── Transaction Logbook Modal ───────────────────────── */}
-      {logbookUser && (
-        <UserLogbookModal
-          user={logbookUser}
-          onClose={() => setLogbookUser(null)}
+      {detailsUser && (
+        <UserDetailsModal
+          key={detailsUser.id}
+          user={detailsUser}
+          address={addressesByCustomerId[detailsUser.id]}
+          addressesLoading={addressesLoading}
+          addressesError={addressesError}
+          onRetryAddresses={refetchAddresses}
+          onClose={() => setDetailsUser(null)}
         />
       )}
 
