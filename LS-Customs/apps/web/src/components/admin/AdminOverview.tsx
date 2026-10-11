@@ -51,6 +51,90 @@ export function AdminOverview({ onViewChange, ticketCount, bookingCount }: Admin
         <button type="button" onClick={() => onViewChange('tickets')}><TicketPlus size={20} /><span><strong>Ticket Requests</strong><small>{ticketCount.loading ? 'Checking…' : ticketCount.error ? 'Count unavailable' : `${ticketCount.count} open requests`}</small></span><ChevronRight size={18} /></button>
       </section>
 
+      {/* ── Stats Row ────────────────────────────────────────── */}
+      <section className="admin-metrics" aria-label="Business metrics" aria-busy={statsLoading}>
+      <SectionState label="Metrics" loading={statsLoading} error={statsError} updatedAt={statsUpdatedAt} onRetry={refetchStats} />
+      <div className="admin-stats-row">
+        {stats.map((stat) => {
+          const statView: AdminView | null =
+            stat.icon === 'revenue'   ? 'revenue'
+            : stat.icon === 'rentals'  ? 'bookings'
+            : stat.icon === 'mechanics'? 'bookings'
+            : stat.icon === 'fleet'    ? 'fleet'
+            : null
+          return (
+          <div
+            className="admin-stat-card"
+            key={stat.label}
+            role={statView ? 'button' : undefined}
+            tabIndex={statView ? 0 : undefined}
+            onClick={statView ? () => onViewChange(statView) : undefined}
+            onKeyDown={statView ? (e) => { if (e.key === 'Enter' || e.key === ' ') onViewChange(statView) } : undefined}
+            style={statView ? { cursor: 'pointer' } : undefined}
+            aria-label={statView ? `${stat.label} — click to view` : undefined}
+          >
+            <div className="admin-stat-header">
+              <span className="admin-stat-label">{stat.label}</span>
+              <div className={`admin-stat-icon ${stat.icon}`}>
+                {stat.icon === 'revenue'   && <span style={{ fontWeight: 700 }}>₱</span>}
+                {stat.icon === 'rentals'   && <Car size={20} />}
+                {stat.icon === 'mechanics' && <Wrench size={20} />}
+                {stat.icon === 'fleet'     && <BarChart3 size={20} />}
+              </div>
+            </div>
+            <div className="admin-stat-value">{stat.value}</div>
+            {stat.trend && (
+              <span className={`admin-stat-trend ${stat.trendUp ? 'up' : 'down'}`}>
+                {stat.trendUp ? '↑' : '↓'} {stat.trend}
+              </span>
+            )}
+            {stat.sub && !stat.trend && (
+              <span className="admin-stat-sub">{stat.sub}</span>
+            )}
+          </div>
+          )
+        })}
+      </div>
+
+      </section>
+
+        <div className="admin-map-card">
+          <button className="admin-map-toggle" type="button" aria-expanded={mapOpen} aria-controls="overview-map" onClick={() => setMapOpen(!mapOpen)}>{mapOpen ? 'Hide mechanic locations' : 'Show mechanic locations'} <ChevronRight size={16} /></button>
+          {mapOpen && <div id="overview-map">
+          <div className="admin-section-header">
+            <h3 className="admin-section-title">
+              <span className="admin-section-title-dot" />
+              Mechanic locations
+            </h3>
+            <div className="admin-map-legend">
+              <div className="admin-map-legend-item">
+                <span className="admin-map-legend-dot mechanic" />
+                Mechanics
+              </div>
+
+            </div>
+          </div>
+          <div className="admin-map-container">
+            {techError ? <p className="overview-empty">Locations are unavailable. Retry mechanic availability above.</p> : mapPins.length > 0 ? (
+              <MapView pins={mapPins} height={320}  />
+            ) : (
+              <div className="admin-map-bg" style={{ opacity: 0.5 }}>
+                <div style={{ padding: 24, color: 'var(--admin-muted)', fontSize: 13, textAlign: 'center' }}>
+                  {techLoading ? 'Loading mechanic locations…' : 'No mechanics with live locations available.'}
+                </div>
+              </div>
+            )}
+          </div>
+          </div>}
+        </div>
+
+
+      {/* ── Manage Schedule CTA ──────────────────────────────── */}
+      <button className="admin-manage-schedule" onClick={() => onViewChange('mechanics')}>
+        <Calendar size={18} />
+        View mechanics
+      </button>
+
       {/* ── Recent Bookings ──────────────────────────────────── */}
       <div className="admin-bookings-card">
         <div className="admin-section-header">
@@ -160,90 +244,6 @@ export function AdminOverview({ onViewChange, ticketCount, bookingCount }: Admin
             </div>
           )}
         </div>
-
-      {/* ── Stats Row ────────────────────────────────────────── */}
-      <section className="admin-metrics" aria-label="Business metrics" aria-busy={statsLoading}>
-      <SectionState label="Metrics" loading={statsLoading} error={statsError} updatedAt={statsUpdatedAt} onRetry={refetchStats} />
-      <div className="admin-stats-row">
-        {stats.map((stat) => {
-          const statView: AdminView | null =
-            stat.icon === 'revenue'   ? 'revenue'
-            : stat.icon === 'rentals'  ? 'bookings'
-            : stat.icon === 'mechanics'? 'bookings'
-            : stat.icon === 'fleet'    ? 'fleet'
-            : null
-          return (
-          <div
-            className="admin-stat-card"
-            key={stat.label}
-            role={statView ? 'button' : undefined}
-            tabIndex={statView ? 0 : undefined}
-            onClick={statView ? () => onViewChange(statView) : undefined}
-            onKeyDown={statView ? (e) => { if (e.key === 'Enter' || e.key === ' ') onViewChange(statView) } : undefined}
-            style={statView ? { cursor: 'pointer' } : undefined}
-            aria-label={statView ? `${stat.label} — click to view` : undefined}
-          >
-            <div className="admin-stat-header">
-              <span className="admin-stat-label">{stat.label}</span>
-              <div className={`admin-stat-icon ${stat.icon}`}>
-                {stat.icon === 'revenue'   && <span style={{ fontWeight: 700 }}>₱</span>}
-                {stat.icon === 'rentals'   && <Car size={20} />}
-                {stat.icon === 'mechanics' && <Wrench size={20} />}
-                {stat.icon === 'fleet'     && <BarChart3 size={20} />}
-              </div>
-            </div>
-            <div className="admin-stat-value">{stat.value}</div>
-            {stat.trend && (
-              <span className={`admin-stat-trend ${stat.trendUp ? 'up' : 'down'}`}>
-                {stat.trendUp ? '↑' : '↓'} {stat.trend}
-              </span>
-            )}
-            {stat.sub && !stat.trend && (
-              <span className="admin-stat-sub">{stat.sub}</span>
-            )}
-          </div>
-          )
-        })}
-      </div>
-
-      </section>
-
-        <div className="admin-map-card">
-          <button className="admin-map-toggle" type="button" aria-expanded={mapOpen} aria-controls="overview-map" onClick={() => setMapOpen(!mapOpen)}>{mapOpen ? 'Hide mechanic locations' : 'Show mechanic locations'} <ChevronRight size={16} /></button>
-          {mapOpen && <div id="overview-map">
-          <div className="admin-section-header">
-            <h3 className="admin-section-title">
-              <span className="admin-section-title-dot" />
-              Mechanic locations
-            </h3>
-            <div className="admin-map-legend">
-              <div className="admin-map-legend-item">
-                <span className="admin-map-legend-dot mechanic" />
-                Mechanics
-              </div>
-
-            </div>
-          </div>
-          <div className="admin-map-container">
-            {techError ? <p className="overview-empty">Locations are unavailable. Retry mechanic availability above.</p> : mapPins.length > 0 ? (
-              <MapView pins={mapPins} height={320}  />
-            ) : (
-              <div className="admin-map-bg" style={{ opacity: 0.5 }}>
-                <div style={{ padding: 24, color: 'var(--admin-muted)', fontSize: 13, textAlign: 'center' }}>
-                  {techLoading ? 'Loading mechanic locations…' : 'No mechanics with live locations available.'}
-                </div>
-              </div>
-            )}
-          </div>
-          </div>}
-        </div>
-
-
-      {/* ── Manage Schedule CTA ──────────────────────────────── */}
-      <button className="admin-manage-schedule" onClick={() => onViewChange('mechanics')}>
-        <Calendar size={18} />
-        View mechanics
-      </button>
 
       {/* ── Footer ───────────────────────────────────────────── */}
       <div className="admin-footer">
