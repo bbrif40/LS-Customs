@@ -123,7 +123,11 @@ export function Dashboard({ userId, displayName, initials, onView, onNotify, onS
       )}
 
       <section className={`hero-grid workspace-brand-grid stagger-hero ${isDashboardVisible ? 'visible' : ''} ${isHeroExpanded ? 'is-expanded' : ''}`}>
-        <article className={`hero-card ${isHeroExpanded ? 'expanded' : ''}`}>
+        <article className={`hero-card hero-card-with-video ${isHeroExpanded ? 'expanded' : ''}`}>
+          <video className="hero-video" autoPlay loop muted playsInline preload="metadata" aria-hidden="true">
+            <source src="/customer-videos/dashboardvidep.mp4" type="video/mp4" />
+          </video>
+          <div className="hero-overlay" aria-hidden="true" />
           <div className="hero-copy">
             <p className="eyebrow light">{settings.heroEyebrow || 'LS CUSTOMS CONCIERGE'}</p>
             <h2>

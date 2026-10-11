@@ -84,6 +84,9 @@ input, select, textarea { accent-color: var(--green); }
 .workspace-brand-grid .hero-buttons { flex-wrap: wrap; }
 .workspace-brand-grid .hero-buttons button { white-space: nowrap; }
 .workspace-brand-grid .hero-copy { transform: none; }
+.workspace-brand-grid .hero-card-with-video { background: #203b3b; color: #eaf3e9; }
+.workspace-brand-grid .hero-card-with-video h2 em { color: #e8bf67; }
+.workspace-brand-grid .hero-card-with-video p { color: #d6e5dc; }
 .workspace-brand-grid .location-helper { font-size: 13px; }
 .workspace-brand-grid .location-actions { flex-wrap: wrap; }
 .section-heading { margin: 32px 0 16px; }
