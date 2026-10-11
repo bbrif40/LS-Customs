@@ -100,7 +100,7 @@ export function StepCategory({ services, loading, source, selected, onSelect }: 
   return (
     <section className="step-panel">
       <header className="step-panel-head">
-        <p className="eyebrow">STEP 1 OF 5</p>
+        <p className="eyebrow">STEP 1 OF 6</p>
         <h2>What kind of service do you need?</h2>
         <p className="muted">Pick a category to see available services.</p>
         {source === 'static' && !loading && (

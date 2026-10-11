@@ -6,6 +6,7 @@
  * instantly on revisit — no spinner flash, no re-fetch.
  */
 import { useState, Component, type ReactNode, type ErrorInfo } from 'react'
+import { Menu, X } from 'lucide-react'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminOverview } from './AdminOverview'
 import { AdminFleet } from './AdminFleet'
@@ -67,6 +68,7 @@ const ALL_VIEWS: AdminView[] = [
 ]
 
 export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
   const [currentView, setCurrentView] = useState<AdminView>('overview')
   const openTicketCount = useOpenTicketCount()
   const activeBookingsCount = useAdminBookingsCount()
@@ -76,7 +78,7 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
   const renderView = (view: AdminView) => {
     switch (view) {
       case 'overview':
-        return <AdminOverview onViewChange={setCurrentView} />
+        return <AdminOverview onViewChange={setCurrentView} ticketCount={openTicketCount} bookingCount={activeBookingsCount} />
       case 'fleet':
         return <AdminFleet />
       case 'services':
@@ -99,14 +101,19 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
   }
 
   return (
-    <div className="admin-app">
+    <div className={`admin-app${menuOpen ? ' admin-menu-open' : ''}`}>
+      <header className="admin-mobile-header"><a href="/admin" aria-label="LS Customs admin"><img src="/logo.png" alt="" />LS Customs <span>Admin</span></a><button type="button" aria-label={menuOpen ? 'Close navigation' : 'Open navigation'} aria-expanded={menuOpen} aria-controls="admin-navigation" onClick={() => setMenuOpen(!menuOpen)}>{menuOpen ? <X size={22} /> : <Menu size={22} />}</button></header>
+      {menuOpen && <button type="button" className="admin-nav-backdrop" aria-label="Close navigation" onClick={() => setMenuOpen(false)} />}
+
       <AdminSidebar
+        mobileOpen={menuOpen}
+        onCloseMenu={() => setMenuOpen(false)}
         currentView={currentView}
-        onViewChange={setCurrentView}
+        onViewChange={(view) => { setCurrentView(view); setMenuOpen(false) }}
         onSignOut={onSignOut}
         userName={userName}
-        openTicketCount={openTicketCount}
-        activeBookingsCount={activeBookingsCount}
+        openTicketCount={openTicketCount.count}
+        activeBookingsCount={activeBookingsCount.count}
       />
       <div className="admin-views">
         <AdminAccountSecurity />

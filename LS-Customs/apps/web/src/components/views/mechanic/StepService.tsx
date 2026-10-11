@@ -41,7 +41,7 @@ export function StepService({ services, loading, category, selected, onSelect, o
         <button type="button" className="text-button step-back" onClick={onBack}>
           <ChevronLeft size={15} /> Back
         </button>
-        <p className="eyebrow">STEP 2 OF 5</p>
+        <p className="eyebrow">STEP 2 OF 6</p>
         <h2>Choose a service</h2>
         <p className="muted">
           {category ? `Available in ${prettyLabel(category)}.` : 'Pick a category first.'}

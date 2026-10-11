@@ -262,7 +262,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
         <button type="button" className="text-button step-back" onClick={onBack}>
           <ChevronLeft size={16} /> Back
         </button>
-        <p className="eyebrow">STEP 3 OF 5</p>
+        <p className="eyebrow">STEP 3 OF 6</p>
         <h2>Pick a date & time</h2>
         <p className="muted schedule-intro">
           {service ? `${service.name} · Est. ${service.duration}` : 'Choose your preferred appointment schedule.'}
@@ -275,7 +275,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
         <span className="selection-text">{selectedSummary}</span>
         {date && time && (
           <span className="selection-badge">
-            <Check size={14} /> Confirmed
+            <Check size={14} /> Selected
           </span>
         )}
       </div>

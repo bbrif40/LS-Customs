@@ -17,7 +17,9 @@ import {
   ShieldCheck,
   Settings,
   ExternalLink,
+  X,
 } from 'lucide-react'
+import { useDialog } from '../../hooks/useDialog'
 
 export type AdminView =
   | 'overview'
@@ -38,6 +40,8 @@ interface AdminSidebarProps {
   userName: string
   openTicketCount?: number
   activeBookingsCount?: number
+  mobileOpen?: boolean
+  onCloseMenu?: () => void
 }
 
 const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[] = [
@@ -59,11 +63,15 @@ export function AdminSidebar({
   userName,
   openTicketCount = 0,
   activeBookingsCount = 0,
+  mobileOpen = false,
+  onCloseMenu,
 }: AdminSidebarProps) {
+  const dialogRef = useDialog<HTMLElement>(() => onCloseMenu?.(), mobileOpen)
   return (
-    <aside className="admin-sidebar">
+    <aside ref={dialogRef} tabIndex={mobileOpen ? -1 : undefined} role={mobileOpen ? 'dialog' : undefined} aria-modal={mobileOpen || undefined} aria-label={mobileOpen ? 'Admin navigation menu' : undefined} id="admin-navigation" className="admin-sidebar">
+      {mobileOpen && <button className="admin-sidebar-close" type="button" aria-label="Close admin menu" onClick={onCloseMenu}><X size={20} /></button>}
       {/* Brand */}
-      <div className="admin-sidebar-brand" onClick={() => onViewChange('overview')}>
+      <div className="admin-sidebar-brand">
         <div className="admin-sidebar-brand-icon" style={{ background: 'transparent', padding: 0 }}>
           <img
             src="/logo.png"

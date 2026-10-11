@@ -213,7 +213,7 @@ export function StepLocation({
         <button type="button" className="text-button step-back" onClick={onBack}>
           <ChevronLeft size={15} /> Back
         </button>
-        <p className="eyebrow">STEP 4 OF 5</p>
+        <p className="eyebrow">STEP 4 OF 6</p>
         <h2>Where should we send the mechanic?</h2>
         <p className="muted">Use your saved address or drop a pin. Distance travel fee is ₱85 per 5km.</p>
       </header>

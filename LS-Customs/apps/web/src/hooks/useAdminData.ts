@@ -1093,8 +1093,10 @@ export function useAdminTickets(): UseAdminTicketsResult {
  * sidebar badge. head:true so it never pulls row data. Light polling keeps
  * the badge close to live without needing a realtime channel.
  */
-export function useOpenTicketCount(): number {
+export function useOpenTicketCount() {
   const [count, setCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -1103,7 +1105,10 @@ export function useOpenTicketCount(): number {
         .from('support_tickets')
         .select('id', { count: 'exact', head: true })
         .in('status', ['open', 'in_progress'])
-      if (!cancelled && !error && typeof c === 'number') setCount(c)
+      if (cancelled) return
+      setLoading(false)
+      setError(Boolean(error) || typeof c !== 'number')
+      if (!error && typeof c === 'number') setCount(c)
     }
     void fetchCount()
 
@@ -1114,7 +1119,7 @@ export function useOpenTicketCount(): number {
     }
   }, [])
 
-  return count
+  return { count, loading, error }
 }
 
 // Statuses that mean the booking still needs admin attention. `completed`
@@ -1133,8 +1138,10 @@ const ACTIVE_BOOKING_STATUSES = [
  * summed so neither table pulls row data. Light polling keeps the badge
  * close to live without needing realtime infra.
  */
-export function useAdminBookingsCount(): number {
+export function useAdminBookingsCount() {
   const [count, setCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -1150,6 +1157,9 @@ export function useAdminBookingsCount(): number {
           .in('status', [...ACTIVE_BOOKING_STATUSES]),
       ])
       if (cancelled) return
+      setLoading(false)
+      setError(Boolean(vehicles.error || services.error) || vehicles.count === null || services.count === null)
+      if (vehicles.error || services.error || vehicles.count === null || services.count === null) return
       const v = vehicles.count ?? 0
       const s = services.count ?? 0
       setCount(v + s)
@@ -1171,7 +1181,7 @@ export function useAdminBookingsCount(): number {
     }
   }, [])
 
-  return count
+  return { count, loading, error }
 }
 
 // ── Ticket thread messages ────────────────────────────────────────

@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog'
 import { useState } from 'react'
 import { supabase } from '../../supabaseClient'
 
@@ -8,9 +9,11 @@ export function AdminAccountSecurity() {
   const [confirmation, setConfirmation] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
-  return <section style={{ padding: '12px 24px' }}>
-    <button type="button" onClick={() => setOpen(true)}>Account security</button>
-    {open && <form role="dialog" aria-label="Admin account security" onSubmit={async event => {
+  const close = () => { if (!busy) { setOpen(false); setPassword(''); setConfirmation(''); setMessage('') } }
+  const dialogRef = useDialog(close, open)
+  return <section className="admin-account-security">
+    <button className="text-button" type="button" onClick={() => setOpen(true)}>Account security</button>
+    {open && <div className="admin-modal-overlay"><div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Admin account security" tabIndex={-1} className="admin-modal"><form onSubmit={async event => {
       event.preventDefault()
       if (busy) return
       if (password !== confirmation) { setMessage('Passwords do not match.'); return }
@@ -28,8 +31,8 @@ export function AdminAccountSecurity() {
       <label>New password<input type="password" autoComplete="new-password" minLength={15} maxLength={128} required value={password} onChange={event => setPassword(event.target.value)} /></label>
       <label>Confirm password<input type="password" autoComplete="new-password" minLength={15} maxLength={128} required value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label>
       {message && <p role="status">{message}</p>}
-      <button type="submit" disabled={busy}>Change password</button>
-      <button type="button" disabled={busy} onClick={() => { setOpen(false); setPassword(''); setConfirmation(''); setMessage('') }}>Close</button>
-    </form>}
+      <button className="admin-modal-btn primary" type="submit" disabled={busy}>Change password</button>
+      <button className="admin-modal-btn secondary" type="button" disabled={busy} onClick={close}>Close</button>
+    </form></div></div>}
   </section>
 }

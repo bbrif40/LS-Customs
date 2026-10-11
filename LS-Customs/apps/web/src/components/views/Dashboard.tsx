@@ -9,6 +9,7 @@ import { useTrendingServices } from '../../hooks/useTrendingServices'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
 import { useFavoriteVehicles } from '../../hooks/useFavoriteVehicles'
 import { useCustomerSiteSettings } from '../../hooks/useCustomerSiteSettings'
+import { useCustomerBookings, CUSTOMER_ACTIVE_STATUSES } from '../../hooks/useCustomerBookings'
 import { VehicleCard } from '../common/VehicleCard'
 import { ServiceMini } from '../common/ServiceMini'
 import { LocationCard } from '../common/LocationCard'
@@ -28,6 +29,7 @@ function IconForCategory({ category, size = 20 }: { category: string, size?: num
 }
 
 interface DashboardProps {
+  userId?: string
   displayName: string
   initials: string
   onView: (view: View) => void
@@ -41,19 +43,11 @@ function getGreeting(hour: number): string {
   return 'Good evening'
 }
 
-function formatDashboardDate(date: Date): string {
-  // "Saturday, 12 October 2024" → "SATURDAY, 12 OCTOBER 2024"
-  return date
-    .toLocaleDateString('en-US', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    })
-    .toUpperCase()
-}
-
-export function Dashboard({ displayName, initials, onView, onNotify, onSelectService }: DashboardProps) {
+export function Dashboard({ userId, displayName, initials, onView, onNotify, onSelectService }: DashboardProps) {
+  const bookings = useCustomerBookings(userId)
+  const activeBooking = [...bookings.serviceBookings.map(b => ({ ...b, title: b.service_booking_items?.map(i => i.mechanic_services?.name).filter(Boolean).join(', ') || 'Mechanic service', date: b.scheduled_at })), ...bookings.vehicleBookings.map(b => ({ ...b, title: b.vehicles?.name || 'Vehicle rental', date: b.start_date }))]
+    .filter(b => CUSTOMER_ACTIVE_STATUSES.some(status => status === b.status))
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
   const { vehicles: featured, loading: featuredLoading } = useCustomerVehicles()
   const { services: trending, loading: trendingLoading } = useTrendingServices(2)
   const { isFavorite, toggleFavorite } = useFavoriteVehicles()
@@ -69,38 +63,24 @@ export function Dashboard({ displayName, initials, onView, onNotify, onSelectSer
   }, [])
 
   const greeting = getGreeting(now.getHours())
-  const dateLabel = formatDashboardDate(now)
   const scrollRef = useScrollAnimation<HTMLDivElement>({ threshold: 0 })
   const isDashboardVisible = scrollRef.className.includes('visible')
 
   return (
     <div className={`page dashboard-page ${scrollRef.className}`} ref={scrollRef.ref}>
-      {/* ── Redesigned Promos & Available Vouchers Section ─────── */}
-      {settings.showBanner && (
-        <AvailableVouchersPromos
-          onView={onView}
-          onNotify={onNotify}
-          bannerText={settings.bannerText}
-          bannerBg={settings.bannerBg}
-          bannerTextColor={settings.bannerTextColor}
-          bannerLinkText={settings.bannerLinkText}
-          bannerLinkView={settings.bannerLinkView}
-          promoCode={settings.promoCode}
-          promoTitle={settings.promoTitle}
-          promoDiscount={settings.promoDiscount}
-        />
-      )}
-
       <section className="welcome-row">
-        <div>
-          <p className="eyebrow">{dateLabel}</p>
-          <h1>
-            {greeting}, {displayName} <span>✦</span>
-          </h1>
-          <p className="muted">{settings.welcomeSubtitle || 'Your garage is in good hands. What do you need today?'}</p>
-        </div>
+        <div><p className="eyebrow">YOUR WORKSPACE</p><h1>{greeting}, {displayName}</h1><p className="muted">{settings.welcomeSubtitle || 'Your next journey starts here.'}</p></div>
       </section>
-
+      <section className="workspace-next" aria-label="Your bookings" aria-busy={bookings.loading}>
+        <span className="workspace-next-icon"><CalendarDays size={24} /></span>
+        <div className="workspace-next-copy" role="status">
+          <h2>{activeBooking?.title || (bookings.loading && !bookings.updatedAt ? 'Loading your bookings…' : bookings.error ? 'We couldn’t load your bookings' : 'What do you need today?')}</h2>
+          {activeBooking && <p>{new Date(activeBooking.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })} · {activeBooking.status.replace(/_/g, ' ')} · Payment: {activeBooking.payments?.status === 'succeeded' ? 'paid' : activeBooking.payments?.status?.replace(/_/g, ' ') || 'not confirmed'}</p>}
+          {bookings.error ? <p>{bookings.updatedAt ? 'We couldn’t refresh your bookings. Showing the last successful update.' : 'Try again to check your appointments and rentals.'}</p> : bookings.loading ? <p>{bookings.updatedAt ? 'Refreshing your bookings. The previous update remains visible.' : 'Checking your appointments and rentals.'}</p> : !activeBooking && <p>{bookings.updatedAt ? 'No active bookings. Find a vehicle for your trip or book care at your location.' : 'Find a vehicle for your trip or book care at your location.'}</p>}
+          {bookings.updatedAt && <small>Last updated {bookings.updatedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</small>}
+        </div>
+        {bookings.error ? <button type="button" className="button dark-button" disabled={bookings.loading} onClick={() => { void bookings.refetch() }}>Retry bookings</button> : <button type="button" className="button dark-button" onClick={() => onView('bookings')}>View bookings <ChevronRight size={16} /></button>}
+      </section>
       {/* ── Quick-Action Tiles ─────────────────────────────────── */}
       <div className="quick-actions-row">
         <button className="quick-action-tile" onClick={() => onView('rentals')} type="button">
@@ -126,21 +106,24 @@ export function Dashboard({ displayName, initials, onView, onNotify, onSelectSer
         </button>
       </div>
 
-      <section className={`hero-grid stagger-hero ${isDashboardVisible ? 'visible' : ''} ${isHeroExpanded ? 'is-expanded' : ''}`}>
-        <article className={`hero-card ${isHeroExpanded ? 'expanded' : ''}`}>
-          <video
-            className="hero-video"
-            autoPlay
-            loop
-            muted
-            playsInline
-            preload="metadata"
-            aria-hidden="true"
-          >
-            <source src="/customer-videos/dashboardvidep.mp4" type="video/mp4" />
-          </video>
-          <div className="hero-overlay" aria-hidden="true" />
+      {/* Promotions remain available below the primary task. */}
+      {settings.showBanner && (
+        <AvailableVouchersPromos
+          onView={onView}
+          onNotify={onNotify}
+          bannerText={settings.bannerText}
+          bannerBg={settings.bannerBg}
+          bannerTextColor={settings.bannerTextColor}
+          bannerLinkText={settings.bannerLinkText}
+          bannerLinkView={settings.bannerLinkView}
+          promoCode={settings.promoCode}
+          promoTitle={settings.promoTitle}
+          promoDiscount={settings.promoDiscount}
+        />
+      )}
 
+      <section className={`hero-grid workspace-brand-grid stagger-hero ${isDashboardVisible ? 'visible' : ''} ${isHeroExpanded ? 'is-expanded' : ''}`}>
+        <article className={`hero-card ${isHeroExpanded ? 'expanded' : ''}`}>
           <div className="hero-copy">
             <p className="eyebrow light">{settings.heroEyebrow || 'LS CUSTOMS CONCIERGE'}</p>
             <h2>
@@ -150,14 +133,7 @@ export function Dashboard({ displayName, initials, onView, onNotify, onSelectSer
             </h2>
             <p>{settings.heroSubtitle || 'Experience the perfect blend of high-end car rentals and on-demand, expert mobile mechanics.'}</p>
 
-            <div className="hero-buttons">
-              <button className="button light-button" onClick={() => onView('rentals')}>
-                {settings.heroCtaRentalText || 'Rent a vehicle'} <ChevronRight size={16} />
-              </button>
-              <button className="ghost-button" onClick={() => onView('services')}>
-                {settings.heroCtaServiceText || 'Book a mechanic'}
-              </button>
-            </div>
+
           </div>
         </article>
         <LocationCard
@@ -187,11 +163,12 @@ export function Dashboard({ displayName, initials, onView, onNotify, onSelectSer
         <div className="vehicle-grid">
           {featured.filter((vehicle) => isFavorite(vehicle.id)).map((vehicle) => (
             <VehicleCard
-              key={vehicle.name}
+              key={vehicle.id}
               vehicle={vehicle}
               isFavorite={isFavorite(vehicle.id)}
               onToggleFavorite={() => toggleFavorite(vehicle.id)}
-              onBook={() => onNotify(`${vehicle.name} selected for booking`)}
+              actionLabel="Browse rentals"
+              onBook={() => onView('rentals')}
             />
           ))}
         </div>
@@ -200,7 +177,7 @@ export function Dashboard({ displayName, initials, onView, onNotify, onSelectSer
       <section className="section-heading service-heading">
         <div>
           <p className="eyebrow">ON-DEMAND CARE</p>
-          <h2>You might want to try these for your vehicle</h2>
+          <h2>Popular services</h2>
         </div>
         <button className="text-button" onClick={() => onView('services')}>
           View all <ChevronRight size={15} />

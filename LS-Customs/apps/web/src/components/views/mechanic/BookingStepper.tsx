@@ -14,6 +14,8 @@ export function BookingStepper({ current, onJump }: BookingStepperProps) {
   const currentIndex = STEP_ORDER.indexOf(current)
 
   return (
+    <>
+    <p className="booking-mobile-progress" role="status">Step {currentIndex + 1} of {STEP_ORDER.length}<strong>{STEP_LABEL[current]}</strong></p>
     <ol className="booking-stepper" aria-label="Booking progress">
       {STEP_ORDER.map((step, i) => {
         const isDone = i < currentIndex
@@ -45,5 +47,6 @@ export function BookingStepper({ current, onJump }: BookingStepperProps) {
         )
       })}
     </ol>
+    </>
   )
 }

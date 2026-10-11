@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog'
 /**
  * AdminBookingDetail — right-side drawer that opens when an admin
  * clicks a service-booking row. Shows the full booking context plus
@@ -31,13 +32,13 @@ const statusLabels: Record<string, string> = {
 }
 
 const statusColors: Record<string, string> = {
-  pending: '#f59e0b',
-  confirmed: '#3b82f6',
-  assigned: '#8b5cf6',
-  en_route: '#06b6d4',
-  in_progress: '#e8a838',
-  completed: '#22c55e',
-  cancelled: '#ef4444',
+  pending: '#93621a',
+  confirmed: '#245f98',
+  assigned: '#6f45a3',
+  en_route: '#147184',
+  in_progress: '#93621a',
+  completed: '#316749',
+  cancelled: '#b34232',
 }
 
 export interface AdminBookingDetailBooking {
@@ -65,6 +66,7 @@ export interface AdminBookingDetailBooking {
 interface AdminBookingDetailProps {
   booking: AdminBookingDetailBooking | null
   onClose: () => void
+  onPaymentDetails?: () => void
 }
 
 function formatRelative(iso: string | null | undefined, now: number): string {
@@ -163,11 +165,11 @@ class DetailErrorBoundary extends Component<{ children: ReactNode }, { error: Er
             borderLeft: '1px solid #2d3748', zIndex: 1200,
             display: 'flex', flexDirection: 'column',
             alignItems: 'center', justifyContent: 'center',
-            color: '#d4d9e6', padding: 24, textAlign: 'center',
+            color: '#586963', padding: 24, textAlign: 'center',
           }}
         >
           <div style={{ fontWeight: 600, marginBottom: 8 }}>Couldn't load booking detail</div>
-          <div style={{ fontSize: 12, color: '#9ca3af', maxWidth: 320 }}>
+          <div style={{ fontSize: 12, color: 'var(--admin-muted)', maxWidth: 320 }}>
             {this.state.error.message || 'An unexpected error occurred while rendering this booking.'}
           </div>
           <div style={{ fontSize: 11, color: '#6b7280', marginTop: 12 }}>
@@ -180,11 +182,12 @@ class DetailErrorBoundary extends Component<{ children: ReactNode }, { error: Er
   }
 }
 
-function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) {
+function AdminBookingDetailInner({ booking, onClose, onPaymentDetails }: AdminBookingDetailProps) {
   // Tick a `now` value every 10s while the drawer is open so the
   // "last update" line stays fresh. Mounted only when the drawer is
   // actually visible (parent passes null otherwise), so the interval
   // is cheap and only runs when the user is looking at the panel.
+  const dialogRef = useDialog(onClose, Boolean(booking))
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const id = window.setInterval(() => setNow(Date.now()), 10_000)
@@ -206,7 +209,7 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
           lng: booking.pin_lng as number,
           title: 'Saved pickup',
           description: 'Where the customer asked the mechanic to arrive',
-          color: '#e8a838',
+          color: '#93621a',
         },
       ]
     : []
@@ -220,12 +223,12 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
             lng: booking.current_lng as number,
             title: 'Customer live location',
             description: `Last update: ${formatRelative(booking.location_updated_at, now)}`,
-            color: '#22c55e',
+            color: '#316749',
           },
         ]
       : []
 
-  const statusColor = statusColors[booking.status] ?? '#9ca3af'
+  const statusColor = statusColors[booking.status] ?? 'var(--admin-muted)'
 
   return (
     <>
@@ -234,7 +237,10 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
         onClick={onClose}
         aria-hidden="true"
       />
-      <aside
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        aria-modal="true"
         className="admin-booking-detail"
         role="dialog"
         aria-label={`Booking ${booking.id} details`}
@@ -242,7 +248,7 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
         <header className="admin-booking-detail-head">
           <div>
             <h2>Booking {booking.id.slice(0, 8)}</h2>
-            <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4, fontFamily: 'monospace' }}>
+            <div style={{ fontSize: 11, color: 'var(--admin-muted)', marginTop: 4, fontFamily: 'monospace' }}>
               {booking.id}
             </div>
           </div>
@@ -273,6 +279,7 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
         </header>
 
         <div className="admin-booking-detail-body">
+          {onPaymentDetails && <button type="button" className="admin-modal-btn secondary" onClick={onPaymentDetails}>Payment & confirmation details</button>}
           {/* Customer */}
           <section className="admin-booking-detail-section">
             <h4>
@@ -283,7 +290,7 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
               <strong>{getCustomerName(booking)}</strong>
             </p>
             {booking.profiles?.[0]?.phone && (
-              <p style={{ marginTop: 4, color: '#9ca3af', fontSize: 12, display: 'flex', alignItems: 'center' }}>
+              <p style={{ marginTop: 4, color: 'var(--admin-muted)', fontSize: 12, display: 'flex', alignItems: 'center' }}>
                 <Phone size={12} style={{ display: 'inline', marginRight: 6, flexShrink: 0 }} />
                 <span>{booking.profiles[0].phone}</span>
               </p>
@@ -299,8 +306,8 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
             <p>
               <strong>{getServiceNames(booking)}</strong>
             </p>
-            <p style={{ marginTop: 6, color: '#9ca3af', fontSize: 12 }}>
-              Mechanic: <strong style={{ color: '#d4d9e6' }}>{getMechanicName(booking)}</strong>
+            <p style={{ marginTop: 6, color: 'var(--admin-muted)', fontSize: 12 }}>
+              Mechanic: <strong style={{ color: '#586963' }}>{getMechanicName(booking)}</strong>
             </p>
           </section>
 
@@ -332,8 +339,8 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
                 })
               })()}
             </p>
-            <p style={{ marginTop: 6, color: '#9ca3af', fontSize: 12 }}>
-              Total: <strong style={{ color: '#e8a838' }}>₱{booking.total_price.toLocaleString()}</strong>
+            <p style={{ marginTop: 6, color: 'var(--admin-muted)', fontSize: 12 }}>
+              Total: <strong style={{ color: '#93621a' }}>₱{booking.total_price.toLocaleString()}</strong>
             </p>
             {(() => {
               const promo = parsePromoFromText(booking.notes)
@@ -352,9 +359,9 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
                     gap: 8,
                   }}
                 >
-                  <Ticket size={14} style={{ color: '#34d399', flexShrink: 0 }} />
+                  <Ticket size={14} style={{ color: '#316749', flexShrink: 0 }} />
                   <div>
-                    <span style={{ color: '#34d399', fontWeight: 700 }}>Voucher Used: {promo.code}</span>
+                    <span style={{ color: '#316749', fontWeight: 700 }}>Voucher Used: {promo.code}</span>
                     <span style={{ color: '#94a3b8', marginLeft: 6 }}>({promo.discount})</span>
                   </div>
                 </div>
@@ -392,9 +399,9 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
               <MapPin size={11} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
               Customer Service Location
             </h4>
-            <p style={{ fontWeight: 600, color: '#f1f5f9' }}>{getAddress(booking)}</p>
+            <p style={{ fontWeight: 600, color: 'var(--admin-ink)' }}>{getAddress(booking)}</p>
             {booking.pin_lat != null && booking.pin_lng != null && (
-              <p style={{ marginTop: 4, fontSize: 11, color: '#9ca3af', fontFamily: 'monospace' }}>
+              <p style={{ marginTop: 4, fontSize: 11, color: 'var(--admin-muted)', fontFamily: 'monospace' }}>
                 GPS Pin: {booking.pin_lat.toFixed(5)}, {booking.pin_lng.toFixed(5)}
               </p>
             )}
@@ -471,7 +478,7 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
               <Hash size={11} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
               Metadata
             </h4>
-            <p style={{ fontSize: 12, color: '#9ca3af' }}>
+            <p style={{ fontSize: 12, color: 'var(--admin-muted)' }}>
               Booked {(() => {
                 // The booking id is a UUID, not a timestamp — `new
                 // Date(uuid).toISOString()` throws "Invalid time
@@ -497,7 +504,7 @@ function AdminBookingDetailInner({ booking, onClose }: AdminBookingDetailProps) 
             autoLogView={true}
           />
         </div>
-      </aside>
+      </div>
     </>
   )
 }

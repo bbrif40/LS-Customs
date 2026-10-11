@@ -29,6 +29,7 @@ interface UseAdminOverviewStatsResult {
   stats: OverviewStat[]
   loading: boolean
   error: string | null
+  updatedAt: Date | null
   refetch: () => Promise<void>
 }
 
@@ -38,6 +39,7 @@ export function useAdminOverviewStats(): UseAdminOverviewStatsResult {
   const [stats, setStats] = useState<OverviewStat[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
 
   const fetchStats = useCallback(async () => {
     setLoading(true)
@@ -139,9 +141,9 @@ export function useAdminOverviewStats(): UseAdminOverviewStatsResult {
       ]
 
       setStats(computedStats)
+      setUpdatedAt(new Date())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load overview stats')
-      setStats([])
     } finally {
       setLoading(false)
     }
@@ -201,7 +203,7 @@ export function useAdminOverviewStats(): UseAdminOverviewStatsResult {
     }
   }, [fetchStats])
 
-  return { stats, loading, error, refetch: fetchStats }
+  return { stats, loading, error, updatedAt, refetch: fetchStats }
 }
 
 function computeTrend(current: number, previous: number): RevenueTrend {

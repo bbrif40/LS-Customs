@@ -16,9 +16,10 @@ interface VehicleCardProps {
    *  disables the book button instead of letting the user hit the
    *  `no_overlapping_bookings` exclusion constraint at INSERT time. */
   unavailable?: boolean
+  actionLabel?: string
 }
 
-export function VehicleCard({ vehicle, onBook, onView, unavailable, isFavorite = false, onToggleFavorite }: VehicleCardProps) {
+export function VehicleCard({ vehicle, onBook, onView, unavailable, isFavorite = false, onToggleFavorite, actionLabel = 'Book now' }: VehicleCardProps) {
   return (
     <article
       className={`vehicle-card ${unavailable ? 'is-unavailable' : ''} ${onView ? 'is-viewable' : ''}`}
@@ -55,7 +56,7 @@ export function VehicleCard({ vehicle, onBook, onView, unavailable, isFavorite =
               Unavailable
             </button>
           ) : (
-            <button className="small-button" onClick={(event) => { event.stopPropagation(); onBook() }}>Book now <ArrowUpRight size={14} /></button>
+            <button className="small-button" onClick={(event) => { event.stopPropagation(); onBook() }}>{actionLabel} <ArrowUpRight size={14} /></button>
           )}
         </div>
       </div>

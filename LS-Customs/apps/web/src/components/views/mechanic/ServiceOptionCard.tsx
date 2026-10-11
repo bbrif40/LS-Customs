@@ -3,7 +3,7 @@
  * Wraps the existing `.service-row` visual with a button affordance so
  * the user can pick a service with one tap.
  */
-import { Clock3 } from 'lucide-react'
+import { Clock3, Wrench } from 'lucide-react'
 import type { Service } from '../../../types'
 
 interface ServiceOptionCardProps {
@@ -18,10 +18,11 @@ export function ServiceOptionCard({ service, selected, onSelect }: ServiceOption
       type="button"
       className={`service-row service-option ${selected ? 'selected' : ''}`}
       onClick={() => onSelect(service)}
+      aria-pressed={selected}
     >
-      <div className="service-row-icon">{service.icon}</div>
+      <div className="service-row-icon"><Wrench size={22} /></div>
       <div className="service-row-copy">
-        <span className="eyebrow">{service.category}</span>
+        <span className="eyebrow">{service.category.replace(/_/g, ' ')}</span>
         <h3>{service.name}</h3>
         <p>Professional service performed at your location, with transparent pricing.</p>
         <small>

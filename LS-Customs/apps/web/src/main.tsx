@@ -8,6 +8,7 @@ import '@ionic/react/css/typography.css';
 import 'leaflet/dist/leaflet.css';
 import './styles.css';
 import './admin.css';
+import './workspace-design.css';
 import { App } from './App';
 import { ToastProvider } from './components/common/ToastProvider';
 

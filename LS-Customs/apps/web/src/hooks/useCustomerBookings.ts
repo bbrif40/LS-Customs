@@ -56,6 +56,7 @@ export function useCustomerBookings(userId: string | undefined) {
   const [serviceBookings, setServiceBookings] = useState<CustomerServiceBooking[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
 
   const refetch = useCallback(async () => {
     if (!userId) { setVehicleBookings([]); setServiceBookings([]); setLoading(false); return }
@@ -64,7 +65,11 @@ export function useCustomerBookings(userId: string | undefined) {
       supabase.from('vehicle_bookings').select('id, vehicle_id, start_date, end_date, hold_expires_at, pickup_location, status, total_price, created_at, vehicles(name, image_url)').eq('customer_id', userId).order('created_at', { ascending: false }),
       supabase.from('service_bookings').select('id, scheduled_at, is_emergency, status, total_price, notes, created_at, pin_lat, pin_lng, mechanic_id, mechanic_profiles(current_lat, current_lng, profiles(full_name, phone)), service_booking_items(mechanic_services(name))').eq('customer_id', userId).order('scheduled_at', { ascending: false }),
     ])
-    if (vehiclesResult.error || servicesResult.error) setError((vehiclesResult.error ?? servicesResult.error)?.message ?? 'Failed to load bookings')
+    if (vehiclesResult.error || servicesResult.error) {
+      setError((vehiclesResult.error ?? servicesResult.error)?.message ?? 'Failed to load bookings')
+      setLoading(false)
+      return
+    }
     const vehicles = (vehiclesResult.data ?? []) as unknown as CustomerVehicleBooking[]
     const services = (servicesResult.data ?? []) as unknown as CustomerServiceBooking[]
 
@@ -119,11 +124,12 @@ export function useCustomerBookings(userId: string | undefined) {
 
     setVehicleBookings(vehicles)
     setServiceBookings(services)
+    setUpdatedAt(new Date())
     setLoading(false)
   }, [userId])
 
   useEffect(() => { void refetch() }, [refetch])
-  return { vehicleBookings, serviceBookings, loading, error, refetch }
+  return { vehicleBookings, serviceBookings, loading, error, updatedAt, refetch }
 }
 
 export const CUSTOMER_ACTIVE_STATUSES = [

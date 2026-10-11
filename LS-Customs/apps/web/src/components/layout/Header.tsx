@@ -219,7 +219,7 @@ export function Header({ view, menuOpen, displayName, initials, avatarUrl, onTog
             )}
           </div>
         )}
-        <button className="user-chip" onClick={() => onView('profile')}>
+        <button className="user-chip" aria-label={`Open ${displayName}'s profile`} onClick={() => onView('profile')}>
           {avatarUrl && <span className="avatar"><img src={avatarUrl} alt="" /></span>}
           <span>{displayName}</span>
           <ChevronRight size={15} />

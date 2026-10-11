@@ -451,6 +451,7 @@ export function App() {
 
             {view === 'home' && (
               <Dashboard
+                userId={userId}
                 displayName={identity.displayName}
                 initials={identity.initials}
                 onView={setView}

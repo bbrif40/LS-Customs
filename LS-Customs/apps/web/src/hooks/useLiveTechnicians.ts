@@ -33,6 +33,7 @@ interface UseLiveTechniciansResult {
   mechanicPins: MechanicPin[]
   loading: boolean
   error: string | null
+  updatedAt: Date | null
   refetch: () => Promise<void>
 }
 
@@ -53,6 +54,7 @@ export function useLiveTechnicians(): UseLiveTechniciansResult {
   const [mechanicPins, setMechanicPins] = useState<MechanicPin[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
 
   const fetchTechnicians = useCallback(async () => {
     setLoading(true)
@@ -165,10 +167,9 @@ export function useLiveTechnicians(): UseLiveTechniciansResult {
       // Limit to first 15 technicians for the status list (matches Figma design)
       setTechnicians(techList.slice(0, 15))
       setMechanicPins(pins)
+      setUpdatedAt(new Date())
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load technicians')
-      setTechnicians([])
-      setMechanicPins([])
     } finally {
       setLoading(false)
     }
@@ -208,5 +209,5 @@ export function useLiveTechnicians(): UseLiveTechniciansResult {
     }
   }, [fetchTechnicians])
 
-  return { technicians, mechanicPins, loading, error, refetch: fetchTechnicians }
+  return { technicians, mechanicPins, loading, error, updatedAt, refetch: fetchTechnicians }
 }

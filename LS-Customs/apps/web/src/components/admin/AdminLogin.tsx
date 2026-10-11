@@ -217,7 +217,7 @@ export function AdminLogin({ onAuthenticated, onNavigateHome }: AdminLoginProps)
             <p>
               This portal is restricted to authorized admin personnel only.
               <br />
-              © 2024 LS Customs • Professional Automotive Solutions
+              © {new Date().getFullYear()} LS Customs
             </p>
           </div>
         </div>

@@ -14,7 +14,7 @@ interface ServiceMiniProps {
 
 export function ServiceMini({ title, detail, price, icon, onClick }: ServiceMiniProps) {
   return (
-    <article className="service-mini" onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
+    <article className="service-mini" role={onClick ? 'button' : undefined} tabIndex={onClick ? 0 : undefined} onKeyDown={event => { if (onClick && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onClick() } }} onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
       <div className="service-icon">{icon}</div>
       <h3>{title}</h3>
       <p>{detail}</p>

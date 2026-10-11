@@ -1,3 +1,4 @@
+import { useDialog } from '../../hooks/useDialog'
 /**
  * AdminBookings — Combined Bookings Overview (read-only with admin status updates).
  * Shows both vehicle_bookings and service_bookings in tabbed views.
@@ -63,13 +64,13 @@ const statusLabels: Record<BookingStatus, string> = {
 }
 
 const statusColors: Record<BookingStatus, string> = {
-  pending: '#f59e0b',
-  confirmed: '#3b82f6',
-  assigned: '#8b5cf6',
-  en_route: '#06b6d4',
-  in_progress: '#e8a838',
-  completed: '#22c55e',
-  cancelled: '#ef4444',
+  pending: '#93621a',
+  confirmed: '#245f98',
+  assigned: '#6f45a3',
+  en_route: '#147184',
+  in_progress: '#93621a',
+  completed: '#316749',
+  cancelled: '#b34232',
 }
 
 function getAdminErrorMessage(error: unknown, fallback: string): string {
@@ -102,6 +103,7 @@ export function AdminBookings() {
 
   const [completionBooking, setCompletionBooking] = useState<VehicleBooking | ServiceBooking | null>(null)
   const [viewingBooking, setViewingBooking] = useState<VehicleBookingWithDetails | ServiceBookingWithDetails | null>(null)
+  const detailDialogRef = useDialog(() => setViewingBooking(null), Boolean(viewingBooking))
   useEffect(() => {
     let active = true
     setPaymentSummary(null)
@@ -232,7 +234,7 @@ export function AdminBookings() {
       lng: booking.pin_lng,
       title: `${isSelected ? '★ ' : ''}${customer}`,
       description: `${serviceName} · ${statusLabels[booking.status] ?? booking.status} · ₱${booking.total_price.toLocaleString()}`,
-      color: isSelected ? '#e8a838' : (statusColors[booking.status] ?? '#3b82f6'),
+      color: isSelected ? '#93621a' : (statusColors[booking.status] ?? '#245f98'),
     }
   })
 
@@ -477,7 +479,7 @@ export function AdminBookings() {
   if (error) {
     return (
       <div className="admin-main" style={{ display: 'grid', placeItems: 'center', minHeight: '60vh', textAlign: 'center' }}>
-        <div style={{ color: '#ef4444' }}>Failed to load bookings</div>
+        <div style={{ color: '#b34232' }}>Failed to load bookings</div>
         <p style={{ color: 'var(--admin-muted)', marginTop: 8 }}>{error}</p>
         <button onClick={() => { refetchVehicles(); refetchServices(); }} className="admin-add-btn" style={{ marginTop: 16 }}>
           Retry
@@ -543,17 +545,17 @@ export function AdminBookings() {
     }
 
     return (
-      <div className="admin-modal-overlay" onClick={() => setViewingBooking(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+      <div className="admin-modal-overlay admin-record-overlay" onClick={() => setViewingBooking(null)}>
         <style>{`
           @keyframes bookingModalPop {
             0% { opacity: 0; transform: scale(0.95); }
             100% { opacity: 1; transform: scale(1); }
           }
         `}</style>
-        <div className="admin-modal" onClick={e => e.stopPropagation()} style={{ background: '#ffffff', padding: '24px', borderRadius: '12px', width: '90%', maxWidth: '500px', color: '#1e293b', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)', animation: 'bookingModalPop 0.2s ease-out forwards' }}>
+        <div ref={detailDialogRef} role="dialog" aria-modal="true" aria-label="Booking details" tabIndex={-1} className="admin-modal admin-record-detail" onClick={e => e.stopPropagation()}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 600 }}>Booking Details</h2>
-            <button onClick={() => setViewingBooking(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex' }}><X size={20} /></button>
+            <button aria-label="Close booking details" onClick={() => setViewingBooking(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', display: 'flex' }}><X size={20} /></button>
           </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', fontSize: '14px', lineHeight: 1.5 }}>
@@ -660,10 +662,10 @@ export function AdminBookings() {
                 : 'rgba(239, 68, 68, 0.15)',
             border: `1px solid ${
               assignmentNotice.type === 'success'
-                ? '#22c55e'
+                ? '#316749'
                 : assignmentNotice.type === 'warning'
-                ? '#f59e0b'
-                : '#ef4444'
+                ? '#93621a'
+                : '#b34232'
             }`,
             color:
               assignmentNotice.type === 'success'
@@ -759,7 +761,7 @@ export function AdminBookings() {
       </div>
 
       {activeTab === 'services' && (
-        <section className="admin-map-panel">
+        <details className="admin-map-panel"><summary>Service location map</summary>
           <h3>Service customer locations</h3>
           <p className="admin-map-panel-sub">
             {isSelectedBookingOnMap && selectedBooking
@@ -768,8 +770,8 @@ export function AdminBookings() {
                 ? 'No active service bookings with pinned customer locations.'
                 : `${servicePins.length} active service customer${servicePins.length === 1 ? '' : 's'} on the map.`}
           </p>
-          <MapView pins={servicePins} center={mapCenter} height={360} />
-        </section>
+          <MapView pins={servicePins} center={mapCenter} height={300} />
+        </details>
       )}
 
       {/* ── Bookings Table ───────────────────────────────────── */}
@@ -780,7 +782,7 @@ export function AdminBookings() {
           </div>
         ) : (
           <div style={{ gridColumn: '1 / -1', overflowX: 'auto' }}>
-            <table className="admin-table" style={{ minWidth: 1000 }}>
+            <table className="admin-table admin-booking-table">
               <thead>
                 <tr>
                   <th>Booking ID</th>
@@ -818,17 +820,17 @@ export function AdminBookings() {
                       background: isSelected ? 'rgba(232, 168, 56, 0.06)' : undefined,
                     }}
                   >
-                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                    <td data-label="Booking reference" style={{ fontFamily: 'monospace', fontSize: 12 }}>
                       {booking.id.slice(0, 8)}...
                     </td>
-                    <td style={{ fontWeight: 500 }}>{getCustomerName(booking)}</td>
+                    <td data-label="Customer" style={{ fontWeight: 500 }}>{getCustomerName(booking)}</td>
                     {activeTab === 'vehicles' ? (
                       <>
-                        <td>{getVehicleName(booking as VehicleBooking)}</td>
-                        <td style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
+                        <td data-label="Vehicle">{getVehicleName(booking as VehicleBooking)}</td>
+                        <td data-label="Dates" style={{ fontSize: 13, whiteSpace: 'nowrap' }}>
                           {(booking as VehicleBooking).start_date} → {(booking as VehicleBooking).end_date}
                         </td>
-                        <td style={{ fontSize: 13, color: 'var(--admin-muted)', maxWidth: 200 }}>
+                        <td data-label="Pickup location" style={{ fontSize: 13, color: 'var(--admin-muted)', maxWidth: 200 }}>
                           {(booking as VehicleBooking).pickup_location || '—'}
                         </td>
                       </>
@@ -838,9 +840,9 @@ export function AdminBookings() {
                           const sb = booking as ServiceBookingWithDetails
                           return (
                             <>
-                              <td style={{ maxWidth: 250 }}>{getServiceDetails(sb)}</td>
-                              <td>{getMechanicName(sb)}</td>
-                              <td style={{ whiteSpace: 'nowrap' }}>
+                              <td data-label="Services" style={{ maxWidth: 250 }}>{getServiceDetails(sb)}</td>
+                              <td data-label="Mechanic">{getMechanicName(sb)}</td>
+                              <td data-label="Scheduled" style={{ whiteSpace: 'nowrap' }}>
                                 {new Date(sb.scheduled_at).toLocaleString('en-US', {
                                   month: 'short',
                                   day: 'numeric',
@@ -848,7 +850,7 @@ export function AdminBookings() {
                                   minute: '2-digit',
                                 })}
                               </td>
-                              <td style={{ fontSize: 12, color: 'var(--admin-muted)', maxWidth: 220 }}>
+                              <td data-label="Address / Pin" style={{ fontSize: 12, color: 'var(--admin-muted)', maxWidth: 220 }}>
                                 {(() => {
                                   if (sb.addresses?.[0]) return `${sb.addresses[0].line1}, ${sb.addresses[0].city}`
                                   if (sb.notes) {
@@ -866,7 +868,7 @@ export function AdminBookings() {
                         })()}
                       </>
                     )}
-                    <td>
+                    <td data-label="Voucher / Promo">
                       {(() => {
                         const rawText = isServiceRow
                           ? (booking as ServiceBookingWithDetails).notes
@@ -879,7 +881,7 @@ export function AdminBookings() {
                           <span
                             style={{
                               background: 'rgba(16, 185, 129, 0.15)',
-                              color: '#34d399',
+                              color: 'var(--admin-success)',
                               border: '1px solid rgba(16, 185, 129, 0.35)',
                               padding: '3px 8px',
                               borderRadius: 6,
@@ -898,10 +900,10 @@ export function AdminBookings() {
                         )
                       })()}
                     </td>
-                    <td style={{ fontWeight: 600, color: '#e8a838' }}>
+                    <td data-label="Total (₱)" style={{ fontWeight: 600, color: 'var(--admin-ink)' }}>
                       {booking.total_price.toLocaleString()}
                     </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
+                    <td data-label="Status" style={{ whiteSpace: 'nowrap' }}>
                       <select
                         aria-label="Change booking status"
                         value={booking.status}
@@ -926,68 +928,68 @@ export function AdminBookings() {
                         ))}
                       </select>
                     </td>
-                    <td>
+                    <td data-label="Actions">
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <button
-                          title="View Details"
+                          title="View Details" aria-label="View Details"
                           onClick={(e) => {
                             e.stopPropagation()
-                            setViewingBooking(booking)
+                            activeTab === 'services' ? setSelectedId(booking.id) : setViewingBooking(booking)
                           }}
-                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--admin-ink)', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                         >
-                          <Eye size={14} />
+                          <Eye size={14} /><span>Details</span>
                         </button>
                         <button
-                          title="Edit"
+                          title="Edit" aria-label="Edit"
                           onClick={(e) => {
                             e.stopPropagation()
                             setEditingBooking(booking)
                             setEditingText('vehicle_id' in booking ? booking.pickup_location ?? '' : booking.notes ?? '')
                           }}
-                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#d4d9e6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--admin-ink)', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                         >
-                          <Edit size={14} />
+                          <Edit size={14} /><span>Edit</span>
                         </button>
 
                         {(['pending', 'confirmed', 'assigned', 'en_route', 'in_progress'] as BookingStatus[]).includes(booking.status) && (
                           <>
                             {booking.status !== 'completed' && (
                               <button
-                                title="Complete"
+                                title="Complete" aria-label="Complete"
                                 onClick={(event) => {
                                   event.stopPropagation()
                                   openCompletionModal(booking)
                                 }}
-                                style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#10b981', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                                style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', color: '#316749', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                               >
-                                <Check size={14} />
+                                <Check size={14} /><span>Complete</span>
                               </button>
                             )}
                             {booking.status !== 'cancelled' && (
                               <button
-                                title="Cancel"
+                                title="Cancel" aria-label="Cancel"
                                 onClick={(event) => {
                                   event.stopPropagation()
                                   void handleStatusChange(booking, 'cancelled')
                                 }}
-                                style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#ef4444', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                                style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#b34232', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                               >
-                                <X size={14} />
+                                <X size={14} /><span>Cancel</span>
                               </button>
                             )}
                             {['pending', 'confirmed'].includes(booking.status) && activeTab === 'services' && (
                               <div style={{ position: 'relative', display: 'inline-block' }}>
                                 <button
-                                  title="Assign Mechanic"
+                                  title="Assign Mechanic" aria-label="Assign Mechanic"
                                   onClick={(event) => {
                                     event.stopPropagation()
                                     setAssignOpenFor((cur) => (cur === booking.id ? null : booking.id))
                                   }}
-                                  style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', color: '#3b82f6', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
+                                  style={{ background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.2)', color: '#245f98', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'flex' }}
                                   disabled={assigning}
                                 >
-                                  <UserPlus size={14} />
+                                  <UserPlus size={14} /><span>Assign</span>
                                 </button>
                                 {assignOpenFor === booking.id && (
                                   <div
@@ -1025,7 +1027,7 @@ export function AdminBookings() {
                                           {m.years_experience != null ? `${m.years_experience} yrs` : 'New'} ·{' '}
                                           {m.rating_avg != null ? (
                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
-                                              <IonIcon icon={star} style={{ color: '#e8a838', fontSize: 11 }} />
+                                              <IonIcon icon={star} style={{ color: 'var(--admin-ink)', fontSize: 11 }} />
                                               {m.rating_avg.toFixed(1)}
                                             </span>
                                           ) : (
@@ -1085,6 +1087,7 @@ export function AdminBookings() {
             : null
         }
         onClose={() => setSelectedId(null)}
+        onPaymentDetails={() => { if (selectedBooking) { setSelectedId(null); setViewingBooking(selectedBooking) } }}
       />
 
       {completionBooking && (

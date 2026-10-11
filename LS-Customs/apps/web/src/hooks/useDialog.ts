@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 
 /** Keyboard containment and focus restoration for modal dialogs. */
-export function useDialog(onClose: () => void, open = true) {
-  const ref = useRef<HTMLDivElement>(null)
+export function useDialog<T extends HTMLElement = HTMLDivElement>(onClose: () => void, open = true) {
+  const ref = useRef<T>(null)
   const close = useRef(onClose)
   close.current = onClose
   useEffect(() => {
