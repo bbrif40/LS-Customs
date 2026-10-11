@@ -87,7 +87,9 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
   }
 
   handleRetry = () => {
-    this.setState({ error: null, copied: false })
+    // React.lazy caches rejected imports. A fresh document also loads the
+    // current deployment's asset URLs instead of retrying a stale chunk.
+    window.location.reload()
   }
 
   handleReload = () => {
