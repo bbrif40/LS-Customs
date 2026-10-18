@@ -9,12 +9,14 @@
  */
 import type { ReactNode } from 'react'
 import { ChatBot } from '../chat/ChatBot'
-import type { PublicView } from '../../types'
+import type { PublicView, ChatRecommendation } from '../../types'
 import { navigateTo } from '../../utils/navigation'
+import { usePageSlide } from '../../hooks/usePageSlide'
 
 interface PublicLayoutProps {
   publicView: PublicView
   children: ReactNode
+  onRecommendation?: (recommendation: ChatRecommendation) => void
 }
 
 const PUBLIC_NAV: { id: PublicView; label: string; href: string }[] = [
@@ -26,7 +28,8 @@ const PUBLIC_NAV: { id: PublicView; label: string; href: string }[] = [
   { id: 'docs', label: 'Documentation', href: '/docs' },
 ]
 
-export function PublicLayout({ publicView, children }: PublicLayoutProps) {
+export function PublicLayout({ publicView, children, onRecommendation }: PublicLayoutProps) {
+  const pageSlideRef = usePageSlide(PUBLIC_NAV.findIndex(item => item.id === publicView), ':scope > *')
   return (
     <div className="public-layout">
       <header className="public-header">
@@ -62,9 +65,9 @@ export function PublicLayout({ publicView, children }: PublicLayoutProps) {
         </nav>
       </header>
 
-      <main className="public-main">{children}</main>
+      <main className="public-main" ref={pageSlideRef}>{children}</main>
 
-      <ChatBot userId={undefined} onNotify={() => {}} />
+      <ChatBot userId={undefined} onNotify={() => {}} onRecommendation={onRecommendation} />
 
       <footer className="public-footer">
         <div className="footer-brand">

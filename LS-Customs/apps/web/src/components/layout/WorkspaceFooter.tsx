@@ -1,10 +1,10 @@
 /**
  * WorkspaceFooter — sleek multi-column typographic footer with subtle line icons.
- * Fully interactive and connected to customer-side navigation, active booking tracker,
- * vouchers drawer, emergency roadside dispatch, and contact support.
+ * Includes newsletter signup, service navigation, and contact details.
  */
 
 import { Mail, MapPin, Phone, Clock, Facebook, Twitter, Linkedin, Instagram } from 'lucide-react'
+import { NewsletterForm } from './NewsletterForm'
 import { navigateTo } from '../../utils/navigation'
 import { useCustomerSiteSettings } from '../../hooks/useCustomerSiteSettings'
 import type { View } from '../../types'
@@ -18,7 +18,7 @@ interface WorkspaceFooterProps {
 export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: WorkspaceFooterProps) {
   const { settings } = useCustomerSiteSettings()
 
-  const handleNav = (targetView: View, action?: 'promos') => {
+  const handleNav = (targetView: View) => {
     // If user is currently on a public page (/help, /contact, /terms, etc.), return to app frame
     const path = window.location.pathname
     if (path.startsWith('/help') || path.startsWith('/contact') || path.startsWith('/terms') || path.startsWith('/privacy') || path.startsWith('/faqs') || path.startsWith('/docs')) {
@@ -26,21 +26,6 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
       window.dispatchEvent(new PopStateEvent('popstate'))
     }
 
-    if (action === 'promos') {
-      if (onView) {
-        onView('home')
-      } else {
-        navigateTo('/')
-      }
-      setTimeout(() => {
-        const promoEl = document.getElementById('available-vouchers-promos-section')
-        if (promoEl) {
-          promoEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        }
-        window.dispatchEvent(new CustomEvent('ls-open-promos'))
-      }, 150)
-      return
-    }
 
     if (onView) {
       onView(targetView)
@@ -128,95 +113,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
           </p>
         </div>
 
-        {/* ── Column 2: Navigation (100% Functional Customer Actions) ─── */}
-        <div>
-          <h4
-            style={{
-              fontSize: 14,
-              fontWeight: 700,
-              color: '#0f172a',
-              margin: '0 0 16px',
-              letterSpacing: '0.01em',
-            }}
-          >
-            Navigation
-          </h4>
-          <ul
-            style={{
-              listStyle: 'none',
-              padding: 0,
-              margin: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 11,
-              fontSize: 13,
-            }}
-          >
-            <li>
-              <button type="button"
-                onClick={() => handleNav('home')}
-                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-              >
-                Home
-              </button>
-            </li>
-            <li>
-              <button type="button"
-                onClick={() => handleNav('services')}
-                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-              >
-                Book Service
-              </button>
-            </li>
-            <li>
-              <button type="button"
-                onClick={() => handleNav('rentals')}
-                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-              >
-                Vehicle Rentals
-              </button>
-            </li>
-            <li>
-              <button type="button"
-                onClick={() => handleNav('bookings')}
-                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-              >
-                Live Repair Tracker
-              </button>
-            </li>
-            <li>
-              <button type="button"
-                onClick={() => handleNav('home', 'promos')}
-                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-              >
-                Vouchers & Promos
-              </button>
-            </li>
-            <li>
-              <button type="button"
-                onClick={() => {
-                  navigateTo('/contact')
-                  window.scrollTo({ top: 0, behavior: 'smooth' })
-                }}
-                style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-              >
-                Contact Us
-              </button>
-            </li>
-          </ul>
-        </div>
+        <NewsletterForm />
 
         {/* ── Column 3: Services (Functional Booking & SOS Triggers) ─── */}
         <div>

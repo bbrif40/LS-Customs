@@ -33,6 +33,7 @@ function toUiVehicle(row: DbVehicle): UiVehicle {
     detail: detailParts.join(' · ') || row.category.replace('_', ' '),
     price: `₱${row.price_per_day.toLocaleString()}`,
     pricePerDay: row.price_per_day,
+    fuelType: row.fuel_type || undefined,
     image: row.image_url || '',
     tag: row.sub_category ? row.sub_category.toUpperCase() : row.category.toUpperCase(),
     rating: row.rating_avg ? row.rating_avg.toFixed(1) : '0.0',

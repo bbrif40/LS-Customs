@@ -24,7 +24,7 @@ export function ServiceOptionCard({ service, selected, onSelect }: ServiceOption
       <div className="service-row-copy">
         <span className="eyebrow">{service.category.replace(/_/g, ' ')}</span>
         <h3>{service.name}</h3>
-        <p>Professional service performed at your location, with transparent pricing.</p>
+        <p>{service.description || 'Professional service performed at your location, with transparent pricing.'}</p>
         <small>
           <Clock3 size={13} /> Est. {service.duration}
         </small>

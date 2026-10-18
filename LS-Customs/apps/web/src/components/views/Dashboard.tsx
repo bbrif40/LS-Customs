@@ -1,3 +1,4 @@
+import { SidebarTestimonials } from '../layout/SidebarTestimonials'
 /**
  * Dashboard — home view with welcome row, hero cards, featured rentals, and trending services.
  * Both featured rentals and trending services come from Supabase.
@@ -222,6 +223,8 @@ export function Dashboard({ userId, displayName, initials, onView, onNotify, onS
           ))
         )}
       </div>
+      <SidebarTestimonials />
     </div>
   )
 }
+

@@ -28,6 +28,7 @@ interface UseServicesResult {
 function toUiService(row: MechanicService): Service {
   return {
     name: row.name,
+    description: row.description ?? undefined,
     category: row.main_category,
     price: `₱${row.base_price.toFixed(2)}`,
     duration: `${row.estimated_duration_minutes} mins`,

@@ -462,3 +462,8 @@ verify_jwt = false
 
 [functions.booking-route]
 verify_jwt = false
+
+# Public planner supports guests; the endpoint verifies JWTs internally before
+# accessing any customer-owned booking or ticket data.
+[functions.chatbot]
+verify_jwt = false

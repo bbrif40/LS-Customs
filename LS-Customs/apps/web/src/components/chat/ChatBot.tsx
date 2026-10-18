@@ -3,26 +3,33 @@
  * Calls the `chatbot` Edge Function (OpenRouter-backed) for customer
  * support via the Supabase `functions.invoke` API.
  *
- * Only rendered for signed-in users (see App.tsx). Guest users never
- * see or mount this component.
+ * Rendered for signed-in users and on public content pages. Recommendation
+ * actions are delegated to the parent so it can apply the right access flow.
  */
 import { useState, useRef, useEffect } from 'react'
-import { MessageCircle, Send, X, Sparkles, RefreshCw, TicketPlus, Loader2, AlertCircle } from 'lucide-react'
+import { MessageCircle, Send, X, Sparkles, RefreshCw, TicketPlus } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
-import type { ChatMessage, ChatBotProps } from '../../types'
+import type { ChatMessage, ChatBotProps, ChatPlannerMode, ChatRecommendation } from '../../types'
 import { TicketForm, TicketSuccess } from './TicketForm'
 import { TicketThread } from '../common/TicketThread'
+import { PlannerItinerary, PlannerModeBar, PlannerModePicker, PlannerRecommendations } from './PlannerExperience'
+import './planner.css'
 
 const WELCOME_MESSAGE =
-  "Hi! I'm the LS Customs Assistant. How can I help you today with car rentals, vehicle bookings, or mobile mechanic services?"
+  "Hi! I can help plan a trip and find a rental vehicle, or talk through car symptoms and suggest a service. Choose a starting point, then share whatever details you have."
 
-const QUICK_SUGGESTIONS = [
-  "🚗 Help me rent a car",
-  "🔧 Need a mobile mechanic",
-  "💰 Rates & pricing",
-  "📍 Pickup locations",
-  "🎫 Create support ticket",
-]
+const MODE_PROMPTS: Record<ChatPlannerMode, string> = {
+  trip: "I'm planning a trip and need help with an itinerary and rental vehicle.",
+  diagnosis: "I have a car problem and would like help understanding what service may be useful.",
+}
+
+interface ChatbotResponse {
+  reply?: string
+  conversation_id?: string
+  ticket_form_requested?: boolean
+  recommendations?: unknown
+  itinerary?: unknown
+}
 
 /**
  * Format markdown-like text (bullet points, bold text, newlines) safely for display
@@ -60,14 +67,13 @@ function FormattedMessage({ text }: { text: string }) {
   )
 }
 
-export function ChatBot({ userId, onNotify }: ChatBotProps) {
+export function ChatBot({ userId, onNotify, onRecommendation }: ChatBotProps) {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [conversationId, setConversationId] = useState<string | undefined>(undefined)
+  const [mode, setMode] = useState<ChatPlannerMode | null>(null)
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [ticketId, setTicketId] = useState<string | null>(null)
-  const [showTicketStatus, setShowTicketStatus] = useState(false)
   const [ticketFormOpen, setTicketFormOpen] = useState(false)
   // When true, the overlay shows the live thread instead of the form/success.
   // Set after the success card's Done button is clicked.
@@ -82,6 +88,7 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
   } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const requestVersionRef = useRef(0)
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -114,6 +121,10 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
   }
 
   const resetChat = () => {
+    requestVersionRef.current += 1
+    setLoading(false)
+    setInput('')
+    setMode(null)
     setConversationId(undefined)
     setMessages([
       {
@@ -124,9 +135,11 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
     ])
   }
 
-  const sendMessage = async (customText?: string) => {
+  const sendMessage = async (customText?: string, modeOverride?: ChatPlannerMode) => {
     const textToSend = (customText ?? input).trim()
     if (!textToSend || loading) return
+    const requestVersion = ++requestVersionRef.current
+    const requestMode = modeOverride ?? mode
 
     const userMsg: ChatMessage = {
       role: 'user',
@@ -142,9 +155,9 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
     setLoading(true)
 
     try {
-      // Send up to the last 14 messages as conversation history so the LLM
-      // retains context for multi-turn conversations (backend uses 12 of these).
-      const chatHistory = updatedMessages.slice(-14).map((m) => ({
+      // Keep enough context for longer planning and revisions; the backend
+      // also caps the total history size before sending it to the model.
+      const chatHistory = updatedMessages.slice(-32).map((m) => ({
         role: m.role,
         content: m.content,
       }))
@@ -155,11 +168,15 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
           messages: chatHistory,
           conversation_id: conversationId,
           user_id: userId,
+          mode: requestMode ?? undefined,
         },
       })
 
-      // The edge function returns JSON with { data: { reply, conversation_id, ... }, error: null }
-      const resPayload = (data as { data?: { reply?: string; conversation_id?: string }; reply?: string; conversation_id?: string } | null)?.data ?? data
+      if (requestVersionRef.current !== requestVersion) return
+
+      // Supabase may wrap the worker result in `data`; accept both forms.
+      const response = data as { data?: ChatbotResponse } & ChatbotResponse | null
+      const resPayload = response?.data ?? response
 
       if (error && !resPayload?.reply) {
         // If error response from Edge Function
@@ -173,14 +190,18 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
       }
 
       const botReply = resPayload?.reply?.trim()
+      const recommendations = parseRecommendations(resPayload?.recommendations)
+      const itinerary = parseItinerary(resPayload?.itinerary)
 
-      // Handle ticket creation response
-      if (resPayload?.ticket_created && resPayload?.ticket_id) {
-        setTicketId(resPayload.ticket_id)
-        setShowTicketStatus(true)
+      // The assistant may open the existing form after an explicit request;
+      // ticket creation still happens only when the customer submits it.
+      if (resPayload?.ticket_form_requested) {
+        setTicketResult(null)
+        setTicketThreadOpen(false)
+        setTicketFormOpen(true)
       }
 
-      if (resPayload?.conversation_id && !conversationId) {
+      if (resPayload?.conversation_id && resPayload.conversation_id !== conversationId) {
         setConversationId(resPayload.conversation_id)
       }
 
@@ -188,16 +209,17 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
         const fallbackMsg = "I'm here to help with all LS Customs car rentals and mobile mechanic services! How can I assist you today?"
         setMessages((prev) => [
           ...prev,
-          { role: 'assistant', content: fallbackMsg, timestamp: Date.now() },
+          { role: 'assistant', content: fallbackMsg, timestamp: Date.now(), recommendations, itinerary },
         ])
         return
       }
 
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: botReply, timestamp: Date.now() },
+        { role: 'assistant', content: botReply, timestamp: Date.now(), recommendations, itinerary },
       ])
     } catch {
+      if (requestVersionRef.current !== requestVersion) return
       setMessages((prev) => [
         ...prev,
         {
@@ -208,8 +230,13 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
       ])
       onNotify('Failed to reach assistant')
     } finally {
-      setLoading(false)
+      if (requestVersionRef.current === requestVersion) setLoading(false)
     }
+  }
+
+  const startMode = (selectedMode: ChatPlannerMode) => {
+    setMode(selectedMode)
+    void sendMessage(MODE_PROMPTS[selectedMode], selectedMode)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -256,6 +283,10 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
               </button>
             </div>
           </div>
+
+          {mode && !ticketFormOpen && (
+            <PlannerModeBar mode={mode} onChange={resetChat} />
+          )}
 
           {ticketFormOpen ? (
             <div className="chat-ticket-overlay">
@@ -314,31 +345,29 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
             </div>
           ) : (
             <>
-              <div className="chat-messages">
-                {showTicketStatus && ticketId && (
-                  <div className="chat-message assistant ticket-status">
-                    <div className="chat-bubble ticket-status-bubble">
-                      <div className="ticket-status-header">
-                        <TicketPlus size={16} />
-                        <span className="ticket-status-title">Support Ticket Created</span>
-                      </div>
-                      <div className="ticket-status-id">Ticket ID: <strong>{ticketId.slice(0, 8)}...</strong></div>
-                      <div className="ticket-status-note">An admin will review your request and respond. You can ask me for updates on this ticket.</div>
-                      <button className="ticket-status-close" onClick={() => setShowTicketStatus(false)} aria-label="Dismiss ticket status">
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-
+              <div className="chat-messages" role="log" aria-live="polite" aria-label="Assistant conversation" aria-relevant="additions">
                 {messages.map((msg, i) => (
                   <div
-                    key={i}
+                    key={`${msg.timestamp}-${i}`}
                     className={`chat-message ${msg.role === 'user' ? 'user' : 'assistant'}`}
                   >
                     <div className="chat-bubble">
                       <FormattedMessage text={msg.content} />
                     </div>
+                    {msg.role === 'assistant' && msg.itinerary && (
+                      <PlannerItinerary itinerary={msg.itinerary} variant="message" />
+                    )}
+                    {msg.role === 'assistant' && msg.recommendations && (
+                      <PlannerRecommendations
+                        recommendations={msg.recommendations}
+                        mode={mode}
+                        hideNestedItinerary={Boolean(msg.itinerary)}
+                        onSelect={(recommendation) => {
+                          closeChat()
+                          onRecommendation?.(recommendation)
+                        }}
+                      />
+                    )}
                     <div className="chat-time">
                       {new Date(msg.timestamp).toLocaleTimeString([], {
                         hour: '2-digit',
@@ -349,7 +378,7 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
                 ))}
 
                 {loading && (
-                  <div className="chat-message assistant">
+                  <div className="chat-message assistant" role="status" aria-label="Assistant is preparing a reply">
                     <div className="chat-bubble typing-dots">
                       <span />
                       <span />
@@ -358,21 +387,8 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
                   </div>
                 )}
 
-                {messages.length === 1 && !loading && (
-                  <div className="chat-suggestions">
-                    <p className="chat-suggestions-title">Quick actions:</p>
-                    <div className="chat-chips-grid">
-                      {QUICK_SUGGESTIONS.map((suggestion, idx) => (
-                        <button
-                          key={idx}
-                          className="chat-chip"
-                          onClick={() => void sendMessage(suggestion.replace(/^[^\s]+\s/, ''))}
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                {mode === null && messages.length === 1 && (
+                  <PlannerModePicker disabled={loading} onChoose={startMode} />
                 )}
 
                 <div ref={messagesEndRef} />
@@ -386,7 +402,11 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
                   onChange={(e) => setInput(e.target.value)}
                   aria-label="Chat input field"
                   onKeyDown={handleKeyDown}
-                  placeholder="Ask about rentals, bookings, services..."
+                  placeholder={mode === 'trip'
+                    ? 'Add your destination, dates, or group size...'
+                    : mode === 'diagnosis'
+                      ? 'Describe the symptoms you noticed...'
+                      : 'Choose a guide above or ask a question...'}
                   disabled={loading}
                 />
                 <button
@@ -404,6 +424,74 @@ export function ChatBot({ userId, onNotify }: ChatBotProps) {
       )}
     </div>
   )
+}
+
+function parseRecommendations(value: unknown): ChatRecommendation[] {
+  if (!Array.isArray(value)) return []
+
+  return value.flatMap((item): ChatRecommendation[] => {
+    if (!isRecord(item)
+      || (item.kind !== 'vehicle' && item.kind !== 'service')
+      || typeof item.id !== 'string'
+      || typeof item.title !== 'string'
+      || typeof item.reason !== 'string') {
+      return []
+    }
+
+    const recommendation: ChatRecommendation = {
+      kind: item.kind,
+      id: item.id,
+      title: item.title,
+      reason: item.reason,
+    }
+
+    if (typeof item.price === 'number' && Number.isFinite(item.price)) {
+      recommendation.price = item.price
+    }
+    if (item.currency === 'PHP') recommendation.currency = item.currency
+    if (isRecord(item.dates)
+      && typeof item.dates.start === 'string'
+      && typeof item.dates.end === 'string') {
+      recommendation.dates = { start: item.dates.start, end: item.dates.end }
+    }
+    if (item.availability_status === 'available_for_dates' || item.availability_status === 'not_checked') {
+      recommendation.availability_status = item.availability_status
+    }
+    if (typeof item.checked_at === 'string') recommendation.checked_at = item.checked_at
+    const itinerary = parseItinerary(item.itinerary)
+    if (itinerary) recommendation.itinerary = itinerary
+
+    return [recommendation]
+  })
+}
+
+function parseItinerary(value: unknown): ChatRecommendation['itinerary'] {
+  if (!isRecord(value) || typeof value.title !== 'string' || !Array.isArray(value.days)) return undefined
+
+  const days = value.days.slice(0, 30).flatMap((day): NonNullable<ChatRecommendation['itinerary']>['days'] => {
+    if (!isRecord(day)
+      || typeof day.day !== 'number'
+      || !Number.isInteger(day.day)
+      || day.day < 1
+      || typeof day.title !== 'string'
+      || !Array.isArray(day.activities)) {
+      return []
+    }
+    return [{
+      day: day.day,
+      title: day.title.slice(0, 160),
+      activities: day.activities
+        .slice(0, 12)
+        .filter((activity): activity is string => typeof activity === 'string')
+        .map((activity) => activity.slice(0, 280)),
+    }]
+  })
+
+  return days.length > 0 ? { title: value.title.slice(0, 160), days } : undefined
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 /**

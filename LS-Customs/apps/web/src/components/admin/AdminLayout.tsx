@@ -19,6 +19,7 @@ import { AdminTickets } from './AdminTickets'
 
 import { AdminAuditLogs } from './AdminAuditLogs'
 import { AdminAccountSecurity } from './AdminAccountSecurity'
+import { usePageSlide } from '../../hooks/usePageSlide'
 import { useOpenTicketCount, useAdminBookingsCount } from '../../hooks/useAdminData'
 import type { AdminView } from './AdminSidebar'
 
@@ -70,6 +71,7 @@ const ALL_VIEWS: AdminView[] = [
 export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [currentView, setCurrentView] = useState<AdminView>('overview')
+  const pageSlideRef = usePageSlide(ALL_VIEWS.indexOf(currentView), ':scope > .admin-view-pane.is-active')
   const openTicketCount = useOpenTicketCount()
   const activeBookingsCount = useAdminBookingsCount()
 
@@ -115,7 +117,7 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
         openTicketCount={openTicketCount.count}
         activeBookingsCount={activeBookingsCount.count}
       />
-      <div className="admin-views">
+      <div className="admin-views" ref={pageSlideRef}>
         <AdminAccountSecurity />
         {ALL_VIEWS.map((view) => (
           <div

@@ -8,9 +8,11 @@ import { IonIcon } from '@ionic/react'
 import { sparkles, warningOutline } from 'ionicons/icons'
 import { navItems } from '../../data/navigation'
 import { useScrollAnimation } from '../../hooks/useScrollAnimation'
+import { usePageSlide } from '../../hooks/usePageSlide'
 import { Rentals } from './Rentals'
 import { MechanicServices } from './MechanicServices'
 import { WorkspaceFooter } from '../layout/WorkspaceFooter'
+import { SidebarTestimonials } from '../layout/SidebarTestimonials'
 import { LocationCard } from '../common/LocationCard'
 import { navigateTo } from '../../utils/navigation'
 import type { AuthMode, View } from '../../types'
@@ -24,6 +26,7 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
   const [guestView, setGuestView] = useState<View>('home')
   const [menuOpen, setMenuOpen] = useState(false)
   const scrollRef = useScrollAnimation()
+  const pageSlideRef = usePageSlide(navItems.findIndex(item => item.id === guestView), ':scope > :not(header):not(footer)')
 
   const navigateGuest = (view: View) => {
     setMenuOpen(false)
@@ -108,7 +111,7 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
         </div>
       </aside>
 
-      <main className="main-content">
+      <main className="main-content" ref={pageSlideRef}>
         <header className="topbar">
           <button className="mobile-menu" aria-label="Open menu" onClick={() => setMenuOpen((o) => !o)}>
             <Menu size={21} />
@@ -164,6 +167,7 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
           </div>
         )}
 
+        {guestView === 'home' && <SidebarTestimonials />}
         {guestView === 'rentals' && <Rentals onNotify={() => onOpenAuth('sign-in')} />}
         {guestView === 'services' && (
           <MechanicServices cartCount={0} onAdd={() => onOpenAuth('sign-in')} onNotify={() => onOpenAuth('sign-in')} onEmergencyClick={onEmergencyClick} />
@@ -191,3 +195,4 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
     </div>
   )
 }
+

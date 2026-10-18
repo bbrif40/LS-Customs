@@ -9,10 +9,12 @@ import { App as CapacitorApp } from '@capacitor/app'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { X, AlertTriangle, RefreshCw, Home, ChevronDown, Copy, Check } from 'lucide-react'
 import './status-screens.css'
+import './assistant-handoff.css'
 import { supabase } from './supabaseClient'
 import { useAuth } from './hooks/useAuth'
 import { useAdminAuth } from './hooks/useAdminAuth'
 import { navItems } from './data/navigation'
+import { usePageSlide } from './hooks/usePageSlide'
 import { Sidebar } from './components/layout/Sidebar'
 import { Header } from './components/layout/Header'
 import { WorkspaceFooter } from './components/layout/WorkspaceFooter'
@@ -39,7 +41,7 @@ import { PrivacyPolicy } from './pages/public/PrivacyPolicy'
 import { Faqs } from './pages/public/Faqs'
 import { Documentation } from './pages/public/Documentation'
 import { EmergencyMechanicModal, type EmergencyDispatchData } from './components/common/EmergencyMechanicModal'
-import type { View, PublicView } from './types'
+import type { View, PublicView, ChatRecommendation } from './types'
 import { useCustomerNotifications } from './hooks/useCustomerNotifications'
 import { useCustomerActiveBookingsCount } from './hooks/useCustomerBookings'
 import { MechanicDispatch } from './components/views/MechanicDispatch'
@@ -197,6 +199,7 @@ export function App() {
     return 'home'
   })
   const [menuOpen, setMenuOpen] = useState(false)
+  const pageSlideRef = usePageSlide(navItems.findIndex(item => item.id === view), ':scope > :not(header):not(footer)')
   const [toast, setToast] = useState('')
   const [confirmSignOut, setConfirmSignOut] = useState(false)
   // Legacy simple toast used for sign-out and admin flows; most other
@@ -210,6 +213,15 @@ export function App() {
   const [activeEmergencyDispatch, setActiveEmergencyDispatch] = useState<EmergencyDispatchData | null>(null)
   const [preselectedBookingDate, setPreselectedBookingDate] = useState<string | null>(null)
   const [preselectedServiceId, setPreselectedServiceId] = useState<string | null>(null)
+  const [assistantSelection, setAssistantSelection] = useState<(ChatRecommendation & { requestId: string }) | null>(null)
+  useEffect(() => {
+    if (!assistantSelection) return
+    const destination = assistantSelection.kind === 'vehicle' ? 'rentals' : 'services'
+    if (view !== destination) {
+      setAssistantSelection(null)
+      if (assistantSelection.kind === 'service') setPreselectedServiceId(null)
+    }
+  }, [view, assistantSelection])
 
   useEffect(() => {
     if (!authLoading) {
@@ -296,12 +308,26 @@ export function App() {
     window.setTimeout(() => setToast(''), 2500)
   }
 
+  const openAssistantRecommendation = (recommendation: ChatRecommendation) => {
+    if (!recommendation.id || !['vehicle', 'service'].includes(recommendation.kind)) return
+    setAssistantSelection({ ...recommendation, requestId: crypto.randomUUID() })
+    setPreselectedBookingDate(null)
+    setPreselectedServiceId(recommendation.kind === 'service' ? recommendation.id : null)
+    setAppMode('customer')
+    setView(recommendation.kind === 'vehicle' ? 'rentals' : 'services')
+    window.history.pushState({}, '', recommendation.kind === 'vehicle' ? '/rentals' : '/services')
+    if (!signedIn) openAuth('sign-in')
+    window.scrollTo({ top: 0, behavior: 'instant' })
+  }
+
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut()
     if (error) {
       notify(error.message)
       return
     }
+    setAssistantSelection(null)
+    setPreselectedServiceId(null)
     setView('home')
     notify('You have been signed out')
   }
@@ -345,7 +371,7 @@ export function App() {
   if (appMode === 'public') {
     return (
       <RootErrorBoundary>
-        <PublicLayout publicView={publicView}>
+        <PublicLayout publicView={publicView} onRecommendation={openAssistantRecommendation}>
           {publicView === 'help' && <HelpCenter />}
           {publicView === 'contact' && <ContactSupport />}
           {publicView === 'terms' && <Terms />}
@@ -381,6 +407,7 @@ export function App() {
             onOpenAuth={openAuth}
             onEmergencyClick={() => setEmergencyModalOpen(true)}
           />
+          <ChatBot userId={undefined} onNotify={notify} onRecommendation={openAssistantRecommendation} />
           {authOpen && (
             <AuthModal
               mode={authMode}
@@ -388,7 +415,7 @@ export function App() {
               onClose={() => setAuthOpen(false)}
               onAuthenticated={() => {
                 setAuthOpen(false)
-                setView('home')
+                if (!assistantSelection) setView('home')
               }}
             />
           )}
@@ -414,7 +441,7 @@ export function App() {
   if (signedIn && userId && profileChecked && !identity.phone) {
     return (
       <RootErrorBoundary>
-        <AccountSetup userId={userId} onComplete={() => setView('home')} />
+        <AccountSetup userId={userId} onComplete={() => { if (!assistantSelection) setView('home') }} />
       </RootErrorBoundary>
     )
   }
@@ -439,7 +466,7 @@ export function App() {
             setActiveDispatch={setActiveEmergencyDispatch}
           />
 
-          <main className="main-content">
+          <main className="main-content" ref={pageSlideRef}>
             <Header
               view={view}
               menuOpen={menuOpen}
@@ -469,17 +496,22 @@ export function App() {
             )}
             {view === 'rentals' && (
               <Rentals
+                key={assistantSelection?.kind === 'vehicle' ? assistantSelection.requestId : 'rentals'}
                 userId={userId}
                 onNotify={notify}
-                initialStartDate={preselectedBookingDate ?? undefined}
+                initialVehicleId={assistantSelection?.kind === 'vehicle' ? assistantSelection.id : undefined}
+                initialStartDate={assistantSelection?.kind === 'vehicle' ? assistantSelection.dates?.start : preselectedBookingDate ?? undefined}
+                initialEndDate={assistantSelection?.kind === 'vehicle' ? assistantSelection.dates?.end : undefined}
               />
             )}
             {view === 'services' && (
               <MechanicBookingFlow
+                key={assistantSelection?.kind === 'service' ? assistantSelection.requestId : 'services'}
                 userId={userId}
                 onNotify={notify}
                 initialDate={preselectedBookingDate}
                 initialServiceId={preselectedServiceId}
+                initialServicePreview={assistantSelection?.kind === 'service' && assistantSelection.id === preselectedServiceId}
                 onBackToHome={() => {
                   setPreselectedBookingDate(null)
                   setPreselectedServiceId(null)
@@ -564,7 +596,7 @@ export function App() {
             />
           )}
 
-          <ChatBot userId={userId} onNotify={notify} />
+          <ChatBot userId={userId} onNotify={notify} onRecommendation={openAssistantRecommendation} />
 
           {identity.role === 'admin' && (
             <CustomerSettingsEditor />

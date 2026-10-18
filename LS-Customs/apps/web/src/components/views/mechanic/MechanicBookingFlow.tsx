@@ -6,7 +6,7 @@
  * and calculates the total price by adding the distance travel fee (every 5km is 85 pesos).
  * On confirm, inserts a `service_bookings` row and shows the Confirmed step.
  */
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { supabase } from '../../../supabaseClient'
 import { useProfile } from '../../../hooks/useProfile'
 import { useServices } from '../../../hooks/useServices'
@@ -45,6 +45,7 @@ interface MechanicBookingFlowProps {
   onBackToHome?: () => void
   initialDate?: string | null
   initialServiceId?: string | null
+  initialServicePreview?: boolean
 }
 
 function generateLocalRef(): string {
@@ -57,7 +58,7 @@ function buildScheduledAt(date: string, time: string): string {
   return d.toISOString()
 }
 
-export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDate, initialServiceId }: MechanicBookingFlowProps) {
+export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDate, initialServiceId, initialServicePreview = false }: MechanicBookingFlowProps) {
   useEffect(() => {
     preloadMap()
   }, [])
@@ -69,10 +70,10 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
   const [step, setStep] = useState<Step>('category')
   const [category, setCategory] = useState<string | null>(null)
   const [service, setService] = useState<Service | null>(null)
+  const [showRecommendedService, setShowRecommendedService] = useState(initialServicePreview)
+  const appliedInitialService = useRef<string | null>(null)
   const [date, setDate] = useState<string | null>(initialDate ?? null) // YYYY-MM-DD
   const [time, setTime] = useState<string | null>(null) // HH:MM
-
-  const { services: initialAllServices } = useServices()
 
   useEffect(() => {
     if (initialDate) {
@@ -81,15 +82,16 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
   }, [initialDate])
 
   useEffect(() => {
-    if (initialServiceId && initialAllServices.length > 0) {
-      const found = initialAllServices.find(s => s.id === initialServiceId)
-      if (found && !service) {
+    if (initialServiceId && services.length > 0 && appliedInitialService.current !== initialServiceId) {
+      const found = services.find(s => s.id === initialServiceId)
+      if (found) {
+        appliedInitialService.current = initialServiceId
         setCategory(found.category)
         setService(found)
         setStep('schedule')
       }
     }
-  }, [initialServiceId, initialAllServices, service])
+  }, [initialServiceId, services])
   const [address, setAddress] = useState<ChosenAddress | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [confirmedBooking, setConfirmedBooking] = useState<ServiceBooking | null>(null)
@@ -297,6 +299,28 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
           onBookAnother={reset}
           onBackToHome={onBackToHome}
         />
+      </div>
+    )
+  }
+
+  if (showRecommendedService) {
+    const recommended = services.find(item => item.id === initialServiceId)
+    return (
+      <div className={`page mechanic-flow ${scrollRef.className}`} ref={scrollRef.ref}>
+        <section className="page-heading"><div><h1>{recommended?.name || 'Recommended mechanic service'}</h1><p className="muted">Review the service before choosing a schedule. AI guidance is not a confirmed diagnosis.</p></div></section>
+        {servicesLoading ? <p role="status">Loading current service details…</p> : catalogError ? (
+          <p role="alert">We couldn’t load this service. <button type="button" onClick={() => void reloadCatalog()}>Retry</button></p>
+        ) : recommended ? (
+          <section className="assistant-service-preview" aria-label="Service details">
+            <p>{recommended.description || 'A mobile mechanic will inspect your vehicle and explain the work needed. Confirm the scope with your mechanic before repairs.'}</p>
+            <dl><div><dt>Base service price</dt><dd>{recommended.price}</dd></div><div><dt>Estimated duration</dt><dd>{recommended.duration}</dd></div></dl>
+            <p>Travel fees and any additional work are reviewed separately. This recommendation has not created a booking.</p>
+            <div className="assistant-service-actions">
+              <button type="button" className="outline-button" onClick={() => { setShowRecommendedService(false); setStep('category'); setService(null); setCategory(null) }}>Browse other services</button>
+              <button type="button" className="button dark-button" onClick={() => { setService(recommended); setCategory(recommended.category); setShowRecommendedService(false); setStep('schedule') }}>Choose a schedule</button>
+            </div>
+          </section>
+        ) : <p role="alert">This service is no longer available. <button type="button" onClick={() => { setShowRecommendedService(false); setStep('category') }}>Browse current services</button></p>}
       </div>
     )
   }

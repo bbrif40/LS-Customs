@@ -1,0 +1,21 @@
+.footer-newsletter { min-width: 0; }
+.footer-newsletter h4 { margin: 0 0 16px; color: #0f172a; font-size: 14px; font-weight: 700; letter-spacing: .01em; }
+.footer-newsletter > p { margin: 0 0 16px; color: #526662; font-size: 13px; line-height: 1.65; }
+.newsletter-label { display: block; margin-bottom: 7px; font-size: 12px; font-weight: 600; color: #203c3a; }
+.newsletter-input-row { display: flex; align-items: center; gap: 4px; padding: 4px; background: #fff; border: 1px solid #bdcec5; border-radius: 10px; }
+.newsletter-input-row:focus-within { outline: 2px solid #42694e; outline-offset: 3px; }
+.newsletter-input-row.has-error { border-color: #a42d2d; }
+.newsletter-input-row input { width: 100%; min-width: 0; min-height: 40px; padding: 8px; border: 0; outline: none; background: transparent; color: #203c3a; font: inherit; font-size: 13px; box-shadow: none; }
+.newsletter-input-row input::placeholder { color: #60736c; }
+.newsletter-input-row button { display: inline-flex; align-items: center; justify-content: center; gap: 3px; min-height: 40px; padding: 9px 10px; border: 0; border-radius: 7px; background: #264a38; color: #fff; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.newsletter-input-row button:hover:not(:disabled) { background: #1e3b2c; }
+.newsletter-input-row button:focus-visible, .newsletter-privacy a:focus-visible { outline: 2px solid #42694e; outline-offset: 3px; }
+.newsletter-input-row button:disabled { opacity: .7; cursor: wait; }
+.footer-newsletter .newsletter-privacy { margin: 12px 0 0; font-size: 11px; line-height: 1.6; color: #526662; }
+.newsletter-privacy a { color: #264a38; text-decoration: underline; text-underline-offset: 3px; }
+.newsletter-error { display: flex; align-items: flex-start; gap: 6px; margin: 9px 0 0; color: #a42d2d; font-size: 12px; line-height: 1.5; }
+.newsletter-error svg { flex-shrink: 0; margin-top: 2px; }
+.newsletter-success { display: flex; align-items: flex-start; gap: 9px; padding: 13px; border-radius: 10px; background: #eaf2ed; color: #264a38; font-size: 13px; line-height: 1.5; }
+.newsletter-success svg { flex-shrink: 0; margin-top: 2px; }
+.newsletter-success strong, .newsletter-success span { display: block; }
+.newsletter-success span { margin-top: 3px; font-size: 12px; }

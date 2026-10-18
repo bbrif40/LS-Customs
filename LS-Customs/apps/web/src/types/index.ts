@@ -63,6 +63,7 @@ export interface Vehicle {
   detail: string
   price: string
   pricePerDay: number
+  fuelType?: string
   image: string
   tag: string
   rating: string
@@ -84,6 +85,7 @@ export interface Service {
   price: string
   duration: string
   icon: ReactNode
+  description?: string
   /** Optional DB id, populated when the row came from Supabase. */
   id?: string
   /** Price stored as integer cents to avoid float math. */
@@ -181,9 +183,40 @@ export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
   timestamp: number
+  recommendations?: ChatRecommendation[]
+  itinerary?: ChatRecommendation['itinerary']
+}
+
+export type ChatPlannerMode = 'trip' | 'diagnosis'
+
+export interface ChatRecommendationDay {
+  day: number
+  title: string
+  activities: string[]
+}
+
+/** A catalog-backed vehicle or mechanic service returned by the chat planner. */
+export interface ChatRecommendation {
+  kind: 'vehicle' | 'service'
+  id: string
+  title: string
+  reason: string
+  price?: number
+  currency?: 'PHP'
+  dates?: {
+    start: string
+    end: string
+  }
+  availability_status?: 'available_for_dates' | 'not_checked'
+  checked_at?: string
+  itinerary?: {
+    title: string
+    days: ChatRecommendationDay[]
+  }
 }
 
 export interface ChatBotProps {
   userId: string | undefined
   onNotify: (message: string) => void
+  onRecommendation?: (recommendation: ChatRecommendation) => void
 }

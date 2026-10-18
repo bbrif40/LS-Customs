@@ -151,6 +151,7 @@ export function Sidebar({
           </button>
         </div>
 
+
         <div className="sidebar-bottom">
           <button className="nav-item" onClick={() => navigateTo('/help')}>
             <span className="nav-icon-wrapper">
@@ -180,3 +181,4 @@ export function Sidebar({
     </>
   )
 }
+

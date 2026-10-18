@@ -483,6 +483,16 @@ export interface Database {
           years_experience: number | null
         }[]
       }
+      get_sidebar_testimonials: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          review_id: string
+          rating: number
+          comment: string
+          acquired_label: string
+          reviewer_label: string
+        }[]
+      }
     }
     Enums: {
       user_role: 'customer' | 'mechanic' | 'admin'

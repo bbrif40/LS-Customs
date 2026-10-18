@@ -5,7 +5,8 @@
  * `create-ticket` Edge Function, which returns a tracking number
  * (TKT-YYYYMMDD-XXXX).
  */
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
+import './ticket-form.css'
 import {
   X,
   TicketPlus,
@@ -20,7 +21,6 @@ import {
   Copy,
   Check,
   Send,
-  MessageSquare,
   ArrowLeft,
   Mail,
 } from 'lucide-react'
@@ -79,16 +79,6 @@ export function TicketForm({ onClose, onSubmitted, onError }: TicketFormProps) {
   const [priority, setPriority] = useState<Priority>('medium')
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    // Focus textarea after brief mount
-    const timer = setTimeout(() => {
-      textareaRef.current?.focus()
-    }, 150)
-    return () => clearTimeout(timer)
-  }, [])
-
   const canSubmit = description.trim().length >= 5 && !submitting
   const selectedCategoryConfig = CATEGORIES.find((c) => c.value === category)
   const selectedPriorityConfig = PRIORITIES.find((p) => p.value === priority)
@@ -138,163 +128,54 @@ export function TicketForm({ onClose, onSubmitted, onError }: TicketFormProps) {
   }
 
   return (
-    <form className="ticket-form" onSubmit={handleSubmit}>
-      {/* Header bar with icon & close */}
-      <div className="ticket-form-header">
-        <div className="ticket-form-title">
-          <span className="ticket-form-badge-icon">
-            <TicketPlus size={16} />
-          </span>
-          <div>
-            <span>Create Support Ticket</span>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="chat-close"
-          onClick={onClose}
-          aria-label="Back to chat"
-          disabled={submitting}
-          title="Back to chat"
-        >
-          <X size={17} />
-        </button>
+    <form className="ticket-form ticket-compose" onSubmit={handleSubmit} aria-labelledby="ticket-heading" aria-busy={submitting}>
+      <div className="ticket-compose-heading">
+        <span className="ticket-compose-symbol"><TicketPlus size={22} /></span>
+        <div><h2 id="ticket-heading">How can we help?</h2><p>Send a request to our support team.</p></div>
       </div>
 
-      <p className="ticket-form-subtitle">
-        Fill in the details below and we will route your ticket directly to our dispatch and support staff.
-      </p>
+      <fieldset className="ticket-topic-field" disabled={submitting} aria-describedby="ticket-topic-help">
+        <legend>What is this about?</legend>
+        <div className="ticket-topic-options">
+          {CATEGORIES.map(({ value, label, icon: Icon }) => (
+            <label key={value} className={`ticket-topic-option${category === value ? ' is-selected' : ''}`}>
+              <input type="radio" name="ticket-category" value={value} checked={category === value} onChange={() => setCategory(value)} />
+              <Icon size={17} aria-hidden="true" /><span>{label}</span>
+              {category === value && <Check size={14} className="ticket-topic-check" aria-hidden="true" />}
+            </label>
+          ))}
+        </div>
+        <p id="ticket-topic-help" className="ticket-compose-help">{selectedCategoryConfig?.helper}</p>
+      </fieldset>
 
-      {/* Category selection */}
-      <div className="ticket-form-field">
-        <div className="ticket-form-label">
-          <span>Category</span>
-          <span className="ticket-form-selected-pill">{selectedCategoryConfig?.label}</span>
+      <div className="ticket-compose-field">
+        <label htmlFor="ticket-description">Tell us what happened <span>Required</span></label>
+        <textarea id="ticket-description" value={description} onChange={e => setDescription(e.target.value)} disabled={submitting}
+          className="ticket-form-textarea" rows={4} maxLength={4000} required minLength={5}
+          aria-describedby="ticket-description-help ticket-description-count"
+          placeholder="Describe the issue and how we can help…" />
+        <div className="ticket-description-meta">
+          <p id="ticket-description-help">{description.length > 0 && description.trim().length < 5 ? 'Add a little more detail (at least 5 characters).' : 'Include a booking reference if you have one.'}</p>
+          <span id="ticket-description-count">{description.length.toLocaleString()} / 4,000</span>
         </div>
-        <div className="ticket-category-grid" role="radiogroup" aria-label="Ticket Category">
-          {CATEGORIES.map((c) => {
-            const Icon = c.icon
-            const active = category === c.value
-            return (
-              <button
-                key={c.value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                disabled={submitting}
-                onClick={() => setCategory(c.value)}
-                className={`ticket-category-card${active ? ' active' : ''}`}
-                title={c.helper}
-              >
-                <Icon size={16} />
-                <span>{c.label}</span>
-              </button>
-            )
-          })}
-        </div>
-        {selectedCategoryConfig && (
-          <div className="ticket-category-helper-bubble">
-            {selectedCategoryConfig.helper}
-          </div>
-        )}
       </div>
 
-      {/* Severity selection */}
-      <div className="ticket-form-field">
-        <div className="ticket-form-label">
-          <span>Severity</span>
-          <span className="ticket-form-selected-pill" style={{ color: selectedPriorityConfig?.color }}>
-            {selectedPriorityConfig?.label}
-          </span>
-        </div>
-        <div className="ticket-form-priority-row" role="radiogroup" aria-label="Ticket Severity">
-          {PRIORITIES.map((p) => {
-            const active = priority === p.value
-            return (
-              <button
-                key={p.value}
-                type="button"
-                role="radio"
-                aria-checked={active}
-                disabled={submitting}
-                onClick={() => setPriority(p.value)}
-                className={`ticket-form-priority-chip${active ? ' active' : ''}`}
-                style={
-                  active
-                    ? {
-                        borderColor: p.color,
-                        background: `${p.color}15`,
-                        color: p.color,
-                      }
-                    : undefined
-                }
-                title={p.helper}
-              >
-                <span
-                  className="ticket-priority-dot"
-                  style={{ background: p.color }}
-                />
-                <span>{p.label}</span>
-              </button>
-            )
-          })}
-        </div>
-        {selectedPriorityConfig && (
-          <div className="ticket-form-priority-helper">
-            {selectedPriorityConfig.helper}
-          </div>
-        )}
+      <div className="ticket-compose-field">
+        <label htmlFor="ticket-priority">How urgent is it?</label>
+        <select id="ticket-priority" value={priority} onChange={e => setPriority(e.target.value as Priority)} disabled={submitting} aria-describedby="ticket-priority-help">
+          {PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}{p.value === 'medium' ? ' (default)' : ''}</option>)}
+        </select>
+        <p id="ticket-priority-help" className="ticket-compose-help">{selectedPriorityConfig?.helper}</p>
       </div>
 
-      {/* Description textarea */}
-      <div className="ticket-form-field">
-        <div className="ticket-form-label">
-          <span>Issue Description</span>
-          <span className={`ticket-form-counter${description.length < 5 && description.length > 0 ? ' warning' : ''}`}>
-            {description.length} / 4,000
-          </span>
+      <div className="ticket-compose-footer">
+        <p>You can follow up in this chat after submitting.</p>
+        <div className="ticket-compose-actions">
+          <button type="button" className="ticket-form-btn secondary" onClick={onClose} disabled={submitting}><ArrowLeft size={16} /> Back to chat</button>
+          <button type="submit" className="ticket-form-btn primary" disabled={!canSubmit}>
+            {submitting ? <><Loader2 size={16} className="spin" /> Sending…</> : <><Send size={16} /> Send request</>}
+          </button>
         </div>
-        <textarea
-          ref={textareaRef}
-          value={description}
-          onChange={(e) => setDescription(e.target.value.slice(0, 4000))}
-          disabled={submitting}
-          className="ticket-form-textarea"
-          rows={3}
-          placeholder="Please describe what happened in detail. Include any booking IDs, vehicle plate numbers, or specific questions..."
-        />
-        {description.length > 0 && description.length < 5 && (
-          <span className="ticket-form-validation-hint">
-            Please enter at least 5 characters to submit.
-          </span>
-        )}
-      </div>
-
-      {/* Form Action Footer */}
-      <div className="ticket-form-actions">
-        <button
-          type="button"
-          className="ticket-form-btn secondary"
-          onClick={onClose}
-          disabled={submitting}
-        >
-          <ArrowLeft size={14} /> Back
-        </button>
-        <button
-          type="submit"
-          className="ticket-form-btn primary"
-          disabled={!canSubmit}
-        >
-          {submitting ? (
-            <>
-              <Loader2 size={14} className="spin" /> Submitting...
-            </>
-          ) : (
-            <>
-              <Send size={14} /> Submit Ticket
-            </>
-          )}
-        </button>
       </div>
     </form>
   )

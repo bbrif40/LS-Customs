@@ -24,6 +24,7 @@ interface RentalsProps {
   onNotify: (message: string) => void
   initialStartDate?: string
   initialEndDate?: string
+  initialVehicleId?: string
 }
 
 type CategoryFilter =
@@ -47,7 +48,7 @@ const CATEGORY_TABS: { id: CategoryFilter; label: string }[] = [
   { id: 'pickup_trucks', label: 'Pick Up Trucks' },
 ]
 
-export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: RentalsProps) {
+export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, initialVehicleId }: RentalsProps) {
   const { vehicles, loading, error, refetch } = useCustomerVehicles()
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -78,6 +79,17 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
   }, [initialStartDate, initialEndDate])
   const [selectedVehicle, setSelectedVehicle] = useState<typeof vehicles[number] | null>(null)
   const [previewVehicle, setPreviewVehicle] = useState<typeof vehicles[number] | null>(null)
+  const openedRecommendation = useRef<string | null>(null)
+  useEffect(() => {
+    if (!initialVehicleId || loading || openedRecommendation.current === initialVehicleId) return
+    openedRecommendation.current = initialVehicleId
+    const vehicle = vehicles.find(item => item.id === initialVehicleId)
+    if (vehicle) {
+      setPreviewVehicle(vehicle)
+    } else {
+      onNotify('That recommended vehicle is no longer in the active fleet. Please choose another vehicle.')
+    }
+  }, [initialVehicleId, loading, vehicles, onNotify])
   const [bookingTotal, setBookingTotal] = useState<number | null>(null)
   const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null)
   const [creatingBooking, setCreatingBooking] = useState(false)
@@ -387,12 +399,18 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate }: 
                 <div className="vehicle-preview-specs">
                   <span><Users size={15} /> {previewVehicle.detail.match(/\d+ seats/)?.[0] || 'Seats available'}</span>
                   <span><Settings2 size={15} /> {previewVehicle.detail.includes('Manual') ? 'Manual' : 'Automatic'}</span>
-                  <span><Fuel size={15} /> {previewVehicle.detail.includes('Electric') ? 'Electric' : 'Gasoline'}</span>
+                  <span><Fuel size={15} /> {previewVehicle.fuelType || 'Fuel type not specified'}</span>
                   <span><MapPin size={15} /> {previewVehicle.location || 'Los Santos'}</span>
                 </div>
                 <strong className="vehicle-preview-price">{previewVehicle.price}<small>/ day</small></strong>
-                <button type="button" className="button dark-button" onClick={() => { setPreviewVehicle(null); document.querySelector('.rental-planner')?.scrollIntoView({ behavior: 'smooth' }) }}>
-                  Choose dates to book <ChevronRight size={15} />
+                {startDate && endDate && <p>Pickup: {startDate} · Return: {endDate}. Final pricing and availability are checked when you book.</p>}
+                <button type="button" className="button dark-button" disabled={creatingBooking || unavailableIds.has(previewVehicle.id)} onClick={() => {
+                  const vehicle = previewVehicle
+                  setPreviewVehicle(null)
+                  if (startDate && endDate && endDate > startDate) void chooseVehicle(vehicle)
+                  else document.querySelector('.rental-planner')?.scrollIntoView({ behavior: 'smooth' })
+                }}>
+                  {unavailableIds.has(previewVehicle.id) ? 'Unavailable for these dates' : startDate && endDate ? 'Book these dates' : 'Choose dates to book'} <ChevronRight size={15} />
                 </button>
               </div>
             </div>
