@@ -5,9 +5,9 @@
  *
  * Supports:
  * 1. Twilio SMS (TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER)
- * 2. TextBee SMS Gateway (TEXTBEE_API_KEY, optional TEXTBEE_DEVICE_ID)
+ * 2. TextBee SMS Gateway (TEXTBEE_API_KEY, TEXTBEE_DEVICE_ID)
  * 3. Semaphore SMS for Philippines (SEMAPHORE_API_KEY, optional SEMAPHORE_SENDER_NAME)
- * 4. SendGrid Email (SENDGRID_API_KEY, SENDGRID_FROM_EMAIL)
+ * 4. Resend Email (RESEND_API_KEY, RESEND_FROM_EMAIL)
  * 5. Diagnostic / Simulated Fallback logging when providers are not yet configured in cloud.
  *
  * Triggers:
@@ -18,6 +18,9 @@
 
 import { createServiceClient } from "../_shared/supabaseClient.ts";
 import { getCorsHeaders, jsonResponse as baseJsonResponse } from "../_shared/cors.ts";
+import { escapeHtml } from "../_shared/html.ts";
+import { sendResendEmail } from "../_shared/resend.ts";
+import { sendTextBeeSms } from "../_shared/textbee.ts";
 
 interface DispatchNotificationRequest {
   notification_id?: string;
@@ -92,7 +95,7 @@ async function fetchUserEmail(
   userId: string,
 ): Promise<string | null> {
   try {
-    const res = await fetch(`${supabaseUrl}/auth/v1/admin/user?id=${userId}`, {
+    const res = await fetch(`${supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
       method: "GET",
       signal: AbortSignal.timeout(15000),
       headers: {
@@ -101,51 +104,15 @@ async function fetchUserEmail(
       },
     });
     if (!res.ok) {
-      console.warn(`Failed to fetch user ${userId} email: HTTP ${res.status}`);
+      console.warn(`Failed to fetch user email: HTTP ${res.status}`);
       return null;
     }
     const data = await res.json().catch(() => null);
-    return data?.user?.email ?? null;
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.warn("Error fetching user email:", msg);
+    const email = data?.email ?? data?.user?.email;
+    return typeof email === "string" && email.trim() ? email.trim() : null;
+  } catch {
+    console.warn("Error fetching user email");
     return null;
-  }
-}
-
-/**
- * Send an email via SendGrid.
- */
-async function sendEmail(
-  to: string,
-  from: string,
-  subject: string,
-  body: string,
-  apiKey: string,
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
-      method: "POST",
-      signal: AbortSignal.timeout(15000),
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        personalizations: [{ to: [{ email: to }], subject }],
-        from: { email: from },
-        content: [{ type: "text/plain", value: body }],
-      }),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "(no body)");
-      return { success: false, error: `HTTP ${res.status}` };
-    }
-    return { success: true };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { success: false, error: msg };
   }
 }
 
@@ -175,47 +142,6 @@ async function sendSmsTwilio(
         From: from,
         Body: body,
       }).toString(),
-    });
-
-    if (!res.ok) {
-      const errText = await res.text().catch(() => "(no body)");
-      return { success: false, error: `HTTP ${res.status}` };
-    }
-    return { success: true };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { success: false, error: msg };
-  }
-}
-
-/**
- * Send an SMS via TextBee (https://textbee.dev).
- * Official Endpoint: https://api.textbee.dev/api/v1/gateway/send-sms
- * Header: x-api-key: <KEY>
- * Body: { recipients: ["+639..."], message: "..." }
- */
-async function sendSmsTextBee(
-  to: string,
-  body: string,
-  apiKey: string,
-  deviceId?: string,
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const url = deviceId
-      ? `https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/send-sms`
-      : `https://api.textbee.dev/api/v1/gateway/send-sms`;
-
-    const res = await fetch(url, {
-      method: "POST",
-      signal: AbortSignal.timeout(15000),
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        recipients: [to],
-        message: body,
-      }),
     });
 
     if (!res.ok) {
@@ -372,13 +298,34 @@ Deno.serve(async (req: Request) => {
       metadata = (notification.metadata as Record<string, unknown>) ?? {};
     }
 
-    // Idempotency: check if already successfully dispatched
-    if (metadata.dispatched === true && metadata.simulated !== true && metadata.delivery_state !== "failed") {
+    const recipientUserId = (notification?.user_id || rawBody.user_id || record?.user_id) as string | undefined;
+    const smsMessage = String(rawMessage || notification?.body || "LS Customs: Your booking status has been updated.");
+    const notificationTitle = String(notification?.title || rawBody.title || record?.title || "Notification");
+    const channels: string[] = metadata.simulated !== true && Array.isArray(metadata.channels_dispatched)
+      ? metadata.channels_dispatched.filter((channel): channel is string => typeof channel === "string") : [];
+    const errors: string[] = [];
+    const simulated = false;
+    // Assignment remains the only event that may trigger SMS.
+    const isAssigned =
+      metadata.new_status === "assigned" ||
+      metadata.dispatch_sms === true ||
+      metadata.dispatch_sms === "true" ||
+      notificationTitle.toLowerCase().includes("assign") ||
+      String(rawMessage || "").toLowerCase().includes("assigned");
+
+    // Return only when every requested channel already has an accepted result.
+    const emailComplete = !recipientUserId || channels.includes("email");
+    const smsComplete = !isAssigned || channels.some((channel) => channel.startsWith("sms_"));
+    if (
+      metadata.dispatched === true && metadata.simulated !== true &&
+      metadata.delivery_state !== "failed" && channels.length > 0 &&
+      emailComplete && smsComplete
+    ) {
       console.log(`[dispatch-notification] Notification ${notificationId} already dispatched`);
       return jsonResponse({
         notification_id: notificationId,
         dispatched: true,
-        channels: (metadata.channels_dispatched as string[]) ?? [],
+        channels,
         reason: "already_dispatched",
       } as DispatchNotificationResponse, null, 200);
     }
@@ -391,7 +338,6 @@ Deno.serve(async (req: Request) => {
 
     // Resolve target recipient phone number
     let targetPhone = rawPhone ?? null;
-    const recipientUserId = (notification?.user_id || rawBody.user_id || record?.user_id) as string | undefined;
 
     if (!targetPhone && recipientUserId) {
       const { data: profile } = await supabase
@@ -453,28 +399,18 @@ Deno.serve(async (req: Request) => {
     }
 
     const normalizedPhone = normalizePhoneNumber(targetPhone);
-    const smsMessage = rawMessage || (notification?.body as string) || "LS Customs: Your booking status has been updated.";
-    const notificationTitle = notification?.title || rawBody.title || record?.title || "Notification";
 
-    const channels: string[] = metadata.simulated !== true && Array.isArray(metadata.channels_dispatched)
-      ? metadata.channels_dispatched.filter((channel): channel is string => typeof channel === "string") : [];
-    const errors: string[] = [];
-    const simulated = false;
-
-    // --- 1. Email via SendGrid (if user_id exists) ---
+    // --- 1. Email via Resend (if user_id exists) ---
     if (recipientUserId && !channels.includes("email")) {
       const email = await fetchUserEmail(supabaseUrl, serviceRoleKey, recipientUserId);
-      const sendgridKey = Deno.env.get("SENDGRID_API_KEY");
-      const sendgridFrom = Deno.env.get("SENDGRID_FROM_EMAIL");
-
-      if (email && isRealSecret(sendgridKey) && sendgridFrom) {
-        const emailResult = await sendEmail(
-          email,
-          sendgridFrom,
-          notificationTitle,
-          smsMessage,
-          sendgridKey!,
-        );
+      if (email) {
+        const emailResult = await sendResendEmail({
+          to: email,
+          subject: notificationTitle,
+          html: `<h1>${escapeHtml(notificationTitle)}</h1><p>${escapeHtml(smsMessage)}</p>`,
+          text: smsMessage,
+          idempotencyKey: notification?.id ? `notification-${notification.id}-email` : undefined,
+        });
         if (emailResult.success) {
           channels.push("email");
           console.log("[dispatch-notification] Email accepted");
@@ -485,14 +421,6 @@ Deno.serve(async (req: Request) => {
     }
 
     // --- 2. SMS Delivery Pipeline ---
-    // User requirement: Only send SMS when status is assigned, rest no.
-    const isAssigned =
-      metadata.new_status === "assigned" ||
-      metadata.dispatch_sms === true ||
-      metadata.dispatch_sms === "true" ||
-      String(notificationTitle || "").toLowerCase().includes("assign") ||
-      String(rawMessage || "").toLowerCase().includes("assigned");
-
     if (normalizedPhone && isAssigned && !channels.some(channel => channel.startsWith("sms_"))) {
       const textbeeKey = Deno.env.get("TEXTBEE_API_KEY");
       const textbeeDeviceId = Deno.env.get("TEXTBEE_DEVICE_ID");
@@ -507,7 +435,7 @@ Deno.serve(async (req: Request) => {
       // Option A: TextBee (Primary SMS Gateway Device)
       if (isRealSecret(textbeeKey)) {
         console.log("[dispatch-notification] SMS provider request");
-        const result = await sendSmsTextBee(normalizedPhone, smsMessage, textbeeKey!, textbeeDeviceId);
+        const result = await sendTextBeeSms(normalizedPhone, smsMessage, textbeeKey, textbeeDeviceId);
         if (result.success) {
           channels.push("sms_textbee");
           smsSent = true;
@@ -569,6 +497,8 @@ Deno.serve(async (req: Request) => {
 
       if (errors.length > 0) {
         updatedMetadata.dispatch_errors = errors;
+      } else {
+        delete updatedMetadata.dispatch_errors;
       }
 
       const { error: metadataError } = await supabase

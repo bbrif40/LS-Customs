@@ -47,14 +47,15 @@ Deno.test("profile phone send uses the SMS gateway without creating an auth iden
   const result = await call({ action: "send", phone, createAccount: false });
   equal(result.response.status, 200);
   equal(result.json.data, { verification: "profile_phone", challengeId: result.calls[0].body.p_id });
-  const sms = result.calls.find(value => value.path.endsWith("/sendSMS"));
+  const sms = result.calls.find(value => value.path.endsWith("/gateway/send-sms"));
   if (!sms || !/\b\d{6}\b/.test(String(sms.body.message))) throw new Error("SMS code was not sent");
+  equal(sms.body.deviceId, "test-device");
   equal(result.calls.some(value => value.path.endsWith("/otp")), false);
 });
 Deno.test("unknown login sends no SMS and exposes no account information", async () => {
   const result = await call({ action: "send", phone, createAccount: false }, { owner: null });
   equal(result.response.status, 200);
-  equal(result.calls.some(value => value.path.endsWith("/sendSMS")), false);
+  equal(result.calls.some(value => value.path.endsWith("/gateway/send-sms")), false);
   equal(result.json.data?.verification, "profile_phone");
   equal(Object.keys(result.json.data ?? {}).sort(), ["challengeId", "verification"]);
 });

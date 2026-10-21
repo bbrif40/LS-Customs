@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { createServiceClient } from "../_shared/supabaseClient.ts";
 import { getCorsHeaders, jsonResponse } from "../_shared/cors.ts";
+import { sendTextBeeSms } from "../_shared/textbee.ts";
 
 // Public endpoint: possession of a one-time SMS challenge authorizes login.
 // Account lookup, quotas, attempt limits and consumption stay server-side.
@@ -69,14 +70,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
         .select("user_id").eq("id", id).single();
       if (readError) throw new Error("OTP challenge lookup failed");
       if (challenge?.user_id) {
-        const apiKey = Deno.env.get("TEXTBEE_API_KEY"), deviceId = Deno.env.get("TEXTBEE_DEVICE_ID");
-        if (!apiKey || !deviceId) throw new Error("SMS gateway unavailable");
-        const response = await fetch(`https://api.textbee.dev/api/v1/gateway/devices/${encodeURIComponent(deviceId)}/sendSMS`, {
-          method: "POST", headers: { "Content-Type": "application/json", "x-api-key": apiKey },
-          body: JSON.stringify({ recipients: [phone], message: `Your LS Customs sign-in code is: ${code}. It expires in 10 minutes.` }),
-          signal: AbortSignal.timeout(15000),
-        });
-        if (!response.ok) throw new Error("SMS gateway rejected the request");
+        const smsResult = await sendTextBeeSms(
+          phone,
+          `Your LS Customs sign-in code is: ${code}. It expires in 10 minutes.`,
+        );
+        if (!smsResult.success) throw new Error("SMS gateway unavailable");
       }
       // Never disclose whether an unknown number has an account.
       return respond({ verification: "profile_phone", challengeId: id }, null);

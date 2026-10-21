@@ -1,7 +1,7 @@
 /**
- * Shared Gmail Email Client & Receipt Template Builder
+ * Shared Resend Email Client & Receipt Template Builder
  *
- * Sends transactional email via Gmail SMTP; historical export names are retained.
+ * Sends transactional email through the Resend API; historical export names are retained.
  * Includes luxury brand styling, warm booking acknowledgment, receipt summary card,
  * and direct links to the LS Customs Help Center (https://ls-customs-web.vercel.app/help).
  */
@@ -27,57 +27,130 @@ export interface SendEmailOptions {
   subject: string;
   html: string;
   text?: string;
+  idempotencyKey?: string;
 }
 
-const DEFAULT_FROM = "LS Customs <onboarding@resend.dev>";
 const HELP_CENTER_URL = "https://ls-customs-web.vercel.app/help";
 
-import * as nodemailer from "https://esm.sh/nodemailer@6.9.14";
 import { escapeHtml } from './html.ts';
+import * as nodemailer from "https://esm.sh/nodemailer@6.9.14";
+
+type SendResult = { success: boolean; id?: string; error?: string };
+
+/** Gmail SMTP over SSL port 465 (Supabase Edge blocks outbound 25 and 587). */
+async function sendViaGmail(options: SendEmailOptions, user: string, pass: string): Promise<SendResult> {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: "smtp.gmail.com", port: 465, secure: true, auth: { user, pass },
+      connectionTimeout: 15_000, greetingTimeout: 15_000, socketTimeout: 15_000,
+    });
+    const info = await transporter.sendMail({
+      // Gmail rewrites any other sender address to the authenticated account.
+      from: `LS Customs <${user}>`,
+      to: (Array.isArray(options.to) ? options.to : [options.to]).map(recipient => recipient.trim()),
+      subject: options.subject, html: options.html,
+      ...(options.text === undefined ? {} : { text: options.text }),
+    });
+    return info?.messageId ? { success: true, id: String(info.messageId) } : { success: false, error: "Gmail did not return a message ID" };
+  } catch (error) {
+    // SMTP errors carry a response code (e.g. 535 bad credentials) but never the password.
+    const code = (error as { responseCode?: number })?.responseCode;
+    return { success: false, error: `Gmail SMTP failed${code ? ` (${code})` : ""}` };
+  }
+}
+
+/** Replaceable in tests; production always uses Gmail SMTP. */
+export const emailTransports = { gmail: sendViaGmail };
 
 /**
- * Sends any email via Gmail (Nodemailer) instead of Resend API for free sending.
+ * Sends an email: Gmail SMTP when GMAIL_USER/GMAIL_PASSWORD are set (reaches any
+ * recipient), otherwise or on failure the Resend HTTP API.
  */
 export async function sendResendEmail(
   options: SendEmailOptions,
   apiKeyOverride?: string,
-): Promise<{ success: boolean; id?: string; error?: string }> {
-  // We grab the Gmail credentials from environment/secrets
-  const user = (typeof Deno !== "undefined" ? Deno.env.get("GMAIL_USER") : undefined) || (typeof process !== "undefined" ? process.env?.GMAIL_USER : undefined);
-  const pass = (typeof Deno !== "undefined" ? Deno.env.get("GMAIL_PASSWORD") : undefined) || (typeof process !== "undefined" ? process.env?.GMAIL_PASSWORD : undefined);
+): Promise<SendResult> {
+  const gmailUser = getEnvironmentVariable("GMAIL_USER")?.trim();
+  const gmailPassword = getEnvironmentVariable("GMAIL_PASSWORD")?.replace(/\s+/g, "");
+  if (!apiKeyOverride && gmailUser && gmailPassword) {
+    const gmail = await emailTransports.gmail(options, gmailUser, gmailPassword);
+    if (gmail.success) return gmail;
+    const resend = await sendViaResend(options);
+    return resend.success ? resend : { success: false, error: `${gmail.error}; ${resend.error}` };
+  }
+  return await sendViaResend(options, apiKeyOverride);
+}
 
-  if (!user || !pass) {
-    console.error("[email] GMAIL_USER or GMAIL_PASSWORD is not configured in secrets.");
-    return { success: false, error: "Missing Gmail credentials" };
+/**
+ * Sends an email through the Resend HTTP API.
+ */
+async function sendViaResend(
+  options: SendEmailOptions,
+  apiKeyOverride?: string,
+): Promise<SendResult> {
+  const apiKey = (apiKeyOverride ?? getEnvironmentVariable("RESEND_API_KEY"))?.trim();
+  if (!apiKey) return { success: false, error: "Resend API key is not configured" };
+
+  const from = (options.from ?? getEnvironmentVariable("RESEND_FROM_EMAIL"))?.trim();
+  if (!from) return { success: false, error: "Resend sender is not configured" };
+
+  const toList = (Array.isArray(options.to) ? options.to : [options.to])
+    .map((recipient) => typeof recipient === "string" ? recipient.trim() : "");
+  if (toList.length === 0 || toList.some((recipient) => !recipient)) {
+    return { success: false, error: "At least one recipient is required" };
   }
 
-  const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    connectionTimeout: 15000,
-    greetingTimeout: 15000,
-    socketTimeout: 15000,
-    auth: {
-      user: user,
-      pass: pass,
-    }
-  });
-
-  const toList = Array.isArray(options.to) ? options.to : [options.to];
-
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15_000);
+  const idempotencyKey = options.idempotencyKey?.trim();
   try {
-    const info = await transporter.sendMail({
-      from: `LS Customs <${user}>`,
-      to: toList,
-      subject: options.subject,
-      html: options.html,
-      text: options.text,
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
+      },
+      body: JSON.stringify({
+        from,
+        to: toList,
+        subject: options.subject,
+        html: options.html,
+        ...(options.text === undefined ? {} : { text: options.text }),
+      }),
+      signal: controller.signal,
     });
-    
-    console.log("Email sent successfully:", info.messageId);
-    return { success: true, id: info.messageId };
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return { success: false, error: msg };
+
+    if (!response.ok) {
+      return { success: false, error: `Resend request failed (HTTP ${response.status})` };
+    }
+
+    let result: unknown;
+    try {
+      result = await response.json();
+    } catch {
+      return { success: false, error: "Resend returned an invalid response" };
+    }
+    const id = result && typeof result === "object" && "id" in result && typeof result.id === "string"
+      ? result.id.trim()
+      : "";
+    if (!id) return { success: false, error: "Resend did not return an email ID" };
+
+    return { success: true, id };
+  } catch {
+    return controller.signal.aborted
+      ? { success: false, error: "Resend request timed out" }
+      : { success: false, error: "Resend request failed" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function getEnvironmentVariable(name: string): string | undefined {
+  try {
+    return typeof Deno === "undefined" ? undefined : Deno.env.get(name);
+  } catch {
+    return undefined;
   }
 }
 
