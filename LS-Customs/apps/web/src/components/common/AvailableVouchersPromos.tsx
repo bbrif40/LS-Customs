@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 import React, { useState, useEffect } from 'react'
 import {
   Sparkles,
@@ -149,6 +150,8 @@ export function AvailableVouchersPromos({
   promoTitle,
   promoDiscount
 }: AvailableVouchersPromosProps) {
+  const websiteText = useWebsiteText("Shared")
+
   const [isExpanded, setIsExpanded] = useState(false)
   const [inputCode, setInputCode] = useState('')
   const [activePromo, setActivePromo] = useState<PromoVoucher | null>(null)
@@ -281,7 +284,7 @@ export function AvailableVouchersPromos({
     <section
       id="available-vouchers-promos-section"
       className="available-vouchers-promos-section"
-      aria-label="Available Vouchers and Promotions"
+      aria-label={websiteText("Available Vouchers and Promotions")}
       style={{
         marginBottom: 20,
         borderRadius: 12,
@@ -336,7 +339,7 @@ export function AvailableVouchersPromos({
                   opacity: 0.95,
                 }}
               >
-                <Tag size={11} /> Active: <strong>{activePromo.code}</strong> ({activePromo.discount})
+                <Tag size={11} />{' '}{websiteText("Active:")} <strong>{activePromo.code}</strong> ({activePromo.discount})
               </span>
             )}
           </div>
@@ -391,7 +394,7 @@ export function AvailableVouchersPromos({
             }}
           >
             <Ticket size={14} />
-            <span>Available Vouchers / Promos</span>
+            <span>{websiteText("Available Vouchers / Promos")}</span>
             <span
               style={{
                 background: bannerTextColor === '#000000' ? 'rgba(0, 0, 0, 0.15)' : 'rgba(255, 255, 255, 0.25)',
@@ -454,9 +457,7 @@ export function AvailableVouchersPromos({
                       fontWeight: 700,
                       color: '#1a2e24',
                     }}
-                  >
-                    Available Vouchers & Promos
-                  </h3>
+                  >{websiteText("Available Vouchers & Promos")}</h3>
                   <span
                     style={{
                       background: '#edf6f0',
@@ -467,12 +468,9 @@ export function AvailableVouchersPromos({
                       borderRadius: 10,
                     }}
                   >
-                    {AVAILABLE_PROMOS.length} Active Deals
-                  </span>
+                    {AVAILABLE_PROMOS.length}{' '}{websiteText("Active Deals")}</span>
                 </div>
-                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#668072' }}>
-                  Input a promo code or select from the available discounts below.
-                </p>
+                <p style={{ margin: '2px 0 0', fontSize: 12, color: '#668072' }}>{websiteText("Input a promo code or select from the available discounts below.")}</p>
               </div>
             </div>
 
@@ -492,7 +490,7 @@ export function AvailableVouchersPromos({
                 gap: 4,
               }}
             >
-              <span>Close</span>
+              <span>{websiteText("Close")}</span>
               <X size={13} />
             </button>
           </div>
@@ -528,9 +526,7 @@ export function AvailableVouchersPromos({
                 >
                   <Check size={13} strokeWidth={3} />
                 </span>
-                <span style={{ fontSize: 13 }}>
-                  Active voucher: <strong>{activePromo.code}</strong> ({activePromo.discount}) — applied to your booking.
-                </span>
+                <span style={{ fontSize: 13 }}>{websiteText("Active voucher:")} <strong>{activePromo.code}</strong> ({activePromo.discount}{websiteText(") — applied to your booking.")}</span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -552,8 +548,7 @@ export function AvailableVouchersPromos({
                       gap: 4,
                     }}
                   >
-                    <Car size={12} /> Rent Fleet
-                  </button>
+                    <Car size={12} />{' '}{websiteText("Rent Fleet")}</button>
                 )}
                 {activePromo.category !== 'rentals' && (
                   <button
@@ -573,8 +568,7 @@ export function AvailableVouchersPromos({
                       gap: 4,
                     }}
                   >
-                    <Wrench size={12} /> Book Mechanic
-                  </button>
+                    <Wrench size={12} />{' '}{websiteText("Book Mechanic")}</button>
                 )}
                 <button
                   type="button"
@@ -589,9 +583,7 @@ export function AvailableVouchersPromos({
                     fontWeight: 600,
                     cursor: 'pointer',
                   }}
-                >
-                  Remove
-                </button>
+                >{websiteText("Remove")}</button>
               </div>
             </div>
           )}
@@ -632,7 +624,7 @@ export function AvailableVouchersPromos({
                   type="text"
                   value={inputCode}
                   onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                  placeholder="Enter code (e.g. ESCAPE20, CARE500)"
+                  placeholder={websiteText("Enter code (e.g. ESCAPE20, CARE500)")}
                   style={{
                     background: 'transparent',
                     border: 'none',
@@ -679,7 +671,7 @@ export function AvailableVouchersPromos({
                 }}
               >
                 <Check size={13} />
-                <span>Apply Code</span>
+                <span>{websiteText("Apply Code")}</span>
               </button>
 
               <button
@@ -701,7 +693,7 @@ export function AvailableVouchersPromos({
                 }}
               >
                 <Gift size={13} />
-                <span>Get Default Promo</span>
+                <span>{websiteText("Get Default Promo")}</span>
               </button>
             </form>
 
@@ -794,10 +786,10 @@ export function AvailableVouchersPromos({
                         {voucher.category === 'services' && <Wrench size={11} />}
                         {voucher.category === 'all' && <Percent size={11} />}
                         {voucher.category === 'rentals'
-                          ? 'Rentals'
+                          ? websiteText("Rentals")
                           : voucher.category === 'services'
-                          ? 'Mechanic'
-                          : 'All'}
+                          ? websiteText("Mechanic")
+                          : websiteText("All")}
                       </span>
                     </div>
 
@@ -879,7 +871,7 @@ export function AvailableVouchersPromos({
                         }}
                       >
                         {isCopied ? <Check size={12} /> : <Copy size={12} />}
-                        <span>{isCopied ? 'Copied' : 'Copy'}</span>
+                        <span>{isCopied ? websiteText("Copied") : websiteText("Copy")}</span>
                       </button>
                     </div>
 
@@ -913,10 +905,10 @@ export function AvailableVouchersPromos({
                       {isCurrent ? (
                         <>
                           <Check size={13} strokeWidth={3} />
-                          <span>Applied</span>
+                          <span>{websiteText("Applied")}</span>
                         </>
                       ) : (
-                        <span>Apply Voucher</span>
+                        <span>{websiteText("Apply Voucher")}</span>
                       )}
                     </button>
                   </div>

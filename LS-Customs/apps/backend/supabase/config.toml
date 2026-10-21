@@ -463,6 +463,16 @@ verify_jwt = false
 [functions.booking-route]
 verify_jwt = false
 
+[functions.account-payment]
+verify_jwt = false
+
+# Scheduled worker validates OPERATIONS_WORKER_TOKEN, never a customer JWT.
+[functions.operations-worker]
+verify_jwt = false
+
+[functions.verify-service-location]
+verify_jwt = false
+
 # Public planner supports guests; the endpoint verifies JWTs internally before
 # accessing any customer-owned booking or ticket data.
 [functions.chatbot]

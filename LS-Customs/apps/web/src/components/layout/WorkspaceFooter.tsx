@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * WorkspaceFooter — sleek multi-column typographic footer with subtle line icons.
  * Includes newsletter signup, service navigation, and contact details.
@@ -16,7 +17,13 @@ interface WorkspaceFooterProps {
 }
 
 export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: WorkspaceFooterProps) {
+  const websiteText = useWebsiteText("Footer")
+
   const { settings } = useCustomerSiteSettings()
+  const supportEmail = websiteText("concierge@lscustoms.com", undefined, settings.supportEmail || 'concierge@lscustoms.com')
+  const supportPhone = websiteText("+63 (02) 8888-5700", undefined, settings.supportPhone || '+63 (02) 8888-5700')
+  const address = websiteText("100 Portola Drive, Rockford Hills, Los Santos", undefined, settings.address || '100 Portola Drive, Rockford Hills, Los Santos')
+  const workingHours = websiteText("Open 24/7 for Emergency Dispatch · Showroom 8AM – 9PM", undefined, settings.workingHours || 'Open 24/7 for Emergency Dispatch · Showroom 8AM – 9PM')
 
   const handleNav = (targetView: View) => {
     // If user is currently on a public page (/help, /contact, /terms, etc.), return to app frame
@@ -85,7 +92,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
           >
             <img
               src="/logo.png"
-              alt={settings.companyName || 'LS Customs'}
+              alt={websiteText("LS Customs", undefined, settings.companyName || 'LS Customs')}
               style={{ width: 28, height: 28, objectFit: 'contain' }}
             />
             <span
@@ -97,7 +104,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
                 textTransform: 'uppercase',
               }}
             >
-              {settings.companyName || 'LS CUSTOMS'}
+              {websiteText("LS CUSTOMS", undefined, settings.companyName || 'LS CUSTOMS')}
             </span>
           </button>
           <p
@@ -108,8 +115,8 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
               margin: 0,
             }}
           >
-            {settings.heroSubtitle ||
-              'Elevate your automotive experience with LS Customs, your premier gateway to bespoke vehicle service, precision tuning, and elite concierge dispatch.'}
+            {websiteText("Elevate your automotive experience with LS Customs, your premier gateway to bespoke vehicle service, precision tuning, and elite concierge dispatch.", undefined, settings.heroSubtitle ||
+              'Elevate your automotive experience with LS Customs, your premier gateway to bespoke vehicle service, precision tuning, and elite concierge dispatch.')}
           </p>
         </div>
 
@@ -125,9 +132,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
               margin: '0 0 16px',
               letterSpacing: '0.01em',
             }}
-          >
-            Services
-          </h4>
+          >{websiteText("Services")}</h4>
           <ul
             style={{
               listStyle: 'none',
@@ -145,9 +150,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
                 style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-              >
-                Performance & ECU Tuning
-              </button>
+              >{websiteText("Performance & ECU Tuning")}</button>
             </li>
             <li>
               <button type="button"
@@ -155,9 +158,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
                 style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-              >
-                Custom Bodywork & Paint
-              </button>
+              >{websiteText("Custom Bodywork & Paint")}</button>
             </li>
             <li>
               <button type="button"
@@ -165,9 +166,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
                 style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-              >
-                Suspension & Precision Alignment
-              </button>
+              >{websiteText("Suspension & Precision Alignment")}</button>
             </li>
             <li>
               <button type="button"
@@ -175,9 +174,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
                 style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#64748b', transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#64748b')}
-              >
-                Advanced Diagnostics & Electrical
-              </button>
+              >{websiteText("Advanced Diagnostics & Electrical")}</button>
             </li>
             <li>
               <button type="button"
@@ -185,9 +182,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
                 style={{ border: 0, padding: 0, background: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer', color: '#16a34a', fontWeight: 600, transition: 'color 0.2s' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#15803d')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#16a34a')}
-              >
-                24/7 Roadside Concierge Dispatch (SOS)
-              </button>
+              >{websiteText("24/7 Roadside Concierge Dispatch (SOS)")}</button>
             </li>
           </ul>
         </div>
@@ -202,15 +197,13 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
               margin: '0 0 16px',
               letterSpacing: '0.01em',
             }}
-          >
-            Get in touch
-          </h4>
+          >{websiteText("Get in touch")}</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: 13 }}>
             {/* Email with subtle icon */}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <Mail size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
               <a
-                href={`mailto:${settings.supportEmail || 'concierge@lscustoms.com'}`}
+                href={`mailto:${supportEmail}`}
                 style={{
                   color: '#475569',
                   textDecoration: 'none',
@@ -220,7 +213,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
               >
-                {settings.supportEmail || 'concierge@lscustoms.com'}
+                {supportEmail}
               </a>
             </div>
 
@@ -228,7 +221,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <Phone size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
               <a
-                href={`tel:${settings.supportPhone || '+63 (02) 8888-5700'}`}
+                href={`tel:${supportPhone}`}
                 style={{
                   color: '#475569',
                   textDecoration: 'none',
@@ -237,7 +230,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
               >
-                {settings.supportPhone || '+63 (02) 8888-5700'}
+                {supportPhone}
               </a>
             </div>
 
@@ -245,7 +238,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <MapPin size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
               <a
-                href={`https://maps.google.com/?q=${encodeURIComponent(settings.address || '100 Portola Drive, Rockford Hills, Los Santos')}`}
+                href={`https://maps.google.com/?q=${encodeURIComponent(address)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -257,7 +250,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#0f172a')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
               >
-                {settings.address || '100 Portola Drive, Rockford Hills, Los Santos'}
+                {address}
               </a>
             </div>
 
@@ -265,11 +258,11 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <Clock size={16} style={{ color: '#0284c7', flexShrink: 0, marginTop: 2 }} />
               <button type="button"
-                onClick={() => onNotify?.(settings.workingHours || 'Showroom 8AM – 9PM · Roadside dispatch is available 24/7.')}
+                onClick={() => onNotify?.(workingHours)}
                 style={{ color: '#475569', lineHeight: 1.5, fontSize: 12, cursor: 'pointer' }}
-                title="Click for schedule info"
+                title={websiteText("Click for schedule info")}
               >
-                {settings.workingHours || 'Open 24/7 for Emergency Dispatch · Showroom 8AM – 9PM'}
+                {workingHours}
               </button>
             </div>
           </div>
@@ -301,8 +294,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
         }}
       >
         <span>
-          © 2026 {settings.companyName || 'LS Customs'}. All rights reserved.
-        </span>
+          © 2026 {websiteText("LS Customs", undefined, settings.companyName || 'LS Customs')}{websiteText(". All rights reserved.")}</span>
 
         {/* Social Icons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -310,7 +302,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             href="https://facebook.com"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Facebook"
+            aria-label={websiteText("Facebook")}
             style={{
               color: '#64748b',
               transition: 'color 0.2s',
@@ -325,7 +317,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             href="https://twitter.com"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Twitter"
+            aria-label={websiteText("Twitter")}
             style={{
               color: '#64748b',
               transition: 'color 0.2s',
@@ -340,7 +332,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             href="https://linkedin.com"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="LinkedIn"
+            aria-label={websiteText("LinkedIn")}
             style={{
               color: '#64748b',
               transition: 'color 0.2s',
@@ -355,7 +347,7 @@ export function WorkspaceFooter({ onNotify, onView, onEmergencyClick }: Workspac
             href="https://instagram.com"
             target="_blank"
             rel="noopener noreferrer"
-            aria-label="Instagram"
+            aria-label={websiteText("Instagram")}
             style={{
               color: '#64748b',
               transition: 'color 0.2s',

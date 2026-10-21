@@ -1,3 +1,5 @@
+import { useWebsiteText } from "../../../hooks/useWebsiteText"
+import { serviceCategoryLabel } from '../../../utils/serviceCategory'
 /**
  * StepCategory — pick a service category. The available categories are
  * derived from the services list so the UI matches whatever the data
@@ -45,15 +47,6 @@ function imageFor(category: string): string | undefined {
   return IMAGE_BY_CATEGORY.find((entry) => entry.keywords.some((keyword) => lower.includes(keyword)))?.image
 }
 
-const CATEGORY_NAMES: Record<string, string> = {
-  routine_fluid_service: 'Routine Fluid Service',
-  tire_wheel_care: 'Tire & Wheel Care',
-  electrical_battery_care: 'Electrical & Battery Care',
-  diagnostic_repair: 'Diagnostic Repair',
-  lighting_visibility: 'Lighting Visibility',
-  quick_fixes: 'Quick Fixes',
-}
-
 const CATEGORY_ORDER: string[] = [
   'routine_fluid_service',
   'tire_wheel_care',
@@ -63,17 +56,9 @@ const CATEGORY_ORDER: string[] = [
   'quick_fixes',
 ]
 
-function prettyLabel(raw: string): string {
-  if (CATEGORY_NAMES[raw]) return CATEGORY_NAMES[raw]
-  // snake_case → Title Case
-  return raw
-    .replace(/_/g, ' ')
-    .split(' ')
-    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
-    .join(' ')
-}
-
 export function StepCategory({ services, loading, source, selected, onSelect }: StepCategoryProps) {
+  const websiteText = useWebsiteText("Mechanic")
+
   const categories = useMemo(() => {
     const map = new Map<string, number>()
     for (const s of services) {
@@ -81,7 +66,7 @@ export function StepCategory({ services, loading, source, selected, onSelect }: 
     }
     const items = Array.from(map.entries()).map(([raw, count]) => ({
       raw,
-      label: prettyLabel(raw),
+      label: serviceCategoryLabel(raw),
       count,
       icon: iconFor(raw),
       image: imageFor(raw),
@@ -100,20 +85,18 @@ export function StepCategory({ services, loading, source, selected, onSelect }: 
   return (
     <section className="step-panel">
       <header className="step-panel-head">
-        <p className="eyebrow">STEP 1 OF 6</p>
-        <h2>What kind of service do you need?</h2>
-        <p className="muted">Pick a category to see available services.</p>
+        <p className="eyebrow">{websiteText("STEP 1 OF 6")}</p>
+        <h2>{websiteText("What kind of service do you need?")}</h2>
+        <p className="muted">{websiteText("Pick a category to see available services.")}</p>
         {source === 'static' && !loading && (
-          <p className="form-helper">
-            Showing the demo catalog. Connect Supabase to load live services.
-          </p>
+          <p className="form-helper">{websiteText("Showing the demo catalog. Connect Supabase to load live services.")}</p>
         )}
       </header>
 
       {loading ? (
-        <p className="muted" style={{ padding: '24px 0' }}>Loading services…</p>
+        <p className="muted" style={{ padding: '24px 0' }}>{websiteText("Loading services…")}</p>
       ) : categories.length === 0 ? (
-        <p className="muted" style={{ padding: '24px 0' }}>No services available right now.</p>
+        <p className="muted" style={{ padding: '24px 0' }}>{websiteText("No services available right now.")}</p>
       ) : (
         <div className="category-grid">
           {categories.map((cat) => (
@@ -128,9 +111,9 @@ export function StepCategory({ services, loading, source, selected, onSelect }: 
               ) : (
                 <div className="category-icon">{cat.icon}</div>
               )}
-              <strong>{cat.label}</strong>
+              <strong>{websiteText(cat.label)}</strong>
               <small>
-                {cat.count} {cat.count === 1 ? 'service' : 'services'}
+                {cat.count} {cat.count === 1 ? websiteText("service") : websiteText("services")}
               </small>
             </button>
           ))}

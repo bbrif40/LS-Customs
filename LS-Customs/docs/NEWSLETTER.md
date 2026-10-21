@@ -28,9 +28,10 @@ suppress it in any mailing provider or previous export before sending again.
 Run the database behavior test with:
 
 ```sh
-node --test scripts/newsletter.test.mjs
+node --test scripts/newsletter.test.ts
 ```
 
 Run from `apps/backend`. The test also runs with the backend test command. It
 checks normalization, duplicate handling, invalid input, anonymous access
 restrictions, and submissions by signed-in visitors.
+

@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * MechanicServices — guest-facing service catalog with category tabs and
  * emergency dispatch card. The catalog and the "available mechanic" tile
@@ -41,6 +42,8 @@ function initialsOf(fullName: string): string {
 }
 
 export function MechanicServices({ cartCount, onAdd, onNotify, onEmergencyClick }: MechanicServicesProps) {
+  const websiteText = useWebsiteText("Mechanic")
+
   const { services, loading, source, error, refetch } = useServices()
   const [activeCategory, setActiveCategory] = useState<string>('all')
   const [mechanic, setMechanic] = useState<FeaturedMechanic | null>(null)
@@ -84,17 +87,17 @@ export function MechanicServices({ cartCount, onAdd, onNotify, onEmergencyClick 
 
   return (
     <div className={`page ${scrollRef.className}`} ref={scrollRef.ref as React.RefObject<HTMLDivElement>}>
-      {error && <p role="alert">Service catalog could not be loaded. <button type="button" onClick={() => void refetch()}>Retry</button></p>}
+      {error && <p role="alert">{websiteText("Service catalog could not be loaded.")} <button type="button" onClick={() => void refetch()}>{websiteText("Retry")}</button></p>}
       <PageHeading
-        eyebrow="MOBILE MECHANIC"
-        title="Care that comes to you"
-        detail="Select the required services. A certified mobile mechanic will be dispatched to your location."
+        eyebrow={websiteText("MOBILE MECHANIC")}
+        title={websiteText("Care that comes to you")}
+        detail={websiteText("Select the required services. A certified mobile mechanic will be dispatched to your location.")}
         action={
           <button
             className="cart-button"
             onClick={() => onNotify(`${cartCount} service${cartCount > 1 ? 's' : ''} in your cart`)}
           >
-            <Package size={17} /> Service cart <b>{cartCount}</b>
+            <Package size={17} />{' '}{websiteText("Service cart")} <b>{cartCount}</b>
           </button>
         }
       />
@@ -107,9 +110,7 @@ export function MechanicServices({ cartCount, onAdd, onNotify, onEmergencyClick 
                 setActiveCategory('all')
                 setCurrentPage(1)
               }}
-            >
-              All services
-            </button>
+            >{websiteText("All services")}</button>
             {categories.map((raw) => (
               <button
                 key={raw}
@@ -119,40 +120,37 @@ export function MechanicServices({ cartCount, onAdd, onNotify, onEmergencyClick 
                   setCurrentPage(1)
                 }}
               >
-                {prettyLabel(raw)}
+                {websiteText(prettyLabel(raw))}
               </button>
             ))}
           </div>
           {loading ? (
-            <p className="muted" style={{ padding: '24px 0' }}>Loading services…</p>
+            <p className="muted" style={{ padding: '24px 0' }}>{websiteText("Loading services…")}</p>
           ) : null}
           {!loading && filtered.length === 0 && (
-            <p className="muted" style={{ padding: '24px 0' }}>No services in this category yet.</p>
+            <p className="muted" style={{ padding: '24px 0' }}>{websiteText("No services in this category yet.")}</p>
           )}
           {paginatedServices.map((service) => (
             <article className="service-row" key={service.id}>
               <div className="service-row-icon">{service.icon}</div>
               <div className="service-row-copy">
-                <span className="eyebrow">{prettyLabel(service.category)}</span>
+                <span className="eyebrow">{websiteText(prettyLabel(service.category))}</span>
                 <h3>{service.name}</h3>
-                <p>Professional service performed at your location, with transparent pricing.</p>
+                <p>{websiteText("Professional service performed at your location, with transparent pricing.")}</p>
                 <small>
-                  <Clock3 size={13} /> Est. {service.duration}
+                  <Clock3 size={13} />{' '}{websiteText("Est.")} {service.duration}
                 </small>
               </div>
               <div className="service-row-price">
                 <strong>{service.price}</strong>
-                <button className="small-button" onClick={() => onAdd(service.name)}>
-                  Add <Plus size={14} />
+                <button className="small-button" onClick={() => onAdd(service.name)}>{websiteText("Add")} <Plus size={14} />
                 </button>
               </div>
             </article>
           ))}
           {totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 16, padding: '12px 16px', background: 'var(--surface, #ffffff)', borderRadius: 10, border: '1px solid var(--border, #e5e7eb)' }}>
-              <span style={{ fontSize: 13, color: 'var(--muted, #6b7280)' }}>
-                Showing {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filtered.length)} of {filtered.length} services
-              </span>
+              <span style={{ fontSize: 13, color: 'var(--muted, #6b7280)' }}>{websiteText("Showing")} {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filtered.length)}{' '}{websiteText("of")} {filtered.length}{' '}{websiteText("services")}</span>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button
                   type="button"
@@ -165,11 +163,8 @@ export function MechanicServices({ cartCount, onAdd, onNotify, onEmergencyClick 
                     opacity: safePage === 1 ? 0.5 : 1,
                     cursor: safePage === 1 ? 'not-allowed' : 'pointer',
                   }}
-                >
-                  Previous
-                </button>
-                <span style={{ fontSize: 13, color: 'var(--foreground, #374151)', padding: '0 8px', fontWeight: 500 }}>
-                  Page {safePage} of {totalPages}
+                >{websiteText("Previous")}</button>
+                <span style={{ fontSize: 13, color: 'var(--foreground, #374151)', padding: '0 8px', fontWeight: 500 }}>{websiteText("Page")} {safePage}{' '}{websiteText("of")} {totalPages}
                 </span>
                 <button
                   type="button"
@@ -182,9 +177,7 @@ export function MechanicServices({ cartCount, onAdd, onNotify, onEmergencyClick 
                     opacity: safePage === totalPages ? 0.5 : 1,
                     cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
                   }}
-                >
-                  Next
-                </button>
+                >{websiteText("Next")}</button>
               </div>
             </div>
           )}
@@ -193,35 +186,33 @@ export function MechanicServices({ cartCount, onAdd, onNotify, onEmergencyClick 
           <div className="dispatch-icon">
             <Wrench size={20} />
           </div>
-          <p className="eyebrow">NEED HELP NOW?</p>
-          <h3>Emergency mechanic</h3>
+          <p className="eyebrow">{websiteText("NEED HELP NOW?")}</p>
+          <h3>{websiteText("Emergency mechanic")}</h3>
           {mechanic ? (
             <>
               <p>
-                {mechanic.fullName} is listed as available. Assignment will be confirmed after your request is saved.
-              </p>
+                {mechanic.fullName}{' '}{websiteText("is listed as available. Assignment will be confirmed after your request is saved.")}</p>
               <div className="mechanic-mini">
                 <div className="avatar mechanic-avatar">{mechanic.initials}</div>
                 <div>
                   <strong>{mechanic.fullName}</strong>
                   <span>
                     {mechanic.yearsExperience != null
-                      ? `${mechanic.yearsExperience}+ yrs experience · `
+                      ? websiteText("{value1}+ yrs experience · ", { value1: String(mechanic.yearsExperience) })
                       : ''}
-                    {mechanic.rating > 0 ? `${mechanic.rating.toFixed(1)} ★` : 'New on the platform'}
+                    {mechanic.rating > 0 ? `${mechanic.rating.toFixed(1)} ★` : websiteText("New on the platform")}
                   </span>
                 </div>
                 <span className="online-dot" />
               </div>
             </>
           ) : (
-            <p className="muted">No mechanics are currently available. Try booking a scheduled visit below.</p>
+            <p className="muted">{websiteText("No mechanics are currently available. Try booking a scheduled visit below.")}</p>
           )}
           <button
             className="button dark-button full"
             onClick={() => onEmergencyClick ? onEmergencyClick() : onNotify('Open Roadside assistance to save a request and check mechanic availability.')}
-          >
-            Request dispatch <ChevronRight size={16} />
+          >{websiteText("Request dispatch")} <ChevronRight size={16} />
           </button>
         </aside>
       </div>

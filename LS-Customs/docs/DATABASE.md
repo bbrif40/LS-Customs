@@ -449,8 +449,25 @@ Forward migrations: `20261006120000_qa_booking_security.sql` and `20261006120100
 - Notification delivery uses Vault keys `notification_dispatch_url` and `notification_dispatch_token`; an absent configuration produces a warning rather than exposing a public unauthenticated delivery path.
 - Published seeded-admin passwords are conditionally disabled and admin roles removed. Rotated passwords are preserved; account recovery and restoring privilege require owner verification.
 
-See `QA_IMPLEMENTATION_2026-10-06.md` for verification scope and required deployment order. The PostgreSQL regression suite is `apps/backend/scripts/booking-security.test.mjs`.
+See `QA_IMPLEMENTATION_2026-10-06.md` for verification scope and required deployment order. The PostgreSQL regression suite is `apps/backend/scripts/booking-security.test.ts`.
 
 ## 2026-10-08 delivery and coordinate integrity
 
 `20261008141000_notification_delivery.sql` adds service-only booking confirmation cooldowns, serialized notification dispatch claims, tested admin notification read access, and a guard limiting customer updates to `is_read`. `20261008142000_address_coordinate_integrity.sql` permits paired null address coordinates, clears historical zero-coordinate placeholders and constrains coordinate pairs/ranges. Existing service RPCs reject missing GPS. `20261008140000_disable_seeded_admin_passwords.sql` disables only published seed-password matches and their admin role/refresh sessions; privately rotated passwords are preserved.
+
+
+## 2026-10-20 customer, mechanic and admin transactions
+
+Forward migrations `20261020120000` through `20261020230000` add:
+
+- Immutable versioned terms/acceptances; decimal PHP account charges, allocations, append-only cash/online/waiver/correction events; reversible account flags with retained history.
+- Rental timestamps, private driver-license review metadata and checkout deadlines; exact timestamp exclusion constraints; completed-hour late fees, 24-hour flags and first daily penalty at 48 hours.
+- Mechanic offers/capacity holds, online/cash checkout state, NCR service areas and owner-bound server-verified pin attestations; real GPS freshness checks and failure/overrun queues.
+- Booking requests, provider refund tasks, immutable condition/work reports with private evidence, exact handover acknowledgements, approved extras and damage disputes.
+- Extension/replacement capacity, protected booking-change payments, fixed accepted destination, and cancellation cleanup that withdraws unpaid changes without losing the original financial audit.
+- Booking-linked support context, single-role shared admin queue/claims, private-worker delivery retries and financial audit origin tracking.
+- `financial_collections`, a security-invoker view combining net provider payments and unlinked cash ledger entries. Linked mechanic cash collections are counted once; negative cash corrections reduce totals.
+
+Only owner/admin reads are granted for financial and license records. Assigned mechanics can read applicable service balances/reports and collect completed service cash through checked RPCs. Direct provider payment outcome changes, financial-history mutation and client-written support snapshots are rejected. Provider settlement/worker routines are service-only. New IDs supersede prior licenses for future reuse while preserving historical evidence.
+
+`20261020151000_operations_schedule.sql` schedules a private worker once per minute using Vault; it requires target pg_cron/pg_net and configured secrets. PGlite regression tests execute the business migrations and Storage policies with mocked auth/storage/network boundaries; they do not verify the hosted scheduler or real providers. Deployment and physical-device checks are listed in `TRANSACTION_DEPLOYMENT.md`.

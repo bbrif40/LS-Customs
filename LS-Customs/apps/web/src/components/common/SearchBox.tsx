@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * SearchBox — shared search input used across Help Center, FAQs, and
  * Documentation pages. Triggers onSearch with the query string.
@@ -18,6 +19,8 @@ export function SearchBox({
   onChange,
   onSearch,
 }: SearchBoxProps) {
+  const websiteText = useWebsiteText("Shared")
+
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const next = e.target.value
     onChange?.(next)
@@ -31,7 +34,7 @@ export function SearchBox({
         placeholder={placeholder}
         value={value}
         onChange={handleChange}
-        aria-label="Search"
+        aria-label={websiteText("Search")}
       />
       <Search size={16} />
     </div>

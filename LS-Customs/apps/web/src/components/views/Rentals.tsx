@@ -1,4 +1,8 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
+import { readBookingDraft, saveBookingDraft } from '../../utils/bookingDraft'
+import { PaymentMethodChoice } from '../common/PaymentMethodChoice'
 import { VehicleImage } from '../common/VehicleImage'
+import { useTransactionTerms } from '../common/TransactionTerms'
 /**
  * Rentals — fleet collection page with filters and search.
  * Pulls the active fleet from Supabase via useCustomerVehicles.
@@ -48,13 +52,22 @@ const CATEGORY_TABS: { id: CategoryFilter; label: string }[] = [
   { id: 'pickup_trucks', label: 'Pick Up Trucks' },
 ]
 
+interface RentalDraft { startDate: string; endDate: string; pickupTime: string; returnTime: string; paymentMethod: 'online' | 'cash'; vehicleId: string | null; previewId: string | null; bookingId: string | null; bookingTotal: number | null; holdExpiresAt: string | null; attempt: { key: string; id: string } | null }
 export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, initialVehicleId }: RentalsProps) {
+  const websiteText = useWebsiteText("Rentals")
+
+  const [draft] = useState(() => readBookingDraft<RentalDraft>(userId, 'rental'))
+  const reviewTerms = useTransactionTerms()
   const { vehicles, loading, error, refetch } = useCustomerVehicles()
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all')
   const [searchQuery, setSearchQuery] = useState('')
-  const [startDate, setStartDate] = useState(initialStartDate || '')
+  const [startDate, setStartDate] = useState(initialStartDate || draft?.startDate || '')
+  const [pickupTime, setPickupTime] = useState(draft?.pickupTime ?? '08:00')
+  const [returnTime, setReturnTime] = useState(draft?.returnTime ?? '08:00')
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>(draft?.paymentMethod === 'cash' ? 'cash' : 'online')
   const [endDate, setEndDate] = useState(() => {
     if (initialEndDate) return initialEndDate
+    if (draft?.endDate) return draft.endDate
     if (initialStartDate) {
       return addCalendarDays(initialStartDate, 1)
     }
@@ -90,13 +103,40 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
       onNotify('That recommended vehicle is no longer in the active fleet. Please choose another vehicle.')
     }
   }, [initialVehicleId, loading, vehicles, onNotify])
-  const [bookingTotal, setBookingTotal] = useState<number | null>(null)
-  const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(null)
+  const [bookingTotal, setBookingTotal] = useState<number | null>(draft?.bookingTotal ?? null)
+  const [holdExpiresAt, setHoldExpiresAt] = useState<string | null>(draft?.holdExpiresAt ?? null)
   const [creatingBooking, setCreatingBooking] = useState(false)
-  const bookingAttempt = useRef<{ key: string; id: string } | null>(null)
+  const bookingAttempt = useRef<{ key: string; id: string } | null>(draft?.attempt ?? null)
   const bookingInFlight = useRef(false)
-  const [bookingId, setBookingId] = useState<string | null>(null)
+  const [bookingId, setBookingId] = useState<string | null>(draft?.bookingId ?? null)
   const [bookingError, setBookingError] = useState<string | null>(null)
+  const restoredRental = useRef(false)
+  useEffect(() => {
+    if (loading || error || restoredRental.current) return
+    restoredRental.current = true
+    if (draft?.vehicleId && draft.bookingId) {
+      const found = vehicles.find(vehicle => vehicle.id === draft.vehicleId)
+      if (found) setSelectedVehicle(found)
+      else { setBookingId(null); onNotify('Open Bookings to resume the saved rental checkout.') }
+    }
+    if (draft?.previewId && !initialVehicleId) setPreviewVehicle(vehicles.find(vehicle => vehicle.id === draft.previewId) ?? null)
+  }, [loading, error, vehicles, draft, initialVehicleId, onNotify])
+  useEffect(() => {
+    if (!restoredRental.current || loading) return
+    saveBookingDraft(userId, 'rental', { startDate, endDate, pickupTime, returnTime, paymentMethod,
+      vehicleId: selectedVehicle?.id ?? null, previewId: previewVehicle?.id ?? null, bookingId, bookingTotal, holdExpiresAt,
+      attempt: bookingAttempt.current } satisfies RentalDraft)
+  }, [userId, startDate, endDate, pickupTime, returnTime, paymentMethod, selectedVehicle, previewVehicle, bookingId, bookingTotal, holdExpiresAt, loading, creatingBooking])
+  useEffect(() => {
+    if (!draft?.bookingId || !userId) return
+    let active = true
+    void supabase.from('vehicle_bookings').select('id,total_price,hold_expires_at').eq('id', draft.bookingId).eq('customer_id', userId).single().then(({ data, error }) => {
+      if (!active) return
+      if (error || !data) { setBookingId(null); setSelectedVehicle(null); setBookingError('Your saved checkout could not be loaded. Check Bookings before creating another rental.'); return }
+      setBookingTotal(Number(data.total_price)); setHoldExpiresAt(data.hold_expires_at)
+    })
+    return () => { active = false }
+  }, [draft, userId])
   // Mark vehicles as unavailable when they have an active booking
   // overlapping the selected date range. The RPC keeps this fresh
   // whenever the dates change, so the cards update as the user
@@ -204,13 +244,19 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
     }
     if (!userId) { onNotify('Please sign in before booking a rental.'); return }
 
-    const attemptKey = [vehicle.id, startDate, endDate, activePromo?.code ?? ''].join(':')
+    const attemptKey = [vehicle.id, startDate, endDate, pickupTime, returnTime, paymentMethod, activePromo?.code ?? ''].join(':')
     if (bookingAttempt.current?.key !== attemptKey) bookingAttempt.current = { key: attemptKey, id: crypto.randomUUID() }
     bookingInFlight.current = true
+    try {
+      if (!await reviewTerms(bookingAttempt.current.id, 'vehicle')) { bookingInFlight.current = false; return }
+    } catch (failure) {
+      bookingInFlight.current = false; setBookingError(failure instanceof Error ? failure.message : 'Terms could not be loaded.'); return
+    }
     setCreatingBooking(true)
     const { data, error: insertError } = await supabase.rpc('create_vehicle_booking', {
       p_request_id: bookingAttempt.current.id, p_vehicle_id: vehicle.id,
       p_start: startDate, p_end: endDate, p_promo_code: activePromo?.code ?? null,
+      p_pickup_time: pickupTime, p_return_time: returnTime, p_payment_method: paymentMethod,
     })
     bookingInFlight.current = false
     setCreatingBooking(false)
@@ -232,22 +278,25 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
   return (
     <div className={`page ${scrollRef.className}`} ref={scrollRef.ref}>
       <PageHeading
-        eyebrow="FLEET COLLECTION"
-        title="Find your next drive"
-        detail="Choose from a curated fleet, ready when you are."
+        eyebrow={websiteText("FLEET COLLECTION")}
+        title={websiteText("Find your next drive")}
+        detail={websiteText("Choose from a curated fleet, ready when you are.")}
       />
 
       <FleetTickerBanner vehicles={vehicles} />
 
-      <section className="rental-planner" aria-label="Rental dates">
+      <section className="rental-planner" aria-label={websiteText("Rental dates")}>
         <div className="rental-planner-heading">
           <div className="planner-icon"><CalendarDays size={20} /></div>
-          <div><strong>Plan your trip</strong><span>Select your dates to see the right daily rate.</span></div>
+          <div><strong>{websiteText("Plan your trip")}</strong><span>{websiteText("Select your dates to see the right daily rate.")}</span></div>
         </div>
         <div className="date-picker-group">
-          <label><span>Pickup</span><input aria-label="Pickup date" type="date" min={bookingToday()} value={startDate} onChange={(e) => setStartDate(e.target.value)} /></label>
-          <span className="date-arrow">to</span>
-          <label><span>Return</span><input aria-label="Return date" type="date" min={startDate || bookingToday()} max={maxEndDate || undefined} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></label>
+          <label>{websiteText("Pickup time (Philippine time)")}<input type="time" min="08:00" max="18:00" value={pickupTime} onInput={e => setPickupTime(e.currentTarget.value)} /></label>
+          <label>{websiteText("Return time (Philippine time)")}<input type="time" min="08:00" max="18:00" value={returnTime} onInput={e => setReturnTime(e.currentTarget.value)} /></label>
+          <PaymentMethodChoice value={paymentMethod} onChange={setPaymentMethod} rental />
+          <label><span>{websiteText("Pickup")}</span><input aria-label={websiteText("Pickup date")} type="date" min={bookingToday()} value={startDate} onInput={e => setStartDate(e.currentTarget.value)} /></label>
+          <span className="date-arrow">{websiteText("to")}</span>
+          <label><span>{websiteText("Return")}</span><input aria-label={websiteText("Return date")} type="date" min={startDate || bookingToday()} max={maxEndDate || undefined} value={endDate} onInput={e => setEndDate(e.currentTarget.value)} /></label>
         </div>
         {bookingError ? (
           <span className="planner-status error" style={{ color: '#b91c1c', fontWeight: 600, background: '#fef2f2', padding: '6px 12px', borderRadius: 6, border: '1px solid #fecaca', fontSize: 12 }}>
@@ -255,13 +304,13 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
           </span>
         ) : (
           <span className={`planner-status ${startDate && endDate && endDate > startDate ? 'ready' : ''}`}>
-            {startDate && endDate && endDate > startDate ? 'Dates selected' : 'Dates required to book'}
+            {startDate && endDate && endDate > startDate ? websiteText("Dates selected") : websiteText("Dates required to book")}
           </span>
         )}
       </section>
 
       <div className="rental-toolbar">
-        <div className="rental-toolbar-label"><SlidersHorizontal size={15} /><strong>Browse fleet</strong></div>
+        <div className="rental-toolbar-label"><SlidersHorizontal size={15} /><strong>{websiteText("Browse fleet")}</strong></div>
         <div className="filter-row">
           {CATEGORY_TABS.map((tab) => (
             <button
@@ -272,15 +321,15 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
                 setCurrentPage(1)
               }}
             >
-              {tab.label}
+              {websiteText(tab.label)}
             </button>
           ))}
         </div>
         <label className="search-field">
           <Search size={17} />
           <input
-            placeholder="Search vehicles..."
-            aria-label="Search vehicles"
+            placeholder={websiteText("Search vehicles...")}
+            aria-label={websiteText("Search vehicles")}
             value={searchQuery}
             onChange={(event) => {
               setSearchQuery(event.target.value)
@@ -307,10 +356,8 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
             gap: 12,
           }}
         >
-            <p>Failed to load vehicles: {error}</p>
-          <button className="button dark-button" onClick={() => void refetch()}>
-            Retry
-          </button>
+            <p>{websiteText("Failed to load vehicles:")} {error}</p>
+          <button className="button dark-button" onClick={() => void refetch()}>{websiteText("Retry")}</button>
         </div>
       ) : filteredVehicles.length === 0 ? (
         <div
@@ -321,8 +368,8 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
           }}
         >
           {vehicles.length === 0
-            ? 'No vehicles are available right now. Check back soon.'
-            : 'No vehicles match your filters.'}
+            ? websiteText("No vehicles are available right now. Check back soon.")
+            : websiteText("No vehicles match your filters.")}
         </div>
       ) : (
         <>
@@ -341,9 +388,7 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
           </div>
           {totalPages > 1 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 24, padding: '14px 20px', background: 'var(--surface, #ffffff)', borderRadius: 12, border: '1px solid var(--border, #e5e7eb)' }}>
-              <span style={{ fontSize: 13, color: 'var(--muted, #6b7280)' }}>
-                Showing {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filteredVehicles.length)} of {filteredVehicles.length} vehicles
-              </span>
+              <span style={{ fontSize: 13, color: 'var(--muted, #6b7280)' }}>{websiteText("Showing")} {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filteredVehicles.length)}{' '}{websiteText("of")} {filteredVehicles.length}{' '}{websiteText("vehicles")}</span>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button
                   type="button"
@@ -356,11 +401,8 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
                     opacity: safePage === 1 ? 0.5 : 1,
                     cursor: safePage === 1 ? 'not-allowed' : 'pointer',
                   }}
-                >
-                  Previous
-                </button>
-                <span style={{ fontSize: 13, color: 'var(--foreground, #374151)', padding: '0 8px', fontWeight: 500 }}>
-                  Page {safePage} of {totalPages}
+                >{websiteText("Previous")}</button>
+                <span style={{ fontSize: 13, color: 'var(--foreground, #374151)', padding: '0 8px', fontWeight: 500 }}>{websiteText("Page")} {safePage}{' '}{websiteText("of")} {totalPages}
                 </span>
                 <button
                   type="button"
@@ -373,9 +415,7 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
                     opacity: safePage === totalPages ? 0.5 : 1,
                     cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
                   }}
-                >
-                  Next
-                </button>
+                >{websiteText("Next")}</button>
               </div>
             </div>
           )}
@@ -389,28 +429,28 @@ export function Rentals({ userId, onNotify, initialStartDate, initialEndDate, in
                 <p className="eyebrow">{previewVehicle.tag}</p>
                 <h2>{previewVehicle.name}</h2>
               </div>
-              <button type="button" onClick={() => setPreviewVehicle(null)} aria-label="Close vehicle details"><X size={20} /></button>
+              <button type="button" onClick={() => setPreviewVehicle(null)} aria-label={websiteText("Close vehicle details")}><X size={20} /></button>
             </header>
             <div className="vehicle-preview-content">
               <VehicleImage src={previewVehicle.galleryImages?.[0] || previewVehicle.image} name={previewVehicle.name} />
               <div className="vehicle-preview-copy">
-                <div className="vehicle-preview-rating"><Star size={15} fill="currentColor" /> {previewVehicle.rating} rating</div>
+                <div className="vehicle-preview-rating"><Star size={15} fill="currentColor" /> {previewVehicle.rating}{' '}{websiteText("rating")}</div>
                 <p>{previewVehicle.description || previewVehicle.detail}</p>
                 <div className="vehicle-preview-specs">
-                  <span><Users size={15} /> {previewVehicle.detail.match(/\d+ seats/)?.[0] || 'Seats available'}</span>
-                  <span><Settings2 size={15} /> {previewVehicle.detail.includes('Manual') ? 'Manual' : 'Automatic'}</span>
-                  <span><Fuel size={15} /> {previewVehicle.fuelType || 'Fuel type not specified'}</span>
-                  <span><MapPin size={15} /> {previewVehicle.location || 'Los Santos'}</span>
+                  <span><Users size={15} /> {previewVehicle.detail.match(/\d+ seats/)?.[0] || websiteText("Seats available")}</span>
+                  <span><Settings2 size={15} /> {previewVehicle.detail.includes('Manual') ? websiteText("Manual") : websiteText("Automatic")}</span>
+                  <span><Fuel size={15} /> {previewVehicle.fuelType || websiteText("Fuel type not specified")}</span>
+                  <span><MapPin size={15} /> {previewVehicle.location || websiteText("Los Santos")}</span>
                 </div>
-                <strong className="vehicle-preview-price">{previewVehicle.price}<small>/ day</small></strong>
-                {startDate && endDate && <p>Pickup: {startDate} · Return: {endDate}. Final pricing and availability are checked when you book.</p>}
+                <strong className="vehicle-preview-price">{previewVehicle.price}<small>{websiteText("/ day")}</small></strong>
+                {startDate && endDate && <p>{websiteText("Pickup:")} {startDate}{websiteText("· Return:")} {endDate}{websiteText(". Final pricing and availability are checked when you book.")}</p>}
                 <button type="button" className="button dark-button" disabled={creatingBooking || unavailableIds.has(previewVehicle.id)} onClick={() => {
                   const vehicle = previewVehicle
                   setPreviewVehicle(null)
                   if (startDate && endDate && endDate > startDate) void chooseVehicle(vehicle)
                   else document.querySelector('.rental-planner')?.scrollIntoView({ behavior: 'smooth' })
                 }}>
-                  {unavailableIds.has(previewVehicle.id) ? 'Unavailable for these dates' : startDate && endDate ? 'Book these dates' : 'Choose dates to book'} <ChevronRight size={15} />
+                  {unavailableIds.has(previewVehicle.id) ? websiteText("Unavailable for these dates") : startDate && endDate ? websiteText("Book these dates") : websiteText("Choose dates to book")} <ChevronRight size={15} />
                 </button>
               </div>
             </div>

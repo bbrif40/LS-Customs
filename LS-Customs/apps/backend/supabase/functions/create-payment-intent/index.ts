@@ -172,6 +172,13 @@ Deno.serve(async (req: Request) => {
       return jsonResponse(null, err, 403);
     }
 
+    const { error: termsError } = await supabase.rpc('require_transaction_terms', {
+      p_transaction_id: body.booking_id, p_kind: 'payment', p_customer: user.id,
+    });
+    if (termsError) return jsonResponse(null, { code: 'TERMS_REQUIRED', message: 'Review and accept the payment terms first.' }, 409);
+    const { error: checkoutError } = await supabase.rpc('require_payable_checkout', { p_type: body.booking_type, p_id: body.booking_id });
+    if (checkoutError) return jsonResponse(null, { code: 'CHECKOUT_REQUIRED', message: 'Complete verification and check your reservation deadline before paying.' }, 409);
+
     if (['cancelled', 'completed'].includes(booking.status)) {
       return jsonResponse(null, { code: 'INVALID_STATE', message: 'This booking is no longer payable' }, 409);
     }

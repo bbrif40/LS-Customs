@@ -13,7 +13,7 @@ let captured: Handler | undefined;
 Deno.serve = ((handler: Handler) => { captured = handler; return {}; }) as unknown as typeof Deno.serve;
 const handlers: Record<string, Handler> = {};
 try {
-  for (const name of ['dispatch-notification', 'send-receipt', 'create-payment-intent', 'assign-mechanic', 'send-booking-confirmation', 'booking-route']) {
+  for (const name of ['dispatch-notification', 'send-receipt', 'create-payment-intent', 'assign-mechanic', 'send-booking-confirmation', 'booking-route', 'account-payment', 'verify-service-location', 'operations-worker']) {
     await import(`../${name}/index.ts`);
     if (!captured) throw new Error('Handler was not registered');
     handlers[name] = captured; captured = undefined;
@@ -26,12 +26,19 @@ try {
 }
 function response(data: unknown) { return Response.json(data); }
 async function call(name: string, body: unknown, rows: Record<string, unknown> = {}, authenticated = true) {
+  const previousAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  Deno.env.set('SUPABASE_ANON_KEY', 'test-anon');
   const originalFetch = globalThis.fetch;
   globalThis.fetch = ((input: RequestInfo | URL) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
+    if (url.pathname in rows) { const mocked = rows[url.pathname]; return Promise.resolve(mocked instanceof Response ? mocked : response(mocked)); }
     if (url.pathname === '/auth/v1/user') return Promise.resolve(response({ id: caller, email: 'qa@example.test' }));
     if (url.pathname === `/auth/v1/admin/users/${caller}`) return Promise.resolve(response({ user: { id: caller, email: 'qa@example.test' } }));
     if (url.pathname === '/rest/v1/rpc/reserve_booking_confirmation') return Promise.resolve(response(true));
+    if (['/rest/v1/rpc/require_transaction_terms','/rest/v1/rpc/require_payable_checkout'].includes(url.pathname)) {
+      const mocked = rows[url.pathname];
+      return Promise.resolve(mocked instanceof Response ? mocked : response(null));
+    }
     const table = url.pathname.match(/^\/rest\/v1\/(\w+)$/)?.[1];
     if (table && table in rows) return Promise.resolve(response(rows[table]));
     throw new Error(`Unexpected external request: ${url.pathname}`);
@@ -41,7 +48,7 @@ async function call(name: string, body: unknown, rows: Record<string, unknown> =
       headers: { 'Content-Type': 'application/json', ...(authenticated ? { Authorization: 'Bearer test-customer' } : {}) },
       body: JSON.stringify(body),
     }));
-  } finally { globalThis.fetch = originalFetch; }
+  } finally { globalThis.fetch = originalFetch; if (previousAnonKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY'); else Deno.env.set('SUPABASE_ANON_KEY', previousAnonKey); }
 }
 function status(actual: Response, expected: number) { if (actual.status !== expected) throw new Error(`Expected HTTP ${expected}, received ${actual.status}`); }
 Deno.test('notification record shape cannot authenticate an unsigned caller', async () => {
@@ -61,19 +68,48 @@ Deno.test('booking routing requires login and active booking visibility before c
 Deno.test('receipt rejects missing transaction even if a recipient and amount are supplied', async () => {
   status(await call('send-receipt', { bookingId, customerEmail: 'attacker@example.test', amount: 1 }, { payments: [] }), 404);
 });
-Deno.test('virtual route resumes cached time and targets recent customer GPS without mechanic GPS', async () => {
+Deno.test('customer GPS and cached simulation cannot replace missing mechanic GPS', async () => {
   const previousKey = Deno.env.get('SUPABASE_ANON_KEY');
   Deno.env.set('SUPABASE_ANON_KEY', 'test-anon');
-  const startedAt = '2026-10-11T00:00:00Z';
   try {
     const result = await call('booking-route', { bookingId }, {
       service_bookings: { id: bookingId, status: 'en_route', mechanic_id: other, pin_lat: 14.6, pin_lng: 121, current_lat: 14.62, current_lng: 121.02, location_updated_at: new Date().toISOString() },
-      booking_route_cache: { route: { mode: 'virtual', trafficModel: Deno.env.get('GEOAPIFY_API_KEY') ? 'approximated' : 'none', mechanicId: other, startedAt, destinationLat: 14.62, destinationLng: 121.02 } },
+      booking_locations: null,
+      booking_route_cache: { route: { mode: 'virtual', mechanicId: other, destinationLat: 14.62, destinationLng: 121.02 } },
     });
-    status(result, 200);
-    const body = await result.json();
-    if (body.data.startedAt !== startedAt || body.data.destinationLat !== 14.62 || !body.data.serverTime) throw new Error('Journey restarted or ignored customer location');
+    status(result, 409);
   } finally { if (previousKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY'); else Deno.env.set('SUPABASE_ANON_KEY', previousKey); }
+});
+Deno.test('fresh mechanic GPS routes to the fixed confirmed pin, not the customer phone', async () => {
+  const previousKey = Deno.env.get('SUPABASE_ANON_KEY'); Deno.env.set('SUPABASE_ANON_KEY', 'test-anon');
+  try {
+    const result = await call('booking-route', { bookingId }, {
+      service_bookings: { id: bookingId, status: 'en_route', mechanic_id: other, pin_lat: 14.6, pin_lng: 121, confirmed_lat: 14.6, confirmed_lng: 121, current_lat: 14.62, current_lng: 121.02 },
+      booking_locations: { mechanic_id: other, lat: 14.61, lng: 121.01, recorded_at: new Date().toISOString() },
+      booking_route_cache: { route: { mode: 'gps', mechanicId: other, calculatedAt: new Date().toISOString(), originLat: 14.61, originLng: 121.01,
+        destinationLat: 14.6, destinationLng: 121, durationSeconds: 300, trafficModel: Deno.env.get('GEOAPIFY_API_KEY') ? 'approximated' : 'none' } },
+    });
+    status(result, 200); const body = await result.json();
+    if (body.data.mode !== 'gps' || body.data.destinationLat !== 14.6 || body.data.originLat !== 14.61) throw new Error('Route did not preserve real GPS and the confirmed destination');
+  } finally { if (previousKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY'); else Deno.env.set('SUPABASE_ANON_KEY', previousKey); }
+});
+Deno.test('stale mechanic GPS hides cached arrival estimates', async () => {
+  const previousKey = Deno.env.get('SUPABASE_ANON_KEY'); Deno.env.set('SUPABASE_ANON_KEY', 'test-anon');
+  try {
+    status(await call('booking-route', { bookingId }, {
+      service_bookings: { id: bookingId, status: 'en_route', mechanic_id: other, confirmed_lat: 14.6, confirmed_lng: 121 },
+      booking_locations: { mechanic_id: other, lat: 14.61, lng: 121.01, recorded_at: new Date(Date.now()-61000).toISOString() },
+    }),409);
+  } finally { if (previousKey === undefined) Deno.env.delete('SUPABASE_ANON_KEY'); else Deno.env.set('SUPABASE_ANON_KEY', previousKey); }
+});
+Deno.test('account payment rejects another customer quote before creating a provider payment', async () => {
+  status(await call('account-payment', { quote_id: bookingId }, { account_quotes: { id: bookingId, customer_id: other } }),404);
+});
+Deno.test('operations worker rejects customer authorization', async () => {
+  status(await call('operations-worker', {}),401);
+});
+Deno.test('service area verification rejects invalid pins before checking coverage', async () => {
+  status(await call('verify-service-location', { lat: 91, lng: 121 }),400);
 });
 Deno.test('receipt rejects another customer successful payment', async () => {
   status(await call('send-receipt', { paymentId: bookingId }, { payments: [{ id: bookingId, customer_id: other, status: 'succeeded' }], profiles: [{ role: 'customer' }] }), 403);
@@ -144,3 +180,15 @@ Deno.test('customer cannot dispatch another customer notification even with over
     profiles: [{ role: 'customer' }], notifications: [{ id: bookingId, user_id: other, metadata: {} }],
   }), 403);
 });
+
+Deno.test('radius verification returns a server attestation without any geocoder',async()=>{
+  const result=await call('verify-service-location',{lat:14.8443,lng:120.8104},{'/rest/v1/rpc/verify_service_pin':{id:bookingId,radius_km:100}});
+  status(result,200); const body=await result.json(); if(body.data.id!==bookingId) throw new Error('Missing attestation');
+});
+Deno.test('outside-radius denial stays actionable and infrastructure errors stay generic',async()=>{
+  const denied=await call('verify-service-location',{lat:16.4,lng:120.6},{'/rest/v1/rpc/verify_service_pin':Response.json({code:'22023',message:'This pin is outside the 100 km service radius'},{status:400})});
+  status(denied,409); if(!(await denied.json()).error.message.includes('100 km')) throw new Error('Lost coverage reason');
+  status(await call('verify-service-location',{lat:14.6,lng:121},{'/rest/v1/rpc/verify_service_pin':Response.json({code:'XX000',message:'private database failure'},{status:500})}),503);
+});
+
+Deno.test('radius verification requires authentication',async()=>{ status(await call('verify-service-location',{lat:14.6,lng:121},{},false),401); });

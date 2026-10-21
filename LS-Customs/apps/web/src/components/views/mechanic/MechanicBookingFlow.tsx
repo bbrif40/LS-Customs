@@ -1,3 +1,6 @@
+import { useWebsiteText } from "../../../hooks/useWebsiteText"
+import { PaymentMethodChoice } from '../../common/PaymentMethodChoice'
+import { clearBookingDraft, readBookingDraft, saveBookingDraft } from '../../../utils/bookingDraft'
 /**
  * MechanicBookingFlow — orchestrator for the multi-step mechanic booking flow.
  *
@@ -7,6 +10,8 @@
  * On confirm, inserts a `service_bookings` row and shows the Confirmed step.
  */
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { useTransactionTerms } from '../../common/TransactionTerms'
+import { verifyServiceLocation } from '../../../utils/serviceLocation'
 import { supabase } from '../../../supabaseClient'
 import { useProfile } from '../../../hooks/useProfile'
 import { useServices } from '../../../hooks/useServices'
@@ -58,7 +63,29 @@ function buildScheduledAt(date: string, time: string): string {
   return d.toISOString()
 }
 
+type PendingPayment = {
+    bookingId: string
+    serviceName: string
+    servicePrice: string
+    baseServicePrice: string
+    distanceFee: string
+    distanceKm: string
+    scheduledAt: string
+    addressLabel: string
+    addressCity: string
+    customerName: string
+    customerPhone: string
+    mechanicName?: string | null
+    mechanicPhone?: string | null
+    promo?: PromoVoucher | null
+    promoDiscount?: string
+}
+interface MechanicDraft { requestId: string; step: Step; category: string | null; serviceId: string | null; date: string | null; time: string | null; address: ChosenAddress | null; paymentMethod: 'online' | 'cash'; pendingPayment: PendingPayment | null }
 export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDate, initialServiceId, initialServicePreview = false }: MechanicBookingFlowProps) {
+  const websiteText = useWebsiteText("Mechanic")
+
+  const [draft] = useState(() => readBookingDraft<MechanicDraft>(userId, 'mechanic'))
+  const reviewTerms = useTransactionTerms()
   useEffect(() => {
     preloadMap()
   }, [])
@@ -66,14 +93,14 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
   const { services, loading: servicesLoading, source: servicesSource, error: catalogError, refetch: reloadCatalog } = useServices()
   const scrollRef = useScrollAnimation<HTMLDivElement>()
 
-  const [requestId, setRequestId] = useState(() => crypto.randomUUID())
-  const [step, setStep] = useState<Step>('category')
-  const [category, setCategory] = useState<string | null>(null)
+  const [requestId, setRequestId] = useState(() => draft?.requestId ?? crypto.randomUUID())
+  const [step, setStep] = useState<Step>(() => draft && STEP_ORDER.includes(draft.step) ? draft.step : 'category')
+  const [category, setCategory] = useState<string | null>(draft?.category ?? null)
   const [service, setService] = useState<Service | null>(null)
   const [showRecommendedService, setShowRecommendedService] = useState(initialServicePreview)
   const appliedInitialService = useRef<string | null>(null)
-  const [date, setDate] = useState<string | null>(initialDate ?? null) // YYYY-MM-DD
-  const [time, setTime] = useState<string | null>(null) // HH:MM
+  const [date, setDate] = useState<string | null>(initialDate ?? draft?.date ?? null) // YYYY-MM-DD
+  const [time, setTime] = useState<string | null>(draft?.time ?? null) // HH:MM
 
   useEffect(() => {
     if (initialDate) {
@@ -92,28 +119,42 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
       }
     }
   }, [initialServiceId, services])
-  const [address, setAddress] = useState<ChosenAddress | null>(null)
+  const [address, setAddress] = useState<ChosenAddress | null>(draft?.address ?? null)
   const [submitting, setSubmitting] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'online' | 'cash'>(draft?.paymentMethod === 'cash' ? 'cash' : 'online')
   const [confirmedBooking, setConfirmedBooking] = useState<ServiceBooking | null>(null)
-  const [pendingPayment, setPendingPayment] = useState<{
-    bookingId: string
-    serviceName: string
-    servicePrice: string
-    baseServicePrice: string
-    distanceFee: string
-    distanceKm: string
-    scheduledAt: string
-    addressLabel: string
-    addressCity: string
-    customerName: string
-    customerPhone: string
-    mechanicName?: string | null
-    mechanicPhone?: string | null
-    promo?: PromoVoucher | null
-    promoDiscount?: string
-  } | null>(null)
+  const [pendingPayment, setPendingPayment] = useState<PendingPayment | null>(draft?.pendingPayment ?? null)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  const restoredService = useRef(false)
+  useEffect(() => {
+    if (restoredService.current || servicesLoading || catalogError) return
+    restoredService.current = true
+    if (draft?.serviceId && !initialServiceId) {
+      const current = services.find(item => item.id === draft.serviceId)
+      if (current) setService(current)
+      else { setStep('service'); setSubmitError('Your previous service is no longer available. Choose another service.') }
+    }
+  }, [servicesLoading, services, draft, initialServiceId, catalogError])
+  useEffect(() => {
+    if (!restoredService.current || servicesLoading) return
+    if (confirmedBooking) { clearBookingDraft(userId, 'mechanic'); return }
+    saveBookingDraft(userId, 'mechanic', { requestId, step,
+      category, serviceId: service?.id ?? null, date, time, address, paymentMethod,
+      pendingPayment: confirmedBooking ? null : pendingPayment } satisfies MechanicDraft)
+  }, [userId, requestId, step, category, service, date, time, address, paymentMethod, pendingPayment, confirmedBooking, servicesLoading])
+  useEffect(() => {
+    const id = draft?.pendingPayment?.bookingId
+    if (!id) return
+    let active = true
+    void supabase.from('service_bookings').select('id,total_price,payment_method,status').eq('id', id).eq('customer_id', userId!).single().then(({ data, error }) => {
+      if (!active) return
+      if (error || !data) { setPendingPayment(null); setStep('review'); setSubmitError('The saved checkout could not be restored. Check your bookings before submitting again.'); return }
+      setPaymentMethod(data.payment_method === 'cash' ? 'cash' : 'online')
+      setPendingPayment(previous => previous ? { ...previous, servicePrice: new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(data.total_price)) } : null)
+    })
+    return () => { active = false }
+  }, [draft, userId])
   // Determine customer coordinates from dropped pin or saved default address
   const customerLat = address?.pin_lat ?? (address?.id === defaultAddress?.id ? defaultAddress?.lat : null) ?? null
   const customerLng = address?.pin_lng ?? (address?.id === defaultAddress?.id ? defaultAddress?.lng : null) ?? null
@@ -211,12 +252,16 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     let serverTotal = totalPricePesos
 
     try {
+      if (!await reviewTerms(requestId, 'service')) { setSubmitting(false); return }
+      const locationCheck = await verifyServiceLocation(customerLat!, customerLng!)
       const { data, error: insertError } = await supabase.rpc('create_service_booking', {
         p_request_id: requestId, p_service_id: service.id, p_scheduled_at: scheduledAt,
         p_address_id: address.source === 'default' ? effectiveAddressId : null,
         p_lat: address.source !== 'default' && hasPin ? address.pin_lat : null, p_lng: address.source !== 'default' && hasPin ? address.pin_lng : null,
         p_notes: 'Address: ' + address.line1 + ', ' + address.city,
         p_promo_code: activePromo?.code ?? null,
+        p_payment_method: paymentMethod,
+        p_location_check: locationCheck,
       })
       if (insertError) throw insertError
       if (!data?.id) throw new Error('Booking was not created')
@@ -262,7 +307,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     setSubmitting(false)
     goTo('payment')
   }, [
-    requestId, submitting, pendingPayment, activePromo, quoteLoading, quoteError, customerLat, customerLng,
+    requestId, submitting, pendingPayment, activePromo, quoteLoading, quoteError, customerLat, customerLng, paymentMethod, reviewTerms,
     userId,
     profile,
     service,
@@ -288,9 +333,9 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     return (
       <div className={`page mechanic-flow ${scrollRef.className}`} ref={scrollRef.ref}>
         <PageHeading
-          eyebrow="MOBILE MECHANIC"
-          title="Service confirmed"
-          detail="Your booking is in. We'll notify you once your mechanic is dispatched."
+          eyebrow={websiteText("MOBILE MECHANIC")}
+          title={websiteText("Service confirmed")}
+          detail={websiteText("Your booking is in. We'll notify you once your mechanic is dispatched.")}
         />
         <StepConfirmed
           booking={confirmedBooking}
@@ -307,31 +352,31 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
     const recommended = services.find(item => item.id === initialServiceId)
     return (
       <div className={`page mechanic-flow ${scrollRef.className}`} ref={scrollRef.ref}>
-        <section className="page-heading"><div><h1>{recommended?.name || 'Recommended mechanic service'}</h1><p className="muted">Review the service before choosing a schedule. AI guidance is not a confirmed diagnosis.</p></div></section>
-        {servicesLoading ? <p role="status">Loading current service details…</p> : catalogError ? (
-          <p role="alert">We couldn’t load this service. <button type="button" onClick={() => void reloadCatalog()}>Retry</button></p>
+        <section className="page-heading"><div><h1>{recommended?.name || websiteText("Recommended mechanic service")}</h1><p className="muted">{websiteText("Review the service before choosing a schedule. AI guidance is not a confirmed diagnosis.")}</p></div></section>
+        {servicesLoading ? <p role="status">{websiteText("Loading current service details…")}</p> : catalogError ? (
+          <p role="alert">{websiteText("We couldn’t load this service.")} <button type="button" onClick={() => void reloadCatalog()}>{websiteText("Retry")}</button></p>
         ) : recommended ? (
-          <section className="assistant-service-preview" aria-label="Service details">
-            <p>{recommended.description || 'A mobile mechanic will inspect your vehicle and explain the work needed. Confirm the scope with your mechanic before repairs.'}</p>
-            <dl><div><dt>Base service price</dt><dd>{recommended.price}</dd></div><div><dt>Estimated duration</dt><dd>{recommended.duration}</dd></div></dl>
-            <p>Travel fees and any additional work are reviewed separately. This recommendation has not created a booking.</p>
+          <section className="assistant-service-preview" aria-label={websiteText("Service details")}>
+            <p>{recommended.description || websiteText("A mobile mechanic will inspect your vehicle and explain the work needed. Confirm the scope with your mechanic before repairs.")}</p>
+            <dl><div><dt>{websiteText("Base service price")}</dt><dd>{recommended.price}</dd></div><div><dt>{websiteText("Estimated duration")}</dt><dd>{recommended.duration}</dd></div></dl>
+            <p>{websiteText("Travel fees and any additional work are reviewed separately. This recommendation has not created a booking.")}</p>
             <div className="assistant-service-actions">
-              <button type="button" className="outline-button" onClick={() => { setShowRecommendedService(false); setStep('category'); setService(null); setCategory(null) }}>Browse other services</button>
-              <button type="button" className="button dark-button" onClick={() => { setService(recommended); setCategory(recommended.category); setShowRecommendedService(false); setStep('schedule') }}>Choose a schedule</button>
+              <button type="button" className="outline-button" onClick={() => { setShowRecommendedService(false); setStep('category'); setService(null); setCategory(null) }}>{websiteText("Browse other services")}</button>
+              <button type="button" className="button dark-button" onClick={() => { setService(recommended); setCategory(recommended.category); setShowRecommendedService(false); setStep('schedule') }}>{websiteText("Choose a schedule")}</button>
             </div>
           </section>
-        ) : <p role="alert">This service is no longer available. <button type="button" onClick={() => { setShowRecommendedService(false); setStep('category') }}>Browse current services</button></p>}
+        ) : <p role="alert">{websiteText("This service is no longer available.")} <button type="button" onClick={() => { setShowRecommendedService(false); setStep('category') }}>{websiteText("Browse current services")}</button></p>}
       </div>
     )
   }
 
   return (
     <div className={`page mechanic-flow ${scrollRef.className}`} ref={scrollRef.ref}>
-      {catalogError && <p role="alert">The service catalog could not be loaded. <button type="button" onClick={() => void reloadCatalog()}>Retry</button></p>}
+      {catalogError && <p role="alert">{websiteText("The service catalog could not be loaded.")} <button type="button" onClick={() => void reloadCatalog()}>{websiteText("Retry")}</button></p>}
       <PageHeading
-        eyebrow="MOBILE MECHANIC"
-        title="Book a mechanic"
-        detail="Choose a category, pick a service, set a schedule, select your location, and review estimated distance pricing."
+        eyebrow={websiteText("MOBILE MECHANIC")}
+        title={websiteText("Book a mechanic")}
+        detail={websiteText("Choose a category, pick a service, set a schedule, select your location, and review estimated distance pricing.")}
       />
       <BookingStepper current={step} onJump={goTo} />
 
@@ -394,6 +439,9 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
       )}
 
       {step === 'review' && (
+        <PaymentMethodChoice value={paymentMethod} onChange={setPaymentMethod} />
+      )}
+      {step === 'review' && (
         <StepReview
           service={service}
           date={date}
@@ -436,6 +484,7 @@ export function MechanicBookingFlow({ userId, onNotify, onBackToHome, initialDat
             setConfirmedBooking(booking)
             setPendingPayment(null)
           }}
+          onRestart={() => { setPendingPayment(null); setRequestId(crypto.randomUUID()); goTo('review') }}
           onBack={() => goTo('review')}
         />
       )}

@@ -1,14 +1,42 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * Documentation — public page with categorized articles.
  * Features a hero with search, a sticky category sidebar, and article listings.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SearchBox } from '../../components/common/SearchBox'
 import { DOC_CATEGORIES, DOC_ARTICLES } from '../../data/documentation'
 import type { DocArticle } from '../../types'
 
 export function Documentation() {
+  const websiteText = useWebsiteText("Help Center")
+
   const [query, setQuery] = useState('')
+
+  const categories = DOC_CATEGORIES.map((category) => ({
+    ...category,
+    label: websiteText(category.label),
+    description: websiteText(category.description),
+  }))
+  const displayedArticles: Record<string, DocArticle[]> = Object.fromEntries(
+    Object.entries(DOC_ARTICLES).map(([categoryId, articles]) => [
+      categoryId,
+      articles.map((article) => ({
+        ...article,
+        title: websiteText(article.title),
+        description: websiteText(article.description),
+      })),
+    ]),
+  )
+  const search = query.trim().toLowerCase()
+  const filteredArticles: Record<string, DocArticle[]> = {}
+  for (const [categoryId, articles] of Object.entries(displayedArticles)) {
+    const matches = search
+      ? articles.filter((article) => article.title.toLowerCase().includes(search) || article.description.toLowerCase().includes(search))
+      : articles
+    if (matches.length > 0) filteredArticles[categoryId] = matches
+  }
+  const hasResults = Object.values(filteredArticles).some((articles) => articles.length > 0)
 
   useEffect(() => {
     document.title = 'Documentation — LS Customs'
@@ -18,46 +46,27 @@ export function Documentation() {
     )
   }, [])
 
-  const filteredArticles = useMemo(() => {
-    if (!query.trim()) return DOC_ARTICLES
-    const q = query.toLowerCase()
-    const result: Record<string, DocArticle[]> = {}
-    for (const [categoryId, articles] of Object.entries(DOC_ARTICLES)) {
-      const matches = articles.filter(
-        (a) => a.title.toLowerCase().includes(q) || a.description.toLowerCase().includes(q)
-      )
-      if (matches.length > 0) result[categoryId] = matches
-    }
-    return result
-  }, [query])
-
-  const hasResults = Object.values(filteredArticles).some((articles) => articles.length > 0)
-
   return (
     <div className="public-page">
       <header className="public-hero">
-        <h1>Documentation</h1>
-        <p className="subhead">
-          Step-by-step guides, troubleshooting, and best practices for LS Customs.
-        </p>
+        <h1>{websiteText("Documentation")}</h1>
+        <p className="subhead">{websiteText("Step-by-step guides, troubleshooting, and best practices for LS Customs.")}</p>
       </header>
 
       <SearchBox
-        placeholder="Search documentation..."
+        placeholder={websiteText("Search documentation...")}
         value={query}
         onChange={setQuery}
       />
 
       {!hasResults ? (
-        <p className="muted" style={{ textAlign: 'center', marginTop: 42 }}>
-          No documents found for "{query}". Try a different search term.
-        </p>
+        <p className="muted" style={{ textAlign: 'center', marginTop: 42 }}>{websiteText("No documents found for \"")}{query}{websiteText("\". Try a different search term.")}</p>
       ) : (
         <div className="doc-layout">
           <aside className="doc-sidebar">
-            <h3>Categories</h3>
+            <h3>{websiteText("Categories")}</h3>
             <ul>
-              {DOC_CATEGORIES.map((cat) => {
+              {categories.map((cat) => {
                 const count = filteredArticles[cat.id]?.length ?? 0
                 if (count === 0) return null
                 return (
@@ -75,7 +84,7 @@ export function Documentation() {
           </aside>
 
           <main className="doc-content">
-            {DOC_CATEGORIES.map((cat) => {
+            {categories.map((cat) => {
               const articles = filteredArticles[cat.id]
               if (!articles || articles.length === 0) return null
               return (

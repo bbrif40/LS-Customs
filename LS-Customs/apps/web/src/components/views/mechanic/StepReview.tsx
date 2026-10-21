@@ -1,9 +1,11 @@
+import { useWebsiteText } from "../../../hooks/useWebsiteText"
+import { serviceCategoryLabel } from '../../../utils/serviceCategory'
 /**
  * StepReview — last step before submission. Shows the full booking summary
  * including base service price, assigned driver, distance from mechanic,
  * distance fee (every 5km is ₱85), and calculated total price.
  */
-import { ChevronLeft, Ticket } from 'lucide-react'
+import { AlertCircle, ChevronLeft, Ticket } from 'lucide-react'
 import type { Service } from '../../../types'
 import type { ChosenAddress } from './MechanicBookingFlow'
 import type { DispatchMechanic } from '../../../hooks/useMechanicDistance'
@@ -61,6 +63,8 @@ export function StepReview({
   onConfirm,
   onJumpTo,
 }: StepReviewProps) {
+  const websiteText = useWebsiteText("Mechanic")
+
   const missing: Step[] = []
   if (!service) missing.push('service')
   if (!date || !time) missing.push('schedule')
@@ -76,42 +80,39 @@ export function StepReview({
     <section className="step-panel">
       <header className="step-panel-head">
         <button type="button" className="text-button step-back" onClick={onBack}>
-          <ChevronLeft size={15} /> Back
-        </button>
-        <p className="eyebrow">STEP 5 OF 6</p>
-        <h2>Review & confirm</h2>
-        <p className="muted">Double-check the details and total price before booking.</p>
+          <ChevronLeft size={15} />{' '}{websiteText("Back")}</button>
+        <p className="eyebrow">{websiteText("STEP 5 OF 6")}</p>
+        <h2>{websiteText("Review & confirm")}</h2>
+        <p className="muted">{websiteText("Double-check the details and total price before booking.")}</p>
       </header>
 
       <article className="review-card">
         <div className="review-section">
-          <h3>Service Details</h3>
+          <h3>{websiteText("Service Details")}</h3>
           <SummaryRow
-            label="Service"
+            label={websiteText("Service")}
             value={service ? service.name : '—'}
             action={
-              <button type="button" className="text-button" onClick={() => onJumpTo('service')}>
-                Edit
-              </button>
+              <button type="button" className="text-button" onClick={() => onJumpTo('service')}>{websiteText("Edit")}</button>
             }
           />
           <SummaryRow
-            label="Category"
-            value={service ? service.category : '—'}
+            label={websiteText("Category")}
+            value={service ? websiteText(serviceCategoryLabel(service.category)) : '—'}
             action={null}
           />
-          <SummaryRow label="Est. duration" value={service ? service.duration : '—'} action={null} />
+          <SummaryRow label={websiteText("Est. duration")} value={service ? service.duration : '—'} action={null} />
           <SummaryRow
-            label="Base Price"
+            label={websiteText("Base Price")}
             value={<strong>{formatBasePrice(service)}</strong>}
             action={null}
           />
         </div>
 
         <div className="review-section">
-          <h3>Driver & Distance Calculation</h3>
+          <h3>{websiteText("Driver & Distance Calculation")}</h3>
           <SummaryRow
-            label="Assigned Driver"
+            label={websiteText("Assigned Driver")}
             value={
               assignedMechanic
                 ? `${assignedMechanic.full_name} (★ ${assignedMechanic.rating_avg.toFixed(1)})`
@@ -120,23 +121,23 @@ export function StepReview({
             action={null}
           />
           <SummaryRow
-            label="Est. Distance"
+            label={websiteText("Est. Distance")}
             value={`${distanceKm.toFixed(1)} km from dispatch hub`}
             action={null}
           />
           <SummaryRow
-            label="Distance Fee"
+            label={websiteText("Distance Fee")}
             value={
               <span>
                 <strong>{formattedDistanceFee}</strong>{' '}
-                <small className="muted">(every 5km is ₱85)</small>
+                <small className="muted">{websiteText("(every 5km is ₱85)")}</small>
               </span>
             }
             action={null}
           />
           {promo && promoDiscountPesos > 0 && (
             <SummaryRow
-              label="Voucher / Promo"
+              label={websiteText("Voucher / Promo")}
               value={
                 <span style={{ color: '#10b981', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <Ticket size={13} /> {promo.code} (-₱{promoDiscountPesos.toFixed(2)})
@@ -146,7 +147,7 @@ export function StepReview({
             />
           )}
           <SummaryRow
-            label="Total Price"
+            label={websiteText("Total Price")}
             value={
               <strong className="review-total-highlight">
                 ₱{finalTotal.toFixed(2)}
@@ -157,23 +158,21 @@ export function StepReview({
         </div>
 
         <div className="review-section">
-          <h3>Schedule</h3>
+          <h3>{websiteText("Schedule")}</h3>
           <SummaryRow
-            label="Date"
+            label={websiteText("Date")}
             value={formatDate(date)}
             action={
-              <button type="button" className="text-button" onClick={() => onJumpTo('schedule')}>
-                Edit
-              </button>
+              <button type="button" className="text-button" onClick={() => onJumpTo('schedule')}>{websiteText("Edit")}</button>
             }
           />
-          <SummaryRow label="Time" value={time ?? '—'} action={null} />
+          <SummaryRow label={websiteText("Time")} value={time ?? '—'} action={null} />
         </div>
 
         <div className="review-section">
-          <h3>Location</h3>
+          <h3>{websiteText("Location")}</h3>
           <SummaryRow
-            label="Address"
+            label={websiteText("Address")}
             value={
               address ? (
                 <>
@@ -186,19 +185,15 @@ export function StepReview({
               )
             }
             action={
-              <button type="button" className="text-button" onClick={() => onJumpTo('location')}>
-                Edit
-              </button>
+              <button type="button" className="text-button" onClick={() => onJumpTo('location')}>{websiteText("Edit")}</button>
             }
           />
         </div>
 
         {isIncomplete && (
-          <p className="form-helper review-warning">
-            You're missing {missing.join(', ')}. Use the stepper to go back and finish.
-          </p>
+          <p className="form-helper review-warning">{websiteText("You're missing")} {missing.join(', ')}{websiteText(". Use the stepper to go back and finish.")}</p>
         )}
-        {submitError && <p className="form-helper review-error">{submitError}</p>}
+        {submitError && <div className="booking-submit-error" role="alert"><AlertCircle size={21} strokeWidth={1.75} aria-hidden="true" /><div><strong>{/location|coverage|radius|pin/i.test(submitError) ? websiteText("Check your service location") : websiteText("Booking needs attention")}</strong><p>{submitError}</p><button type="button" onClick={() => onJumpTo(/location|coverage|radius|pin/i.test(submitError) ? 'location' : 'review')}>{websiteText("Review details")}</button></div></div>}
 
         <div className="step-actions">
           <button
@@ -207,7 +202,7 @@ export function StepReview({
             disabled={isIncomplete || submitting}
             onClick={onConfirm}
           >
-            {submitting ? 'Confirming…' : `Proceed to Payment (₱${finalTotal.toFixed(2)})`}
+            {submitting ? websiteText("Confirming…") : websiteText("Proceed to Payment (₱{value1})", { value1: String(finalTotal.toFixed(2)) })}
           </button>
         </div>
       </article>

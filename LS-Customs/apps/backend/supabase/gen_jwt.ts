@@ -16,7 +16,9 @@ const payload = {
 const headerB64 = Buffer.from(JSON.stringify(header)).toString('base64url');
 const payloadB64 = Buffer.from(JSON.stringify(payload)).toString('base64url');
 const data = headerB64 + '.' + payloadB64;
-const secret = 'super-secret-jwt-token-with-at-least-32-characters-long';
+const secret = process.env.LOCAL_SUPABASE_JWT_SECRET;
+if (!secret) throw new Error('Set LOCAL_SUPABASE_JWT_SECRET to generate a local test token.');
 const signature = crypto.createHmac('sha256', secret).update(data).digest('base64url');
 
 console.log(data + '.' + signature);
+

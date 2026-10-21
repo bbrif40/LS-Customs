@@ -1,3 +1,5 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
+import { AccountBalance } from '../common/AccountBalance'
 /**
  * Profile — user profile with avatar, editable fields, and settings list.
  *
@@ -61,6 +63,8 @@ interface ProfileProps {
 }
 
 export function Profile({ userId, displayName, email, initials, onNotify }: ProfileProps) {
+  const websiteText = useWebsiteText("Profile")
+
   const {
     profile,
     defaultAddress,
@@ -217,17 +221,18 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
         className="page"
         style={{ display: 'grid', placeItems: 'center', minHeight: '50vh', color: 'var(--muted, #6b7280)' }}
       >
-        <Loader2 size={24} className="spin" /> <span style={{ marginLeft: 10 }}>Loading profile…</span>
+        <Loader2 size={24} className="spin" /> <span style={{ marginLeft: 10 }}>{websiteText("Loading profile…")}</span>
       </div>
     )
   }
 
   return (
     <div className="page profile-page">
+      <AccountBalance customerId={userId} />
       <PageHeading
-        eyebrow="ACCOUNT"
-        title="Profile & settings"
-        detail="Keep your personal details and preferences up to date."
+        eyebrow={websiteText("ACCOUNT")}
+        title={websiteText("Profile & settings")}
+        detail={websiteText("Keep your personal details and preferences up to date.")}
       />
 
       {error && (
@@ -251,44 +256,36 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
         <section className="profile-card">
           <div className="profile-main">
             <div className="avatar profile-avatar">
-              {profile?.avatar_url ? <img src={profile.avatar_url} alt="Profile" /> : initials}
+              {profile?.avatar_url ? <img src={profile.avatar_url} alt={websiteText("Profile")} /> : initials}
             </div>
             <h2>{displayName}</h2>
             <p className="muted">{email}</p>
             <input ref={photoInputRef} className="profile-photo-input" type="file" accept="image/*" onChange={handlePhotoChange} />
-            <button className="outline-button" onClick={() => photoInputRef.current?.click()} disabled={saving}>
-              Change photo
-            </button>
+            <button className="outline-button" onClick={() => photoInputRef.current?.click()} disabled={saving}>{websiteText("Change photo")}</button>
           </div>
 
           <div className="profile-fields">
             {/* ── Contact section ──────────────────────────── */}
             <div className="profile-section">
-              <h3 className="profile-section-title">Contact</h3>
-              <label>
-                Full name
-                <input
+              <h3 className="profile-section-title">{websiteText("Contact")}</h3>
+              <label>{websiteText("Full name")}<input
                   value={fullName}
                   onChange={(event) => {
                     setFullName(event.target.value)
                     setContactDirty(true)
                   }}
-                  placeholder="Your full name"
+                  placeholder={websiteText("Your full name")}
                 />
               </label>
-              <label>
-                Email address
-                <input value={email} readOnly />
+              <label>{websiteText("Email address")}<input value={email} readOnly />
               </label>
-              <label>
-                Phone number
-                <input
+              <label>{websiteText("Phone number")}<input
                   value={phone}
                   onChange={(event) => {
                     setPhone(event.target.value)
                     setContactDirty(true)
                   }}
-                  placeholder="Add phone number"
+                  placeholder={websiteText("Add phone number")}
                   inputMode="tel"
                 />
               </label>
@@ -304,8 +301,7 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
                 >
                   {saving ? (
                     <>
-                      <Loader2 size={14} className="spin" /> Saving…
-                    </>
+                      <Loader2 size={14} className="spin" />{' '}{websiteText("Saving…")}</>
                   ) : (
                     'Save contact'
                   )}
@@ -315,7 +311,7 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
 
             {/* ── Address section ──────────────────────────── */}
             <div className="profile-section" ref={addressSectionRef}>
-              <h3 className="profile-section-title">Address</h3>
+              <h3 className="profile-section-title">{websiteText("Address")}</h3>
               <div style={{ marginBottom: 16 }}>
                 <LocationPicker
                   onChange={() => {}}
@@ -326,31 +322,25 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
                   }}
                 />
               </div>
-              <label>
-                Street address
-                <input
+              <label>{websiteText("Street address")}<input
                   value={addressLine1}
                   onChange={(event) => {
                     setAddressLine1(event.target.value)
                     setAddressDirty(true)
                   }}
-                  placeholder="Street, building, unit"
+                  placeholder={websiteText("Street, building, unit")}
                 />
               </label>
-              <label>
-                City
-                <input
+              <label>{websiteText("City")}<input
                   value={addressCity}
                   onChange={(event) => {
                     setAddressCity(event.target.value)
                     setAddressDirty(true)
                   }}
-                  placeholder="City"
+                  placeholder={websiteText("City")}
                 />
               </label>
-              <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>
-                Address is shared with the operations team so on-demand mechanics can find you.
-              </p>
+              <p className="muted" style={{ fontSize: 11, marginTop: 4 }}>{websiteText("Address is shared with the operations team so on-demand mechanics can find you.")}</p>
               <div className="profile-section-actions">
                 <button
                   className="button dark-button"
@@ -363,8 +353,7 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
                 >
                   {saving ? (
                     <>
-                      <Loader2 size={14} className="spin" /> Saving…
-                    </>
+                      <Loader2 size={14} className="spin" />{' '}{websiteText("Saving…")}</>
                   ) : (
                     'Save address'
                   )}
@@ -377,8 +366,8 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
         <aside className="settings-list">
           <SettingsRow
             icon={<Bell size={18} />}
-            title="Notification preferences"
-            detail="Manage email, SMS, and push alerts"
+            title={websiteText("Notification preferences")}
+            detail={websiteText("Manage email, SMS, and push alerts")}
             onClick={() => {
               setPrefsExpanded((open) => !open)
               onNotify('Notification preferences')
@@ -386,14 +375,14 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
           />
           <SettingsRow
             icon={<MapPin size={18} />}
-            title="Saved addresses"
-            detail="Home, office, and frequent locations"
+            title={websiteText("Saved addresses")}
+            detail={websiteText("Home, office, and frequent locations")}
             onClick={handleSavedAddresses}
           />
           <SettingsRow
             icon={<Headset size={18} />}
-            title="Help center"
-            detail="FAQs, contact support, and documentation"
+            title={websiteText("Help center")}
+            detail={websiteText("FAQs, contact support, and documentation")}
             onClick={handleHelpCenter}
           />
 
@@ -401,8 +390,8 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
           <div className={`notification-prefs${prefsExpanded ? ' expanded' : ''}`}>
             <div className="notification-pref-group">
               <span>
-                <strong>Booking updates</strong>
-                <small>Status changes for your rentals and services</small>
+                <strong>{websiteText("Booking updates")}</strong>
+                <small>{websiteText("Status changes for your rentals and services")}</small>
               </span>
               <ToggleSwitch
                 checked={notificationPrefs.bookingUpdates}
@@ -411,8 +400,8 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
             </div>
             <div className="notification-pref-group">
               <span>
-                <strong>Ticket replies</strong>
-                <small>When support responds to your tickets</small>
+                <strong>{websiteText("Ticket replies")}</strong>
+                <small>{websiteText("When support responds to your tickets")}</small>
               </span>
               <ToggleSwitch
                 checked={notificationPrefs.ticketReplies}
@@ -421,8 +410,8 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
             </div>
             <div className="notification-pref-group">
               <span>
-                <strong>Payment updates</strong>
-                <small>Confirmations, failures, and refunds</small>
+                <strong>{websiteText("Payment updates")}</strong>
+                <small>{websiteText("Confirmations, failures, and refunds")}</small>
               </span>
               <ToggleSwitch
                 checked={notificationPrefs.paymentUpdates}
@@ -431,8 +420,8 @@ export function Profile({ userId, displayName, email, initials, onNotify }: Prof
             </div>
             <div className="notification-pref-group">
               <span>
-                <strong>Promotions</strong>
-                <small>Special offers and new service announcements</small>
+                <strong>{websiteText("Promotions")}</strong>
+                <small>{websiteText("Special offers and new service announcements")}</small>
               </span>
               <ToggleSwitch
                 checked={notificationPrefs.promotions}

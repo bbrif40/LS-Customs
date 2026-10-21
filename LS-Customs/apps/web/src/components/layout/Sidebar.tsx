@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * Sidebar — persistent navigation drawer with workspace items,
  * live fleet dispatch status indicator, and dynamic emergency mechanic button.
@@ -41,6 +42,8 @@ export function Sidebar({
   activeDispatch: parentActiveDispatch,
   setActiveDispatch: parentSetActiveDispatch,
 }: SidebarProps) {
+  const websiteText = useWebsiteText("Navigation")
+
   const { settings } = useCustomerSiteSettings()
   // Local fallback state if parent does not manage dispatch state directly
   const [internalModalOpen, setInternalModalOpen] = useState(false)
@@ -74,22 +77,22 @@ export function Sidebar({
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onView('home') } }}
           role="button"
           tabIndex={0}
-          aria-label={`${settings.companyName || 'LS Customs'} home`}
+          aria-label={websiteText("{value1} home", { value1: String(settings.companyName || 'LS Customs') })}
         >
           <img
             src="/logo.png"
-            alt={settings.companyName || 'LS Customs'}
+            alt={websiteText("LS Customs", undefined, settings.companyName || 'LS Customs')}
             className="brand-logo-img"
             style={{ width: 34, height: 34, objectFit: 'contain', flexShrink: 0 }}
           />
           <div className="brand-copy">
-            <span className="brand-name">{settings.companyName || 'LS Customs'}</span>
-            <span className="brand-tagline">AUTOMOTIVE & FLEET</span>
+            <span className="brand-name">{websiteText("LS Customs", undefined, settings.companyName || 'LS Customs')}</span>
+            <span className="brand-tagline">{websiteText("AUTOMOTIVE & FLEET")}</span>
           </div>
         </div>
 
-        <div className="sidebar-label">MY WORKSPACE</div>
-        <nav className="side-nav" role="navigation" aria-label="Main navigation">
+        <div className="sidebar-label">{websiteText("MY WORKSPACE")}</div>
+        <nav className="side-nav" role="navigation" aria-label={websiteText("Main navigation")}>
           {navItems.map(({ id, label, icon: Icon }) => (
             <button
               className={view === id ? 'nav-item active' : 'nav-item'}
@@ -100,9 +103,9 @@ export function Sidebar({
               <span className="nav-icon-wrapper">
                 <Icon size={18} strokeWidth={1.8} />
               </span>
-              <span className="nav-label-text">{label}</span>
+              <span className="nav-label-text">{websiteText(label)}</span>
               {id === 'bookings' && (activeBookingsCount !== undefined ? activeBookingsCount > 0 : unreadCount > 0) && (
-                <span className="nav-count" aria-label="Active bookings count">
+                <span className="nav-count" aria-label={websiteText("Active bookings count")}>
                   {activeBookingsCount !== undefined ? activeBookingsCount : unreadCount}
                 </span>
               )}
@@ -117,7 +120,7 @@ export function Sidebar({
             className={`emergency-button ${activeDispatch ? 'is-active-dispatch' : ''}`}
             onClick={handleEmergencyClick}
             type="button"
-            aria-label="Open Emergency Mechanic Roadside Dispatch"
+            aria-label={websiteText("Open Emergency Mechanic Roadside Dispatch")}
           >
             <div className="emergency-btn-shimmer" />
             
@@ -137,15 +140,15 @@ export function Sidebar({
 
             <div className="emergency-text-col">
               <div className="emergency-title-row">
-                <strong>{activeDispatch ? 'ACTIVE REQUEST' : 'Emergency Mechanic'}</strong>
+                <strong>{activeDispatch ? websiteText("ACTIVE REQUEST") : websiteText("Emergency Mechanic")}</strong>
                 <span className={`emergency-pill-tag ${activeDispatch ? 'pill-active' : ''}`}>
-                  {activeDispatch ? 'STATUS' : 'SOS'}
+                  {activeDispatch ? websiteText("STATUS") : websiteText("SOS")}
                 </span>
               </div>
               <small>
                 {activeDispatch
-                  ? `${activeDispatch.mechanic.unit} • Tap to view`
-                  : 'Request roadside assistance'}
+                  ? websiteText("{value1} • Tap to view", { value1: String(activeDispatch.mechanic.unit) })
+                  : websiteText("Request roadside assistance")}
               </small>
             </div>
           </button>
@@ -157,10 +160,10 @@ export function Sidebar({
             <span className="nav-icon-wrapper">
               <CircleHelp size={18} />
             </span>
-            <span className="nav-label-text">Help Center</span>
+            <span className="nav-label-text">{websiteText("Help Center")}</span>
           </button>
           <button className="signout" onClick={onSignOut}>
-            <span>Sign out</span>
+            <span>{websiteText("Sign out")}</span>
             <ChevronRight size={15} />
           </button>
         </div>

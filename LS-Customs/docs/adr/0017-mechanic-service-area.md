@@ -1,0 +1,8 @@
+# Limit mechanic and roadside bookings to a supported service area
+
+Accepted during the design interview on 2026-10-20; implemented locally; target deployment and device/provider checks remain in IMPLEMENTATION_PLAN.md. Admins define the supported service area for mechanic and roadside bookings. Check the requested service location before checkout, clearly explain when it is unsupported, and do not collect payment for unsupported locations.
+
+This makes geographic eligibility an explicit booking constraint rather than relying only on travel pricing or eventual mechanic assignment. Define coverage through an explicit admin-editable list of supported cities and municipalities, rather than a distance radius. Launch coverage includes all of NCR (Metro Manila). Nearby areas outside NCR are excluded initially and may be added individually through admin settings. Keep the mechanic destination fixed to the confirmed booking pin unless a location change is approved. Movement of the customer phone must not silently redirect the mechanic. Recheck coverage, travel cost, and mechanic availability before accepting a new destination; any price increase requires a new quote and explicit customer approval.
+
+
+

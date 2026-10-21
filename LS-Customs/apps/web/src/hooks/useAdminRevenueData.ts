@@ -81,7 +81,7 @@ export function useAdminRevenueData(
 
       // ── 1. Fetch payments in the current period ─────────────────
       const { data: payments, error: paymentsError } = await supabase
-        .from('payments')
+        .from('financial_collections')
         .select('id, booking_type, booking_id, customer_id, amount, status, provider, created_at')
         .gte('created_at', startDate.toISOString())
         .lte('created_at', endDate.toISOString())
@@ -93,7 +93,7 @@ export function useAdminRevenueData(
 
       // ── 2. Fetch payments in the previous period (for trends) ────
       const { data: prevPayments, error: prevError } = await supabase
-        .from('payments')
+        .from('financial_collections')
         .select('amount, status')
         .gte('created_at', previousStartDate.toISOString())
         .lt('created_at', startDate.toISOString())
@@ -403,3 +403,4 @@ export function useAdminRevenueData(
     refetch: fetchRevenue,
   }
 }
+

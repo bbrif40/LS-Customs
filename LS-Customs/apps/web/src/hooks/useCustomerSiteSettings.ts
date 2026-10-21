@@ -1,3 +1,4 @@
+import { useWebsiteText } from './useWebsiteText'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../supabaseClient'
 
@@ -72,6 +73,8 @@ function loadStoredSettings(): CustomerSiteSettings {
   catch { return DEFAULT_SITE_SETTINGS }
 }
 export function useCustomerSiteSettings() {
+  const workspaceText = useWebsiteText('Workspace', true)
+  const footerText = useWebsiteText('Footer', true)
   const [settings, setSettings] = useState<CustomerSiteSettings>(loadStoredSettings)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
@@ -112,5 +115,10 @@ export function useCustomerSiteSettings() {
     finally { setSaving(false) }
   }, [apply])
   const resetSettings = useCallback(() => saveSettings(DEFAULT_SITE_SETTINGS), [saveSettings])
-  return { settings, saveSettings, resetSettings, error, saving }
+  const displayedSettings = { ...settings }
+  const footerFields = ['companyName', 'supportPhone', 'supportEmail', 'address', 'workingHours'] as const
+  const workspaceFields = ['bannerText', 'bannerLinkText', 'promoTitle', 'welcomeSubtitle', 'heroEyebrow', 'heroHeadline', 'heroHeadlineEm', 'heroSubtitle', 'heroCtaRentalText', 'heroCtaServiceText'] as const
+  for (const key of footerFields) displayedSettings[key] = footerText(DEFAULT_SITE_SETTINGS[key], undefined, settings[key])
+  for (const key of workspaceFields) displayedSettings[key] = workspaceText(DEFAULT_SITE_SETTINGS[key], undefined, settings[key])
+  return { settings: displayedSettings, rawSettings: settings, saveSettings, resetSettings, error, saving }
 }

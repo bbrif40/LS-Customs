@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * SignOutConfirmation — modal dialog to confirm user sign-out action.
  */
@@ -9,6 +10,8 @@ interface SignOutConfirmationProps {
 }
 
 export function SignOutConfirmation({ onCancel, onConfirm }: SignOutConfirmationProps) {
+  const websiteText = useWebsiteText("Shared")
+
   return (
     <div
       className="auth-backdrop"
@@ -19,11 +22,11 @@ export function SignOutConfirmation({ onCancel, onConfirm }: SignOutConfirmation
     >
       <section className="signout-dialog" role="dialog" aria-modal="true" aria-labelledby="signout-title">
         <div className="auth-logo">?</div>
-        <h2 id="signout-title">Sign out?</h2>
-        <p>You will need to sign in again to access your dashboard, bookings, and profile.</p>
+        <h2 id="signout-title">{websiteText("Sign out?")}</h2>
+        <p>{websiteText("You will need to sign in again to access your dashboard, bookings, and profile.")}</p>
         <div className="signout-dialog-actions">
-          <button className="outline-button" onClick={onCancel}>Cancel</button>
-          <button className="button dark-button" onClick={onConfirm}>Sign out</button>
+          <button className="outline-button" onClick={onCancel}>{websiteText("Cancel")}</button>
+          <button className="button dark-button" onClick={onConfirm}>{websiteText("Sign out")}</button>
         </div>
       </section>
     </div>

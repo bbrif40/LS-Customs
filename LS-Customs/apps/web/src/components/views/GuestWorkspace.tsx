@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * GuestWorkspace — authenticated-style workspace for guests.
  * Same layout as the signed-in workspace but gates actions behind sign-in.
@@ -23,9 +24,12 @@ interface GuestWorkspaceProps {
 }
 
 export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceProps) {
+  const websiteText = useWebsiteText("Workspace")
+
   const [guestView, setGuestView] = useState<View>('home')
   const [menuOpen, setMenuOpen] = useState(false)
   const scrollRef = useScrollAnimation()
+  const currentNavLabel = navItems.find((item) => item.id === guestView)?.label
   const pageSlideRef = usePageSlide(navItems.findIndex(item => item.id === guestView), ':scope > :not(header):not(footer)')
 
   const navigateGuest = (view: View) => {
@@ -50,17 +54,17 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
         <div className="brand-mark">
           <img
             src="/logo.png"
-            alt="LS Customs"
+            alt={websiteText("LS Customs")}
             className="brand-logo-img"
             style={{ width: 34, height: 34, objectFit: 'contain', flexShrink: 0 }}
           />
           <div className="brand-copy">
-            <span className="brand-name">LS Customs</span>
-            <span className="brand-tagline">AUTOMOTIVE & FLEET</span>
+            <span className="brand-name">{websiteText("LS Customs")}</span>
+            <span className="brand-tagline">{websiteText("AUTOMOTIVE & FLEET")}</span>
           </div>
         </div>
 
-        <div className="sidebar-label">MY WORKSPACE</div>
+        <div className="sidebar-label">{websiteText("MY WORKSPACE")}</div>
         <nav className="side-nav">
           {navItems.map(({ id, label, icon: Icon }) => (
             <button
@@ -71,7 +75,7 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
               <span className="nav-icon-wrapper">
                 <Icon size={18} strokeWidth={1.8} />
               </span>
-              <span className="nav-label-text">{label}</span>
+              <span className="nav-label-text">{websiteText(label)}</span>
             </button>
           ))}
         </nav>
@@ -82,7 +86,7 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
             className="emergency-button"
             onClick={() => onEmergencyClick ? onEmergencyClick() : onOpenAuth('sign-in')}
             type="button"
-            aria-label="Request Emergency Mechanic Roadside Dispatch"
+            aria-label={websiteText("Request Emergency Mechanic Roadside Dispatch")}
           >
             <div className="emergency-btn-shimmer" />
             <div className="emergency-beacon-wrapper">
@@ -94,74 +98,64 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
             </span>
             <div className="emergency-text-col">
               <div className="emergency-title-row">
-                <strong>Emergency Mechanic</strong>
-                <span className="emergency-pill-tag">SOS</span>
+                <strong>{websiteText("Emergency Mechanic")}</strong>
+                <span className="emergency-pill-tag">{websiteText("SOS")}</span>
               </div>
-              <small>Request roadside assistance</small>
+              <small>{websiteText("Request roadside assistance")}</small>
             </div>
           </button>
         </div>
         <div className="sidebar-bottom">
           <button className="nav-item" onClick={() => navigateTo('/help')}>
-            <CircleHelp size={18} /> Help Center
-          </button>
-          <button className="signout" onClick={() => onOpenAuth('sign-in')}>
-            Sign in <ChevronRight size={15} />
+            <CircleHelp size={18} />{' '}{websiteText("Help Center")}</button>
+          <button className="signout" onClick={() => onOpenAuth('sign-in')}>{websiteText("Sign in")} <ChevronRight size={15} />
           </button>
         </div>
       </aside>
 
       <main className="main-content" ref={pageSlideRef}>
         <header className="topbar">
-          <button className="mobile-menu" aria-label="Open menu" onClick={() => setMenuOpen((o) => !o)}>
+          <button className="mobile-menu" aria-label={websiteText("Open menu")} onClick={() => setMenuOpen((o) => !o)}>
             <Menu size={21} />
           </button>
           <div className="breadcrumb">
-            <span>My workspace</span>
+            <span>{websiteText("My workspace")}</span>
             <ChevronRight size={15} />
-            <strong>{navItems.find((item) => item.id === guestView)?.label}</strong>
+            <strong>{currentNavLabel ? websiteText(currentNavLabel) : null}</strong>
           </div>
           <div className="top-actions">
-            <button className="button dark-button guest-sign-in" onClick={() => onOpenAuth('sign-in')}>
-              Sign in <ChevronRight size={15} />
+            <button className="button dark-button guest-sign-in" onClick={() => onOpenAuth('sign-in')}>{websiteText("Sign in")} <ChevronRight size={15} />
             </button>
           </div>
         </header>
 
         {guestView === 'home' && (
           <div className={`guest-page ${scrollRef.className}`} ref={scrollRef.ref as React.RefObject<HTMLDivElement>}>
-            <p className="eyebrow">LS CUSTOMS WORKSPACE</p>
-            <h1>
-              Your automotive care,
-              <br />
-              <em>in one place.</em>
+            <p className="eyebrow">{websiteText("LS CUSTOMS WORKSPACE")}</p>
+            <h1>{websiteText("Your automotive care,")}<br />
+              <em>{websiteText("in one place.")}</em>
             </h1>
-            <p className="muted guest-copy">
-              Sign in to view your dashboard, manage rentals, book a mobile mechanic, and keep your vehicle history together.
-            </p>
+            <p className="muted guest-copy">{websiteText("Sign in to view your dashboard, manage rentals, book a mobile mechanic, and keep your vehicle history together.")}</p>
             <div className="guest-actions">
-              <button className="button dark-button" onClick={() => onOpenAuth('sign-in')}>
-                Sign in to continue <ChevronRight size={16} />
+              <button className="button dark-button" onClick={() => onOpenAuth('sign-in')}>{websiteText("Sign in to continue")} <ChevronRight size={16} />
               </button>
-              <button className="outline-button" onClick={() => onOpenAuth('create-account')}>
-                Create an account
-              </button>
+              <button className="outline-button" onClick={() => onOpenAuth('create-account')}>{websiteText("Create an account")}</button>
             </div>
             <div className="guest-panels stagger-children">
               <article>
                 <CarFront size={20} />
-                <strong>Premium rentals</strong>
-                <span>Browse and reserve vehicles for your next trip.</span>
+                <strong>{websiteText("Premium rentals")}</strong>
+                <span>{websiteText("Browse and reserve vehicles for your next trip.")}</span>
               </article>
               <article>
                 <Wrench size={20} />
-                <strong>Mobile mechanics</strong>
-                <span>Get certified service at your location.</span>
+                <strong>{websiteText("Mobile mechanics")}</strong>
+                <span>{websiteText("Get certified service at your location.")}</span>
               </article>
               <article>
                 <ClipboardList size={20} />
-                <strong>One workspace</strong>
-                <span>Track bookings, alerts, and service history.</span>
+                <strong>{websiteText("One workspace")}</strong>
+                <span>{websiteText("Track bookings, alerts, and service history.")}</span>
               </article>
             </div>
           </div>
@@ -188,7 +182,7 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
             onClick={() => navigateGuest(id)}
           >
             <Icon size={19} />
-            <span>{label === 'Workspace' ? 'Home' : label}</span>
+            <span>{label === 'Workspace' ? websiteText("Home") : websiteText(label)}</span>
           </button>
         ))}
       </nav>

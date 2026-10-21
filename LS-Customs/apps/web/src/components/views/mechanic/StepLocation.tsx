@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../../hooks/useWebsiteText"
 /**
  * StepLocation — pick where the mechanic should arrive.
  * Defaults to the customer's saved address from useProfile; the user
@@ -43,6 +44,8 @@ export function StepLocation({
   formattedDistanceFee = '₱85.00',
   service,
 }: StepLocationProps) {
+  const websiteText = useWebsiteText("Mechanic")
+
   // If the user has no default address, force the custom input.
   const initialMode: Mode =
     value?.source ?? (defaultAddress ? 'default' : 'custom')
@@ -211,15 +214,14 @@ export function StepLocation({
     <section className="step-panel">
       <header className="step-panel-head">
         <button type="button" className="text-button step-back" onClick={onBack}>
-          <ChevronLeft size={15} /> Back
-        </button>
-        <p className="eyebrow">STEP 4 OF 6</p>
-        <h2>Where should we send the mechanic?</h2>
-        <p className="muted">Use your saved address or drop a pin. Distance travel fee is ₱85 per 5km.</p>
+          <ChevronLeft size={15} />{' '}{websiteText("Back")}</button>
+        <p className="eyebrow">{websiteText("STEP 4 OF 6")}</p>
+        <h2>{websiteText("Where should we send the mechanic?")}</h2>
+        <p className="muted">{websiteText("Use your saved address or drop a pin. Distance travel fee is ₱85 per 5km.")}</p>
       </header>
 
       {loading ? (
-        <p className="muted" style={{ padding: '24px 0' }}>Loading your address…</p>
+        <p className="muted" style={{ padding: '24px 0' }}>{websiteText("Loading your address…")}</p>
       ) : (
         <div className="location-options">
           {defaultAddress && (
@@ -232,7 +234,7 @@ export function StepLocation({
                 <MapPin size={18} />
               </div>
               <div className="location-option-copy">
-                <strong>{defaultAddress.label ?? 'Default address'}</strong>
+                <strong>{defaultAddress.label ?? websiteText("Default address")}</strong>
                 <p>
                   {defaultAddress.line1}, {defaultAddress.city}
                 </p>
@@ -250,8 +252,8 @@ export function StepLocation({
               <MapPin size={18} />
             </div>
             <div className="location-option-copy">
-              <strong>Use a different address</strong>
-              <p>Enter a one-off address or drop a pin on the map.</p>
+              <strong>{websiteText("Use a different address")}</strong>
+              <p>{websiteText("Enter a one-off address or drop a pin on the map.")}</p>
             </div>
             <span className="location-option-check" aria-hidden="true" />
           </button>
@@ -261,61 +263,56 @@ export function StepLocation({
               <div className="gps-auto-detect-header">
                 {isLocating ? (
                   <span className="gps-status-pill locating">
-                    <Loader2 size={13} className="spin" /> Detecting current location via GPS…
-                  </span>
+                    <Loader2 size={13} className="spin" />{' '}{websiteText("Detecting current location via GPS…")}</span>
                 ) : autoDetected ? (
                   <span className="gps-status-pill detected">
-                    <CheckCircle2 size={13} /> Current GPS location detected automatically
-                  </span>
+                    <CheckCircle2 size={13} />{' '}{websiteText("Current GPS location detected automatically")}</span>
                 ) : (
                   <button
                     type="button"
                     className="gps-detect-btn"
                     onClick={() => void detectLocation()}
                   >
-                    <Crosshair size={13} /> Auto-detect my location
-                  </button>
+                    <Crosshair size={13} />{' '}{websiteText("Auto-detect my location")}</button>
                 )}
               </div>
 
               <label>
-                <span>Street address</span>
+                <span>{websiteText("Street address")}</span>
                 <input
                   type="text"
                   value={line1}
-                  placeholder="Enter street or landmark"
+                  placeholder={websiteText("Enter street or landmark")}
                   onChange={(e) => {
                     setLine1(e.target.value)
+                    onChange({ line1: e.target.value, city, source: 'custom', pin_lat: pin?.lat ?? null, pin_lng: pin?.lng ?? null })
                     setAutoDetected(false)
                   }}
                   onBlur={commitCustom}
                 />
               </label>
               <label>
-                <span>City</span>
+                <span>{websiteText("City")}</span>
                 <input
                   type="text"
                   value={city}
-                  placeholder="Metro Manila"
+                  placeholder={websiteText("Metro Manila")}
                   onChange={(e) => {
                     setCity(e.target.value)
+                    onChange({ line1, city: e.target.value, source: 'custom', pin_lat: pin?.lat ?? null, pin_lng: pin?.lng ?? null })
                     setAutoDetected(false)
                   }}
                   onBlur={commitCustom}
                 />
               </label>
-              <p className="form-helper">
-                We don't save custom addresses to your profile.
-              </p>
-              <LocationPicker
+              <p className="form-helper">{websiteText("We don't save custom addresses to your profile.")}</p>
+              <LocationPicker showServiceCoverage
                 value={pin}
                 onChange={handlePinChange}
                 onAddressResolved={handleAddressResolved}
                 height={340}
               />
-              <p className="form-helper">
-                Drag the pin to drop your exact location. Distance fee updates in real-time.
-              </p>
+              <p className="form-helper">{websiteText("Drag the pin to drop your exact location. Distance fee updates in real-time.")}</p>
             </div>
           )}
 
@@ -324,9 +321,8 @@ export function StepLocation({
             <div className="driver-distance-card">
               <div className="driver-distance-badge-row">
                 <span className="driver-pill">
-                  <span className="live-dot" /> Live Distance Estimation
-                </span>
-                <span className="rate-badge">Rate: ₱85 per 5km</span>
+                  <span className="live-dot" />{' '}{websiteText("Live Distance Estimation")}</span>
+                <span className="rate-badge">{websiteText("Rate: ₱85 per 5km")}</span>
               </div>
 
               <div className="driver-info-row">
@@ -334,29 +330,29 @@ export function StepLocation({
                   {assignedMechanic.full_name.charAt(0)}
                 </div>
                 <div className="driver-info-meta">
-                  <strong>Assigned Driver: {assignedMechanic.full_name}</strong>
-                  <p>★ {assignedMechanic.rating_avg.toFixed(1)} rating • Fast Roadside Dispatch Unit</p>
+                  <strong>{websiteText("Assigned Driver:")} {assignedMechanic.full_name}</strong>
+                  <p>★ {assignedMechanic.rating_avg.toFixed(1)}{' '}{websiteText("rating • Fast Roadside Dispatch Unit")}</p>
                 </div>
                 <div className="driver-distance-stat">
-                  <span>Estimated Distance</span>
-                  <strong>{`${distanceKm.toFixed(1)} km`}</strong>
+                  <span>{websiteText("Estimated Distance")}</span>
+                  <strong>{websiteText("{value1} km", { value1: String(distanceKm.toFixed(1)) })}</strong>
                 </div>
               </div>
 
               <div className="distance-fee-summary-row">
                 <div className="fee-item">
-                  <span>Base Service</span>
+                  <span>{websiteText("Base Service")}</span>
                   <strong>{service?.price ?? (basePriceNum > 0 ? `₱${basePriceNum.toFixed(2)}` : '—')}</strong>
                 </div>
                 <div className="fee-divider">+</div>
                 <div className="fee-item">
-                  <span>Distance Travel Fee</span>
+                  <span>{websiteText("Distance Travel Fee")}</span>
                   <strong className="fee-accent">{formattedDistanceFee}</strong>
-                  <small>(every 5km is ₱85)</small>
+                  <small>{websiteText("(every 5km is ₱85)")}</small>
                 </div>
                 <div className="fee-divider">=</div>
                 <div className="fee-item fee-item-total">
-                  <span>Estimated Total Price</span>
+                  <span>{websiteText("Estimated Total Price")}</span>
                   <strong className="total-highlight">
                     ₱{estimatedTotalNum.toFixed(2)}
                   </strong>
@@ -368,9 +364,7 @@ export function StepLocation({
       )}
 
       <div className="step-actions">
-        <button type="button" className="button dark-button" disabled={!canProceed} onClick={onNext}>
-          Continue to Review
-        </button>
+        <button type="button" className="button dark-button" disabled={!canProceed} onClick={onNext}>{websiteText("Continue to Review")}</button>
       </div>
     </section>
   )

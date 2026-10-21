@@ -95,7 +95,7 @@ ls-customs/                          ← git repo root
 │   │   │   │   ├── chatbot/
 │   │   │   │   └── _shared/          # Shared utilities (CORS, Supabase client, payment provider)
 │   │   │   ├── seed.sql              # Demo data for local dev
-│   │   │   └── gen_jwt.mjs           # Generates test JWTs locally
+│   │   │   └── gen_jwt.ts           # Generates test JWTs locally
 │   │   ├── tests/                    # Test scripts per PHASES.md acceptance criteria
 │   │   ├── package.json              # Backend-specific scripts & deps
 │   │   └── tsconfig.json             # TypeScript config (strict mode)

@@ -1,8 +1,9 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * Frequently Asked Questions — public page.
  * Features a hero with search, category filters, and an accordion list.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SearchBox } from '../../components/common/SearchBox'
 import { Accordion } from '../../components/common/Accordion'
 import { faqItems } from '../../data/faqs'
@@ -19,8 +20,25 @@ const FAQ_CATEGORIES = [
 ] as const
 
 export function Faqs() {
+  const websiteText = useWebsiteText("Help Center")
+
   const [query, setQuery] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
+
+  const localizedItems = faqItems.map((item) => ({
+    ...item,
+    question: websiteText(item.question),
+    answer: websiteText(item.answer),
+  }))
+  let filteredItems = localizedItems
+  if (activeCategory !== 'all') {
+    filteredItems = filteredItems.filter((item) => item.category === activeCategory)
+  }
+  const search = query.trim().toLowerCase()
+  if (search) {
+    filteredItems = filteredItems.filter((item) =>
+      item.question.toLowerCase().includes(search) || item.answer.toLowerCase().includes(search))
+  }
 
   useEffect(() => {
     document.title = 'FAQs — LS Customs'
@@ -30,25 +48,6 @@ export function Faqs() {
     )
   }, [])
 
-  const filteredItems = useMemo(() => {
-    let items = faqItems
-
-    if (activeCategory !== 'all') {
-      items = items.filter((item) => item.category === activeCategory)
-    }
-
-    if (query.trim()) {
-      const q = query.toLowerCase()
-      items = items.filter(
-        (item) =>
-          item.question.toLowerCase().includes(q) ||
-          item.answer.toLowerCase().includes(q)
-      )
-    }
-
-    return items
-  }, [query, activeCategory])
-
   const handleSearch = (q: string) => {
     setQuery(q)
   }
@@ -56,15 +55,12 @@ export function Faqs() {
   return (
     <div className="public-page">
       <header className="public-hero">
-        <h1>Frequently Asked <em>Questions</em></h1>
-        <p className="subhead">
-          Find answers to common questions about rentals, mobile mechanics,
-          billing, and your account.
-        </p>
+        <h1>{websiteText("Frequently Asked")} <em>{websiteText("Questions")}</em></h1>
+        <p className="subhead">{websiteText("Find answers to common questions about rentals, mobile mechanics, billing, and your account.")}</p>
       </header>
 
       <SearchBox
-        placeholder="Search questions..."
+        placeholder={websiteText("Search questions...")}
         value={query}
         onChange={handleSearch}
       />
@@ -77,15 +73,13 @@ export function Faqs() {
             className={`faq-filter${activeCategory === cat.id ? ' active' : ''}`}
             onClick={() => setActiveCategory(cat.id)}
           >
-            {cat.label}
+            {websiteText(cat.label)}
           </button>
         ))}
       </div>
 
       {filteredItems.length === 0 ? (
-        <p className="muted" style={{ marginTop: 24 }}>
-          No questions found for "{query}". Try adjusting your search or filter.
-        </p>
+        <p className="muted" style={{ marginTop: 24 }}>{websiteText("No questions found for \"")}{query}{websiteText("\". Try adjusting your search or filter.")}</p>
       ) : (
         <Accordion
           items={filteredItems.map((item: FaqItem) => ({
@@ -99,14 +93,12 @@ export function Faqs() {
 
       {filteredItems.length > 0 && (
         <div style={{ marginTop: 36, textAlign: 'center' }}>
-          <p className="muted">Still have questions?</p>
+          <p className="muted">{websiteText("Still have questions?")}</p>
           <button
             className="button dark-button"
             style={{ marginTop: 12 }}
             onClick={() => navigateTo('/contact')}
-          >
-            Contact Support
-          </button>
+          >{websiteText("Contact Support")}</button>
         </div>
       )}
     </div>

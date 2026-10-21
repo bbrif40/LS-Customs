@@ -1,3 +1,4 @@
+import { coverageRing, type ServiceCoverage } from '../../../utils/serviceCoverage'
 import { useEffect, useRef, useState } from 'react'
 import { Map, Marker, Popup, NavigationControl, LngLatBounds, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl'
 import mapWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
@@ -17,6 +18,8 @@ export interface MapSurfacePin {
 }
 
 export interface MapSurfaceProps {
+  coverage?: ServiceCoverage | null
+  showCoverageArea?: boolean
   center: [number, number]
   zoom: number
   pins: ReadonlyArray<MapSurfacePin>
@@ -170,6 +173,29 @@ export default function OpenStreetMapSurface(props: MapSurfaceProps) {
     else map.once('load', draw)
     return () => { map.off('load', draw) }
   }, [props.route])
+
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !props.coverage) return
+    const ring = coverageRing(props.coverage)
+    const draw = () => {
+      const data: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: props.coverage?.active ? [{ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } }] : [] }
+      const source = map.getSource('service-coverage') as GeoJSONSource | undefined
+      if (source) source.setData(data)
+      else {
+        map.addSource('service-coverage', { type: 'geojson', data })
+        map.addLayer({ id: 'service-coverage-fill', type: 'fill', source: 'service-coverage', paint: { 'fill-color': '#316749', 'fill-opacity': .09 } })
+        map.addLayer({ id: 'service-coverage-edge', type: 'line', source: 'service-coverage', paint: { 'line-color': '#316749', 'line-width': 2, 'line-dasharray': [3, 2] } })
+      }
+      if (props.showCoverageArea) {
+        const bounds = new LngLatBounds()
+        ring.forEach(position => bounds.extend(position))
+        map.fitBounds(bounds, { padding: 24, duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 400 })
+      }
+    }
+    if (map.isStyleLoaded()) draw(); else map.once('load', draw)
+    return () => { map.off('load', draw) }
+  }, [props.coverage, props.showCoverageArea])
 
   if (failed) return <div className="map-skeleton" style={{ height: props.height }} role="status">Map unavailable. Your device needs WebGL support.</div>
   return <div ref={container} style={{ height: props.height, width: '100%', borderRadius: 8 }} aria-label="OpenStreetMap" />

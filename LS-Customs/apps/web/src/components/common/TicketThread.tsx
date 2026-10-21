@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * TicketThread — shared message thread for one support ticket.
  *
@@ -85,6 +86,8 @@ export function TicketThread({
   onError,
   theme,
 }: TicketThreadProps) {
+  const websiteText = useWebsiteText("Bookings")
+
   const t = { ...DEFAULT_THEME, ...theme }
   const { data, loading, error, send } = useTicketMessages(ticketId)
   const [body, setBody] = useState('')
@@ -234,7 +237,7 @@ export function TicketThread({
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value.slice(0, 4000))}
-          placeholder={role === 'admin' ? 'Reply to the customer…' : 'Send a follow-up to support…'}
+          placeholder={role === 'admin' ? websiteText("Reply to the customer…") : websiteText("Send a follow-up to support…")}
           rows={2}
           disabled={sending}
           style={{
@@ -278,7 +281,7 @@ export function TicketThread({
           }}
         >
           {sending ? <Loader2 size={14} className="spin" /> : <Send size={14} />}
-          {role === 'admin' ? 'Reply' : 'Send'}
+          {role === 'admin' ? websiteText("Reply") : websiteText("Send")}
         </button>
       </div>
     </div>

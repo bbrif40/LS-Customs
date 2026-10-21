@@ -85,7 +85,7 @@ export function AdminTransactions() {
 
   const handleRefund = async (paymentId: string) => {
     const confirmed = window.confirm(
-      'Issue a refund for this payment? The transaction will be marked as refunded and deducted from the revenue reports.',
+      'Request a refund for this payment? It stays pending until the provider confirms settlement.',
     )
     if (!confirmed) return
     await updatePaymentStatus(paymentId, 'refunded')

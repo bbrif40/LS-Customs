@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * PublicLayout — shell for public-facing content pages (Help Center, Contact,
  * Legal, FAQs, Documentation). Renders a lightweight header with nav links,
@@ -29,6 +30,8 @@ const PUBLIC_NAV: { id: PublicView; label: string; href: string }[] = [
 ]
 
 export function PublicLayout({ publicView, children, onRecommendation }: PublicLayoutProps) {
+  const websiteText = useWebsiteText("Shared")
+
   const pageSlideRef = usePageSlide(PUBLIC_NAV.findIndex(item => item.id === publicView), ':scope > *')
   return (
     <div className="public-layout">
@@ -43,10 +46,10 @@ export function PublicLayout({ publicView, children, onRecommendation }: PublicL
         >
           <img
             src="/logo.png"
-            alt="LS Customs"
+            alt={websiteText("LS Customs")}
             style={{ width: 28, height: 28, objectFit: 'contain', flexShrink: 0 }}
           />
-          <span>LS Customs</span>
+          <span>{websiteText("LS Customs")}</span>
         </a>
         <nav className="public-nav">
           {PUBLIC_NAV.map(({ id, label, href }) => (
@@ -59,7 +62,7 @@ export function PublicLayout({ publicView, children, onRecommendation }: PublicL
                 navigateTo(href)
               }}
             >
-              {label}
+              {websiteText(label)}
             </a>
           ))}
         </nav>
@@ -73,10 +76,10 @@ export function PublicLayout({ publicView, children, onRecommendation }: PublicL
         <div className="footer-brand">
           <img
             src="/logo.png"
-            alt="LS Customs"
+            alt={websiteText("LS Customs")}
             style={{ width: 24, height: 24, objectFit: 'contain', flexShrink: 0 }}
           />
-          <strong>LS Customs</strong>
+          <strong>{websiteText("LS Customs")}</strong>
         </div>
         <div className="footer-links">
           {PUBLIC_NAV.map(({ id, label, href }) => (
@@ -88,13 +91,11 @@ export function PublicLayout({ publicView, children, onRecommendation }: PublicL
                 navigateTo(href)
               }}
             >
-              {label}
+              {websiteText(label)}
             </a>
           ))}
         </div>
-        <small className="footer-copy">
-          © 2024 LS Customs. All rights reserved.
-        </small>
+        <small className="footer-copy">{websiteText("© 2024 LS Customs. All rights reserved.")}</small>
       </footer>
     </div>
   )

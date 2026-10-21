@@ -11,6 +11,7 @@
 import { useCallback, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { supabase } from '../supabaseClient'
+import { useTransactionTerms } from '../components/common/TransactionTerms'
 
 export type BookingType = 'vehicle' | 'service'
 
@@ -34,6 +35,7 @@ interface UsePaymentIntentResult {
 }
 
 export function usePaymentIntent(): UsePaymentIntentResult {
+  const reviewTerms = useTransactionTerms()
   const [creating, setCreating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -50,6 +52,7 @@ export function usePaymentIntent(): UsePaymentIntentResult {
     const defaultCancel = `${origin}/bookings?payment=cancelled&booking_id=${bookingId}&type=${bookingType}`
 
     try {
+      if (!await reviewTerms(bookingId, 'payment')) return null
       const { data, error: invokeError } = await supabase.functions.invoke('create-payment-intent', {
         body: {
           booking_type: bookingType,

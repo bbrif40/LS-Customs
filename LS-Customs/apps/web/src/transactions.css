@@ -1,0 +1,222 @@
+/* Transaction surfaces reuse the workspace's DM Sans and forest-green tokens.
+   Layers: application dialogs use the existing modal layer; terms sit above them. */
+:root { --transaction-surface: #fff; --transaction-tint: #f1f6f2; --transaction-accent: #275b40; --transaction-text: #142b28; --transaction-muted: #586963; --transaction-border: #dce4df; }
+[data-theme="dark"] { --transaction-surface: #1c2c26; --transaction-tint: #263b31; --transaction-accent: #a7d5b6; --transaction-text: #edf4ee; --transaction-muted: #b9c9bf; --transaction-border: #43584b; }
+:is(.account-panel,.roadside-dialog,.payment-method-choice) { color:var(--transaction-text); font-family:'DM Sans',system-ui,sans-serif; font-size:14px; line-height:1.55; min-width:0; box-sizing:border-box; }
+:is(.account-panel,.roadside-dialog,.payment-method-choice) * { box-sizing:border-box; }
+.account-panel { padding:24px; margin:20px 0; border:1px solid var(--transaction-border); border-radius:16px; background:var(--transaction-surface); }
+.account-panel :is(h2,h3) { margin:0; color:var(--transaction-text); font-family:inherit; font-size:18px; font-weight:700; line-height:1.3; letter-spacing:-.4px; }
+.account-panel h4 { font-size:14px; margin:0 0 8px; }
+.account-panel p { margin:10px 0; font-size:14px; line-height:1.6; overflow-wrap:anywhere; }
+.transaction-section-heading { display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+.transaction-section-heading > div { min-width:0; }
+.transaction-section-heading p { margin:4px 0 0; color:var(--transaction-muted); font-size:13px; }
+.transaction-icon { flex:0 0 auto; width:42px; height:42px; display:inline-grid; place-items:center; border-radius:12px; background:var(--transaction-tint); color:var(--transaction-accent); }
+.account-panel label,.roadside-form > label,.transaction-coordinate-grid label { display:grid; gap:8px; margin:0 0 16px; color:var(--transaction-text); font-size:13px; font-weight:600; min-width:0; }
+:is(.account-panel,.roadside-form) :is(input:not([type="checkbox"]):not([type="radio"]),select,textarea) { display:block; width:100%; max-width:100%; min-width:0; min-height:46px; padding:11px 13px; border:1px solid var(--transaction-border); border-radius:9px; color:var(--transaction-text); background:var(--transaction-surface); font:400 14px/1.5 'DM Sans',system-ui,sans-serif; }
+:is(.account-panel,.roadside-form) textarea { min-height:110px; resize:vertical; }
+:is(.account-panel,.roadside-form) :is(input,textarea)::placeholder { color:var(--transaction-muted); }
+:is(.account-panel,.roadside-form) :is(input,select,textarea):focus-visible { outline:2px solid var(--transaction-accent); outline-offset:3px; }
+.account-panel fieldset { min-width:0; margin:20px 0 0; padding:20px 0 0; border:0; border-top:1px solid var(--transaction-border); }
+.account-panel legend { padding:0 8px 0 0; font-size:13px; font-weight:700; color:var(--transaction-text); }
+:is(.account-panel,.roadside-dialog) button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:10px 15px; border:1px solid var(--transaction-border); border-radius:9px; background:var(--transaction-surface); color:var(--transaction-accent); font:600 13px/1.3 'DM Sans',system-ui,sans-serif; cursor:pointer; max-width:100%; }
+:is(.account-panel,.roadside-dialog) button:hover:not(:disabled) { background:var(--transaction-tint); border-color:var(--transaction-accent); }
+:is(.account-panel,.roadside-dialog) button:active:not(:disabled) { transform:scale(.98); }
+:is(.account-panel,.roadside-dialog) button:disabled { opacity:1; background:var(--transaction-tint); color:var(--transaction-muted); border-color:var(--transaction-border); cursor:not-allowed; }
+:is(.account-panel,.roadside-dialog) button.transaction-primary,.account-panel button.primary-button { background:#275b40; border-color:#275b40; color:#f7faf7; }
+:is(.account-panel,.roadside-dialog) button.transaction-primary:hover:not(:disabled),.account-panel button.primary-button:hover:not(:disabled) { background:#1c4530; color:#f7faf7; }
+:is(.account-panel,.roadside-dialog) button.transaction-primary:disabled { background:var(--transaction-tint); border-color:var(--transaction-border); color:var(--transaction-muted); }
+.account-panel button.transaction-quiet { border-color:transparent; padding:8px 0; background:transparent; font-size:12px; min-height:36px; }
+.transaction-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+.transaction-section-footer { display:flex; justify-content:flex-end; margin-top:14px; padding-top:12px; border-top:1px solid var(--transaction-border); }
+.account-panel [role="alert"],.roadside-dialog [role="alert"] { padding:12px 14px; border:1px solid #dcb5ae; color:#8b3025; background:#fff4f1; border-radius:9px; font-size:13px; }
+.account-notice { padding:14px 16px; border:1px solid var(--transaction-border); background:var(--transaction-tint); border-radius:9px; }
+.transaction-helper { display:flex; gap:8px; align-items:flex-start; color:var(--transaction-muted); font-size:12px!important; }
+.transaction-helper svg { flex-shrink:0; margin-top:2px; }
+.transaction-empty { display:flex; align-items:center; justify-content:center; gap:16px; padding:32px 20px; background:var(--transaction-tint); border:1px dashed var(--transaction-border); border-radius:12px; color:var(--transaction-accent); }
+.transaction-empty > svg { flex-shrink:0; }
+.transaction-empty strong { display:block; color:var(--transaction-text); font-size:15px; font-weight:600; }
+.transaction-empty p { margin:5px 0 0; max-width:48ch; color:var(--transaction-muted); font-size:13px; }
+.transaction-empty-compact { justify-content:flex-start; padding:20px; }
+.booking-bill-summary { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:18px; margin:0 0 18px; background:var(--transaction-tint); border-radius:10px; }
+.booking-bill-summary span { display:block; color:var(--transaction-muted); font-size:12px; margin-bottom:4px; }
+.booking-bill-summary strong { font-size:20px; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-.5px; }
+.booking-bill-summary > p { grid-column:1/-1; margin:0; font-size:12px; color:var(--transaction-muted); }
+.booking-reports > article { padding:18px 0; border-top:1px solid var(--transaction-border); }
+.booking-reports > article.account-panel { border:1px solid var(--transaction-border); padding:18px; background:var(--transaction-tint); }
+.booking-reports article button { margin:4px 6px 4px 0; }
+.transaction-upload { border:1px dashed var(--transaction-border); border-radius:10px; padding:16px; background:var(--transaction-tint); }
+.transaction-upload > span { display:flex; align-items:center; gap:8px; }
+.transaction-upload small { color:var(--transaction-muted); font-size:12px; font-weight:400; }
+.account-panel input[type="file"] { padding:6px; background:var(--transaction-surface); font-size:12px; }
+.account-panel input[type="file"]::file-selector-button { border:0; border-radius:6px; padding:8px 12px; margin-right:10px; background:var(--transaction-tint); color:var(--transaction-accent); font:600 12px 'DM Sans',sans-serif; cursor:pointer; }
+.account-balance-total { display:grid; grid-template-columns:1fr auto; align-items:center; gap:4px 20px; padding:20px 0; margin-bottom:22px; border-block:1px solid var(--transaction-border); }
+.account-balance-total > span { color:var(--transaction-muted); font-size:13px; }
+.account-balance-total > strong { grid-column:2; grid-row:1/3; font-size:34px; line-height:1.2; letter-spacing:-1.2px; font-weight:600; font-variant-numeric:tabular-nums; }
+.account-balance-total > small { font-size:12px; color:var(--transaction-accent); }
+.account-scroll { width:100%; overflow-x:auto; margin:18px 0; }
+.account-panel table { width:100%; border-collapse:collapse; font-size:13px; }
+.account-panel th,.account-panel td { text-align:left; padding:14px 12px; border-bottom:1px solid var(--transaction-border); }
+.account-panel th { font-size:11px; font-weight:600; color:var(--transaction-muted); background:var(--transaction-tint); white-space:nowrap; }
+.account-panel caption { text-align:left; padding:0 0 14px; color:var(--transaction-muted); font-size:12px; }
+.account-panel td:nth-last-child(-n+4) { font-variant-numeric:tabular-nums; }
+.account-panel details { margin-top:18px; }
+.account-panel summary { cursor:pointer; font-size:13px; font-weight:600; padding:12px 0; }
+.account-history { margin:20px 0 12px; border-block:1px solid var(--transaction-border); }
+.account-history summary span { float:right; border-radius:6px; background:var(--transaction-tint); color:var(--transaction-muted); padding:0 8px; font-variant-numeric:tabular-nums; }
+.account-panel ul { padding-left:20px; }
+.account-panel li { padding:6px 0; font-size:13px; }
+.account-panel pre { overflow:auto; font-size:12px; }
+.payment-method-choice { border:0; padding:0; margin:0; min-width:0; }
+.payment-method-choice legend { padding:0; margin-bottom:10px; font-size:13px; font-weight:600; color:var(--transaction-text); }
+.payment-method-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.payment-method-option { position:relative; display:flex!important; align-items:center; gap:12px!important; min-width:0; margin:0!important; padding:15px!important; background:var(--transaction-surface); border:1px solid var(--transaction-border); border-radius:10px; cursor:pointer; }
+.payment-method-option.is-selected { background:var(--transaction-tint); border-color:var(--transaction-accent); box-shadow:inset 0 0 0 1px var(--transaction-accent); }
+.payment-method-option > input { position:absolute; opacity:0; width:1px; height:1px; }
+.payment-method-option:has(input:focus-visible) { outline:2px solid var(--transaction-accent); outline-offset:3px; }
+.payment-method-option > svg { flex-shrink:0; color:var(--transaction-accent); }
+.payment-method-option > span:not(.payment-choice-mark) { display:grid; gap:4px; min-width:0; flex:1; }
+.payment-method-option strong { font-size:13px; font-weight:600; line-height:1.3; }
+.payment-method-option small { font-size:11px; font-weight:400; line-height:1.5; color:var(--transaction-muted); white-space:normal; }
+.payment-choice-mark { display:grid; place-items:center; flex:0 0 18px; width:18px; height:18px; border:1px solid var(--transaction-border); border-radius:50%; }
+.is-selected .payment-choice-mark { color:var(--transaction-surface); background:var(--transaction-accent); border-color:var(--transaction-accent); }
+.payment-method-note { margin:9px 0 0; color:var(--transaction-muted); font-size:12px; }
+.rental-planner .date-picker-group { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; width:100%; }
+.rental-planner .date-picker-group > label { display:grid; gap:7px; min-width:0; font-size:12px; font-weight:600; }
+.rental-planner .date-picker-group > .payment-method-choice { grid-column:1/-1; }
+.rental-planner .date-picker-group input { width:100%; min-width:0; min-height:44px; padding:10px 12px; font-size:14px; border-radius:9px; background:var(--transaction-surface); }
+.rental-planner .date-arrow { display:none; }
+.roadside-backdrop { padding:24px 16px; }
+.roadside-dialog.auth-dialog { width:min(100%,580px); max-width:580px; max-height:calc(100dvh - 48px); margin:auto; padding:28px; overflow-y:auto; overflow-x:hidden; border:1px solid var(--transaction-border); border-radius:18px; background:var(--transaction-surface); text-align:left; scrollbar-gutter:stable; }
+.roadside-dialog .auth-close { position:absolute; top:17px; right:16px; width:36px; height:36px; min-height:36px; padding:0; border:0; background:transparent; color:var(--transaction-muted); }
+.roadside-heading { padding-right:24px; margin-bottom:18px; }
+.roadside-heading .transaction-icon { margin-bottom:16px; }
+.roadside-dialog h2 { margin:0; font:700 25px/1.2 'DM Sans',sans-serif; letter-spacing:-.7px; }
+.roadside-heading p { margin:8px 0 0; color:var(--transaction-muted); font-size:13px; }
+.roadside-safety { display:flex; gap:10px; padding:13px 14px; margin-bottom:24px; border:1px solid var(--transaction-border); border-radius:10px; background:var(--transaction-tint); }
+.roadside-safety > svg { flex-shrink:0; color:var(--transaction-accent); margin-top:2px; }
+.roadside-safety p { margin:0; font-size:12px; line-height:1.6; }
+.roadside-form { display:grid; gap:16px; min-width:0; }
+.roadside-form > label { margin:0; }
+.roadside-form > p { margin:0; font-size:12px; color:var(--transaction-muted); }
+.transaction-coordinate-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; min-width:0; }
+.transaction-coordinate-grid label { margin:0; }
+.roadside-form label.transaction-checkbox { display:flex; gap:10px; align-items:flex-start; padding:12px 0; font-weight:400; font-size:13px; }
+.transaction-checkbox input { flex-shrink:0; width:17px; height:17px; margin:2px 0 0; accent-color:var(--transaction-accent); }
+.roadside-dialog .location-picker { min-width:0; max-width:100%; width:100%; }
+.roadside-dialog .map-search-bar-container,.roadside-dialog .map-search-input-wrap { min-width:0; width:100%; max-width:100%; }
+.roadside-dialog .map-search-input { min-width:0; font-size:13px; }
+.roadside-dialog .location-picker-toolbar { flex-wrap:wrap; gap:8px; }
+.roadside-dialog .location-picker-btn { min-height:36px; padding:8px 10px; font-size:11px; }
+.roadside-dialog .location-picker-coords { font-size:10px; max-width:100%; overflow-wrap:anywhere; }
+.map-unavailable { border:1px solid var(--transaction-border); border-radius:12px; background:var(--transaction-tint); color:var(--transaction-muted); min-width:0; max-width:100%; }
+.map-unavailable > div { min-width:0; max-width:100%; }
+.map-unavailable p { max-width:36ch; font-size:13px; line-height:1.6; }
+.map-unavailable [role="alert"] { background:transparent; border:0; padding:0; color:var(--transaction-text); font-size:14px; }
+.booking-details-modal.map-modal { width:min(100%,760px); max-height:calc(100dvh - 48px); padding:0; overflow-x:hidden; border-radius:18px; background:var(--transaction-surface); scrollbar-gutter:stable; }
+.booking-details-modal > header { position:sticky; top:0; z-index:1; margin:0; padding:23px 26px; background:var(--transaction-surface); border-bottom:1px solid var(--transaction-border); }
+.booking-details-modal > header h3 { font-size:23px; line-height:1.25; margin-top:6px; letter-spacing:-.6px; }
+.booking-details-modal .booking-details-eyebrow { font-size:12px; font-weight:500; letter-spacing:0; text-transform:none; color:var(--transaction-muted); }
+.booking-details-modal .booking-details-body { display:flex; flex-direction:column; gap:0; padding:0 26px 24px; margin:0; }
+.booking-details-modal .account-panel { margin:0; padding:24px 0; border:0; border-bottom:1px solid var(--transaction-border); border-radius:0; box-shadow:none; }
+.booking-details-modal .account-panel .account-panel { padding:16px; border:1px solid var(--transaction-border); border-radius:10px; margin:12px 0; }
+.booking-details-modal footer { padding:0 26px 24px; }
+.transaction-terms { max-width:620px; max-height:90dvh; overflow:auto; }
+.transaction-terms-content { max-height:40dvh; overflow:auto; white-space:pre-wrap; padding:16px; border:1px solid var(--transaction-border); border-radius:9px; margin:16px 0; line-height:1.7; }
+.transaction-terms label { display:flex; gap:10px; align-items:flex-start; }
+.transaction-terms-backdrop { z-index:100000; }
+.transaction-loading { display:grid; gap:14px; padding:20px 0; }
+.transaction-loading > span:not(.sr-only) { display:block; height:24px; background:var(--transaction-tint); border-radius:6px; }
+.transaction-loading > span:nth-child(2) { width:65%; }
+.transaction-loading > span:nth-child(3) { height:90px; }
+@media (max-width:767px) {
+  .account-panel { padding:20px; border-radius:12px; }
+  .payment-method-options { grid-template-columns:1fr; }
+  .payment-method-option { padding:14px!important; }
+  .transaction-section-heading { gap:10px; margin-bottom:18px; }
+  .transaction-section-heading h3 { font-size:16px; }
+  .account-balance-total > strong { font-size:29px; }
+  .transaction-empty { padding:24px 16px; justify-content:flex-start; align-items:flex-start; }
+  .booking-details-modal.map-modal { width:100%; max-height:calc(100dvh - 24px); border-radius:14px; }
+  .booking-details-modal > header { padding:20px; }
+  .booking-details-modal > header h3 { font-size:21px; }
+  .booking-details-modal .booking-details-body { padding:0 20px 20px; }
+  .booking-details-modal footer { padding:0 20px 20px; }
+  .roadside-backdrop { padding:12px; }
+  .roadside-dialog.auth-dialog { padding:22px 18px; max-height:calc(100dvh - 24px); border-radius:14px; }
+  .roadside-dialog h2 { font-size:23px; }
+  .roadside-dialog .map-search-input { font-size:12px; }
+  .transaction-coordinate-grid { gap:10px; }
+  .account-panel button { white-space:normal; }
+  .account-panel .transaction-primary { width:100%; }
+}
+@media (prefers-reduced-motion:reduce) {
+  :is(.account-panel,.roadside-dialog) button { transition:none; }
+  :is(.account-panel,.roadside-dialog) button:active { transform:none; }
+}
+.rental-planner { display:grid!important; grid-template-columns:minmax(0,1fr)!important; gap:20px!important; align-items:stretch!important; }
+.rental-planner .date-picker-group { flex:none; min-width:0; max-width:none; }
+.rental-planner .payment-method-option span { text-transform:none; letter-spacing:normal; color:inherit; }
+.rental-planner .payment-method-option strong { font-size:13px; }
+.rental-planner .payment-method-option small { font-size:12px; color:var(--transaction-muted); }
+.rental-planner .planner-status { justify-self:start; }
+.rental-planner .date-picker-group .payment-method-option { flex-direction:row!important; align-items:center!important; text-align:left!important; }
+.rental-planner .date-picker-group .payment-method-option :is(strong,small,span) { text-transform:none!important; letter-spacing:normal!important; }
+.rental-planner .date-picker-group .payment-method-option > span:not(.payment-choice-mark) { display:grid!important; align-items:start; }
+.rental-planner .date-picker-group .payment-choice-mark { display:grid!important; flex:0 0 18px; width:18px; height:18px; }
+/* Booking flow: readable sequence, protected consent, and actionable validation. */
+.mechanic-progress { display:block; padding:0; margin:28px 0; border:0; border-radius:0; background:transparent; color:var(--transaction-text); }
+.mechanic-progress-track { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:0; list-style:none; margin:0; padding:0; }
+.mechanic-progress-track li { position:relative; min-width:0; }
+.mechanic-progress-track li:not(:last-child)::after { content:''; position:absolute; left:39px; right:9px; top:17px; height:1px; background:var(--transaction-border); }
+.mechanic-progress-track li.is-complete::after { background:var(--transaction-accent); }
+.mechanic-progress-track button { position:relative; z-index:1; display:flex; align-items:flex-start; flex-direction:column; gap:9px; padding:0; margin:0; min-height:60px; width:auto; border:0; background:transparent; color:var(--transaction-muted); text-align:left; border-radius:6px; font:500 12px/1.4 'DM Sans',sans-serif; }
+.mechanic-progress-track button:disabled { opacity:1; color:var(--transaction-muted); cursor:default; }
+.mechanic-progress-number { display:grid; place-items:center; width:34px; height:34px; border:1px solid var(--transaction-border); border-radius:50%; background:var(--transaction-surface); color:var(--transaction-muted); font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
+.is-current .mechanic-progress-number { background:#275b40; border-color:#275b40; color:#f7faf7; }
+.is-complete .mechanic-progress-number { background:var(--transaction-tint); border-color:var(--transaction-tint); color:var(--transaction-accent); }
+.is-current .mechanic-progress-label { color:var(--transaction-text); font-weight:700; }
+.mechanic-progress-track button:focus-visible { outline:2px solid var(--transaction-accent); outline-offset:4px; }
+.transaction-terms.auth-dialog { width:min(100%,620px); max-width:620px; max-height:calc(100dvh - 40px); display:flex; flex-direction:column; gap:20px; padding:26px; overflow:hidden; background:var(--transaction-surface); color:var(--transaction-text); text-align:left; border:1px solid var(--transaction-border); border-radius:16px; font-family:'DM Sans',sans-serif; }
+.terms-heading { display:grid; grid-template-columns:42px minmax(0,1fr); gap:12px; align-items:center; flex-shrink:0; }
+.transaction-terms h2 { margin:0; font:700 21px/1.3 'DM Sans',sans-serif; letter-spacing:-.5px; color:var(--transaction-text); }
+.transaction-terms .terms-heading p { margin:5px 0 0; color:var(--transaction-muted); font-size:13px; line-height:1.5; }
+.terms-version { grid-column:2; font-size:11px; color:var(--transaction-muted); font-variant-numeric:tabular-nums; margin-top:-6px; }
+.transaction-terms .transaction-terms-content { flex:1 1 auto; min-height:100px; max-height:43dvh; padding:18px 20px; margin:0; overflow-y:auto; white-space:normal; background:var(--transaction-tint); border:1px solid var(--transaction-border); border-radius:10px; scrollbar-color:#a1b3a7 transparent; scrollbar-width:thin; }
+.transaction-terms-content p { margin:0 0 14px; font-size:14px; font-weight:400; line-height:1.7; color:var(--transaction-text); text-align:left; }
+.transaction-terms-content p:last-child { margin-bottom:0; }
+.transaction-terms label.terms-consent { display:flex; align-items:flex-start; gap:12px; padding:0; margin:0; text-align:left; min-width:0; flex-shrink:0; }
+.transaction-terms label.terms-consent input[type="checkbox"] { appearance:auto; -webkit-appearance:checkbox; flex:0 0 19px; width:19px!important; height:19px!important; min-height:19px!important; max-width:19px; margin:2px 0 0; padding:0; border:1px solid var(--transaction-border); accent-color:#275b40; box-shadow:none; }
+.transaction-terms .terms-consent span { font-size:13px; font-weight:500; line-height:1.6; color:var(--transaction-text); text-align:left; }
+.transaction-terms .transaction-actions { display:flex; justify-content:flex-end; gap:10px; margin:0; padding-top:18px; border-top:1px solid var(--transaction-border); flex-shrink:0; }
+.transaction-terms .transaction-actions button { display:inline-flex; justify-content:center; align-items:center; min-height:44px; padding:11px 18px; border:1px solid var(--transaction-border); border-radius:9px; background:var(--transaction-surface); color:var(--transaction-accent); font:600 13px/1.4 'DM Sans',sans-serif; white-space:nowrap; }
+.transaction-terms .transaction-actions .primary-button { background:#275b40; border-color:#275b40; color:#f7faf7; }
+.transaction-terms .transaction-actions .primary-button:disabled { opacity:1; background:var(--transaction-tint); color:var(--transaction-muted); border-color:var(--transaction-border); cursor:not-allowed; }
+.transaction-terms > p,.transaction-terms > details { margin:0; font-size:13px; line-height:1.6; text-align:left; }
+.transaction-terms > details { overflow:auto; }
+.transaction-terms > details summary { padding:10px 0; cursor:pointer; font-weight:600; }
+.booking-submit-error { display:flex; align-items:flex-start; gap:12px; padding:18px; border:1px solid #d5ada4; border-radius:10px; margin:20px 0; background:#fff6f3; color:#7e3024; }
+.booking-submit-error > svg { flex-shrink:0; margin-top:2px; }
+.booking-submit-error strong { display:block; font-size:14px; font-weight:600; }
+.booking-submit-error p { margin:5px 0 10px; font-size:13px; line-height:1.6; color:#7e3024; }
+.booking-submit-error button { padding:0; background:transparent; color:#7e3024; border:0; min-height:32px; font-size:12px; font-weight:700; text-decoration:underline; text-underline-offset:3px; }
+.service-coverage-info { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:14px 16px; margin:10px 0; border-radius:10px; background:var(--transaction-tint); color:var(--transaction-text); }
+.service-coverage-info > div { flex:1 1 200px; min-width:0; }
+.service-coverage-info strong { font-size:13px; font-weight:600; }
+.service-coverage-info p { margin:4px 0 0; font-size:12px; line-height:1.6; color:var(--transaction-muted); }
+.service-coverage-info button { flex:0 0 auto; }
+:is(.mechanic-progress,.transaction-terms,.service-coverage-info) ::selection { background:#c1dac8; color:#142b28; }
+@media (max-width:767px) {
+ .mechanic-progress { display:block; padding:0; margin:24px 0; }
+ .mechanic-progress-track { grid-template-columns:repeat(6,minmax(0,1fr)); }
+ .mechanic-progress-track button { min-height:60px; width:100%; gap:8px; }
+ .mechanic-progress-label { font-size:10px; }
+ .mechanic-progress-number { width:30px; height:30px; }
+ .mechanic-progress-track li:not(:last-child)::after { left:34px; right:4px; top:15px; }
+ .transaction-terms.auth-dialog { max-height:calc(100dvh - 24px); padding:22px 18px; gap:18px; }
+ .transaction-terms h2 { font-size:19px; }
+ .transaction-terms .transaction-terms-content { max-height:42dvh; padding:15px; }
+ .transaction-terms .transaction-actions { display:grid; grid-template-columns:auto minmax(0,1fr); gap:10px; }
+ .transaction-terms .transaction-actions button { padding:11px 12px; }
+ .booking-submit-error { padding:15px; }
+}

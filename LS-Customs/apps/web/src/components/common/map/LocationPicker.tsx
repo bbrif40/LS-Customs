@@ -1,3 +1,6 @@
+import { useWebsiteText } from "../../../hooks/useWebsiteText"
+import { supabase } from '../../../supabaseClient'
+import type { ServiceCoverage } from '../../../utils/serviceCoverage'
 /**
  * LocationPicker — draggable-pin map for picking an exact location.
  *
@@ -226,6 +229,7 @@ export async function searchAreas(query: string): Promise<AreaSuggestion[]> {
 }
 
 export interface LocationPickerProps {
+  showServiceCoverage?: boolean
   value?: { lat: number; lng: number } | null
   onChange: (pos: { lat: number; lng: number }) => void
   onAddressResolved?: (
@@ -242,7 +246,7 @@ export interface LocationPickerProps {
 
 const DEFAULT_CENTER = { lat: 14.5995, lng: 120.9842 } // Metro Manila HQ
 
-export function LocationPicker({
+export function LocationPicker({ showServiceCoverage = false,
   value,
   onChange,
   onAddressResolved,
@@ -250,6 +254,18 @@ export function LocationPicker({
   height = 340,
   id = 'loc',
 }: LocationPickerProps) {
+  const websiteText = useWebsiteText("Shared")
+
+  const [coverage, setCoverage] = useState<ServiceCoverage | null>(null)
+  const [areaView, setAreaView] = useState(false)
+  useEffect(() => {
+    if (!showServiceCoverage) return
+    let active = true
+    void supabase.from('service_coverage').select('center_lat,center_lng,radius_km,active').eq('id', true).single().then(({ data, error }) => {
+      if (active && !error) setCoverage(data)
+    })
+    return () => { active = false }
+  }, [showServiceCoverage])
   // Local pin state. Initialized from value, then re-centered by the
   // map on mount. Keeping it in state lets the "Reset" button work.
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(
@@ -416,7 +432,8 @@ export function LocationPicker({
           <input
             type="text"
             className="map-search-input"
-            placeholder="Search area, street, or landmark (e.g. Quezon City, BGC, Valenzuela)..."
+            aria-label={websiteText("Search service location")}
+            placeholder={websiteText("Search area, street, or landmark (e.g. Quezon City, BGC, Valenzuela)...")}
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value)
@@ -442,7 +459,7 @@ export function LocationPicker({
                 setSearchQuery('')
                 setSuggestions([])
               }}
-              aria-label="Clear search"
+              aria-label={websiteText("Clear search")}
             >
               <X size={14} />
             </button>
@@ -455,8 +472,7 @@ export function LocationPicker({
             {suggestions.length > 0 ? (
               <>
                 <div className="suggestions-header">
-                  <Sparkles size={12} /> Matching Locations
-                </div>
+                  <Sparkles size={12} />{' '}{websiteText("Matching Locations")}</div>
                 {suggestions.map((item) => (
                   <button
                     key={item.id}
@@ -473,14 +489,11 @@ export function LocationPicker({
                 ))}
               </>
             ) : searchQuery.trim().length >= 2 && !isSearching ? (
-              <div className="suggestions-empty">
-                No places found matching "{searchQuery}". Try a major avenue or district.
-              </div>
+              <div className="suggestions-empty">{websiteText("No places found matching \"")}{searchQuery}{websiteText("\". Try a major avenue or district.")}</div>
             ) : (
               <>
                 <div className="suggestions-header">
-                  <Navigation size={12} /> Popular Areas in Metro Manila
-                </div>
+                  <Navigation size={12} />{' '}{websiteText("Popular Areas in Metro Manila")}</div>
                 {POPULAR_AREAS.map((item) => (
                   <button
                     key={item.id}
@@ -509,11 +522,10 @@ export function LocationPicker({
           onClick={useCurrent}
           disabled={busy}
         >
-          <Crosshair size={14} /> {busy ? 'Locating…' : 'Use my current location'}
+          <Crosshair size={14} /> {busy ? websiteText("Locating…") : websiteText("Use my current location")}
         </button>
         <button type="button" className="location-picker-btn" onClick={reset}>
-          <RotateCcw size={14} /> Reset
-        </button>
+          <RotateCcw size={14} />{' '}{websiteText("Reset")}</button>
         {pin && (
           <span className="location-picker-coords">
             <MapPin size={12} /> {pin.lat.toFixed(4)}, {pin.lng.toFixed(4)}
@@ -521,6 +533,7 @@ export function LocationPicker({
         )}
       </div>
       
+      {showServiceCoverage && coverage && <div className="service-coverage-info"><div><strong>{coverage.active ? websiteText("{value1} km service radius", { value1: String(coverage.radius_km) }) : websiteText("Service requests paused")}</strong><p>{websiteText("Coverage follows the radius shown, reaching locations in Bulacan and Cavite within the boundary. Subject to mechanic availability.")}</p></div><button type="button" className="location-picker-btn" aria-pressed={areaView} onClick={() => setAreaView(value => !value)}>{areaView ? websiteText("Back to your pin") : websiteText("View service area")}</button></div>}
       {locError && (
         <div className="map-error-banner">
           <AlertTriangle size={14} /> {locError}
@@ -530,11 +543,13 @@ export function LocationPicker({
         </div>
       )}
 
-      <Suspense fallback={<div className="map-skeleton" style={{ height }}>Loading map…</div>}>
+      <Suspense fallback={<div className="map-skeleton" style={{ height }}>{websiteText("Loading map…")}</div>}>
         <MapBoundary height={height}>
           <MapSurface
-            center={center}
-            zoom={14}
+            center={areaView && coverage ? [coverage.center_lat, coverage.center_lng] : center}
+            zoom={areaView ? 7 : 14}
+            coverage={showServiceCoverage ? coverage : null}
+            showCoverageArea={areaView}
             pins={pins}
             draggablePin={pinPayload}
             onPinChange={handlePinChange}

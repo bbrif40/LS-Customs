@@ -1,4 +1,6 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 import { VehicleImage } from '../common/VehicleImage'
+import { RentalLicenseReview, useRentalCheckout } from '../common/RentalLicenseReview'
 import { useState, useEffect } from 'react'
 import { ArrowLeft, CheckCircle2, CreditCard, Fuel, Gauge, Loader2, LockKeyhole, MapPin, Settings2, Star, Users, Zap, AlertTriangle, Ticket } from 'lucide-react'
 import { useProfile } from '../../hooks/useProfile'
@@ -26,6 +28,9 @@ interface RentalPaymentProps {
 }
 
 export function RentalPayment({ vehicle, bookingId, holdExpiresAt, startDate, endDate, total, originalTotal, discountAmount, promo, userId, onBack, onNotify }: RentalPaymentProps) {
+  const websiteText = useWebsiteText("Rentals")
+
+  const { checkout, error: checkoutError, load: reloadCheckout } = useRentalCheckout(bookingId)
   const [payment, setPayment] = useState<PaymentIntentResult | null>(null)
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [formStatus, setFormStatus] = useState<'idle' | 'processing' | 'succeeded' | 'failed' | 'refunded'>('idle')
@@ -76,8 +81,9 @@ export function RentalPayment({ vehicle, bookingId, holdExpiresAt, startDate, en
 
   return (
     <div className="page rental-payment-page">
-      <button className="text-button" onClick={onBack}><ArrowLeft size={15} /> Back to rentals</button>
-      {holdExpiresAt && formStatus !== 'succeeded' && <p role="status">Unpaid reservation expires at {new Date(holdExpiresAt).toLocaleString()}. Complete payment before expiry, or resume it from Bookings.</p>}
+      <button className="text-button" onClick={onBack}><ArrowLeft size={15} />{' '}{websiteText("Back to rentals")}</button>
+      {checkoutError && <p role="alert">{checkoutError}</p>}
+      {checkout && <RentalLicenseReview checkout={checkout} reload={reloadCheckout} />}
       <section className="rental-detail-gallery">
         {gallery.slice(0, 5).map((image, index) => <VehicleImage key={`${image}-${index}`} className={index === 0 ? 'is-featured' : ''} src={image} name={`${vehicle.name} view ${index + 1}`} />)}
         {gallery.length === 0 && <VehicleImage className="is-featured" name={vehicle.name} />}
@@ -86,83 +92,80 @@ export function RentalPayment({ vehicle, bookingId, holdExpiresAt, startDate, en
         <div>
           <p className="eyebrow">{vehicle.tag}</p>
           <h1>{vehicle.name} <Star size={22} fill="currentColor" /></h1>
-          <p className="muted"><MapPin size={15} /> {vehicle.location || 'Los Santos'} · {vehicle.detail}</p>
+          <p className="muted"><MapPin size={15} /> {vehicle.location || websiteText("Los Santos")} · {vehicle.detail}</p>
         </div>
         <span className="vehicle-rating"><Star size={15} fill="currentColor" /> {vehicle.rating}</span>
       </div>
       <div className="rental-detail-layout">
         <section className="rental-detail-copy">
           <div className="rental-detail-specs">
-            <span><Users size={17} /> {vehicle.detail.match(/\d+ seats/)?.[0] || '5 seats'}</span>
-            <span><Settings2 size={17} /> {vehicle.detail.includes('Manual') ? 'Manual' : 'Automatic'}</span>
-            <span><Fuel size={17} /> {vehicle.detail.includes('Electric') ? 'Electric' : 'Regular unleaded'}</span>
+            <span><Users size={17} /> {vehicle.detail.match(/\d+ seats/)?.[0] || websiteText("5 seats")}</span>
+            <span><Settings2 size={17} /> {vehicle.detail.includes('Manual') ? websiteText("Manual") : websiteText("Automatic")}</span>
+            <span><Fuel size={17} /> {vehicle.detail.includes('Electric') ? websiteText("Electric") : websiteText("Regular unleaded")}</span>
           </div>
-          <h2>Hosted by</h2>
-          <p className="host-line"><span className="host-avatar">{(vehicle.hostName || 'LS').slice(0, 1)}</span><strong>{vehicle.hostName || 'LS Customs'}</strong><Star size={15} fill="currentColor" /> {vehicle.hostRating || 'N/A'}</p>
-          <h2>Description</h2>
-          <p className="detail-description">{vehicle.description || 'Always in good running condition.'}</p>
-          <h2>Car features</h2>
+          <h2>{websiteText("Hosted by")}</h2>
+          <p className="host-line"><span className="host-avatar">{(vehicle.hostName || 'LS').slice(0, 1)}</span><strong>{vehicle.hostName || websiteText("LS Customs")}</strong><Star size={15} fill="currentColor" /> {vehicle.hostRating || websiteText("N/A")}</p>
+          <h2>{websiteText("Description")}</h2>
+          <p className="detail-description">{vehicle.description || websiteText("Always in good running condition.")}</p>
+          <h2>{websiteText("Car features")}</h2>
           <div className="detail-feature-grid">{features.map((feature) => <span key={feature}><Zap size={15} /> {feature}</span>)}</div>
-          <h2>Rental duration guide</h2>
-          <p className="detail-description">Minimum rental duration: 1 day</p>
-          <p className="detail-description">Maximum rental duration: {vehicle.maxTrip || 'Flexible'}</p>
-          <h2>Car rules</h2>
+          <h2>{websiteText("Rental duration guide")}</h2>
+          <p className="detail-description">{websiteText("Minimum rental duration: 1 day")}</p>
+          <p className="detail-description">{websiteText("Maximum rental duration:")} {vehicle.maxTrip || websiteText("Flexible")}</p>
+          <h2>{websiteText("Car rules")}</h2>
           <ul className="detail-rules">{rules.map((rule) => <li key={rule}><LockKeyhole size={15} /> {rule}</li>)}</ul>
         </section>
         <aside className="rental-booking-panel">
-          <h2>Car rental price & receipt</h2>
+          <h2>{websiteText("Car rental price & receipt")}</h2>
           {originalTotal && discountAmount && discountAmount > 0 ? (
             <div style={{ marginBottom: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#9ba8a2', marginBottom: 4 }}>
-                <span>Subtotal ({Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))} days)</span>
+                <span>{websiteText("Subtotal (")}{Math.max(1, Math.ceil((new Date(`${endDate}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000))}{' '}{websiteText("days)")}</span>
                 <span style={{ textDecoration: 'line-through' }}>₱{originalTotal.toLocaleString()}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, color: '#10b981', fontWeight: 600, marginBottom: 8, background: 'rgba(16, 185, 129, 0.1)', padding: '4px 8px', borderRadius: 6 }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  <Ticket size={13} /> Voucher: <strong>{promo?.code}</strong>
+                  <Ticket size={13} />{' '}{websiteText("Voucher:")} <strong>{promo?.code}</strong>
                 </span>
                 <span>-₱{discountAmount.toLocaleString()} ({promo?.discount})</span>
               </div>
               <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.1)', paddingTop: 6, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <strong style={{ fontSize: 24, color: '#e8a838' }}>₱{total.toLocaleString()}</strong>
-                <span style={{ fontSize: 12, color: '#9ba8a2' }}>final total</span>
+                <span style={{ fontSize: 12, color: '#9ba8a2' }}>{websiteText("final total")}</span>
               </div>
             </div>
           ) : (
             <>
-              <strong>₱{total.toLocaleString()}</strong><span> total</span>
+              <strong>₱{total.toLocaleString()}</strong><span>{websiteText("total")}</span>
             </>
           )}
           <div className="booking-summary-dates"><span>{startDate}</span><span>{endDate}</span></div>
-          <p className="booking-reference">Booking reference: <code>booking-{bookingId.slice(0, 8)}</code></p>
+          <p className="booking-reference">{websiteText("Booking reference:")} <code>{websiteText("booking-")}{bookingId.slice(0, 8)}</code></p>
           {promo && (
             <p style={{ fontSize: 11, color: '#10b981', marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Ticket size={12} /> Voucher <strong>{promo.code}</strong> applied to this reservation
-            </p>
+              <Ticket size={12} />{' '}{websiteText("Voucher")} <strong>{promo.code}</strong>{' '}{websiteText("applied to this reservation")}</p>
           )}
           {intentError && <p className="form-helper review-error">{intentError}</p>}
 
           {payment && formStatus === 'succeeded' ? (
             <div className="confirmation-card">
               <CheckCircle2 size={28} />
-              <h2>Payment confirmed</h2>
-              <p className="muted">Your booking is now locked in. Payment ID: <code>{payment.payment_id}</code></p>
+              <h2>{websiteText("Payment confirmed")}</h2>
+              <p className="muted">{websiteText("Your booking is now locked in. Payment ID:")} <code>{payment.payment_id}</code></p>
             </div>
           ) : payment && formStatus === 'failed' ? (
             <div className="payment-failed-state">
               <AlertTriangle size={24} />
-              <h3>Payment failed</h3>
-              <p className="muted">Your card was declined or could not be processed.</p>
-              <button className="button dark-button" onClick={() => setFormStatus('idle')} style={{ marginTop: '8px' }}>
-                Try again
-              </button>
+              <h3>{websiteText("Payment failed")}</h3>
+              <p className="muted">{websiteText("Your card was declined or could not be processed.")}</p>
+              <button className="button dark-button" onClick={() => setFormStatus('idle')} style={{ marginTop: '8px' }}>{websiteText("Try again")}</button>
             </div>
           ) : payment ? (
             <div className="payment-form-wrapper">
               {formStatus === 'processing' && (
                 <div className="payment-processing-banner">
                   <Loader2 size={16} className="spin" />
-                  <span>Waiting for provider confirmation…</span>
+                  <span>{websiteText("Waiting for provider confirmation…")}</span>
                 </div>
               )}
               <PaymentForm
@@ -178,9 +181,9 @@ export function RentalPayment({ vehicle, bookingId, holdExpiresAt, startDate, en
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <PaymentMethodBadges />
-              <button className="button dark-button" onClick={() => void handleInitiatePayment()} disabled={creating || loading}>
+              <button className="button dark-button" onClick={() => void handleInitiatePayment()} disabled={creating || loading || !checkout || !['legacy', 'awaiting_payment'].includes(checkout.checkout_state) || (!!checkout.hold_expires_at && Date.parse(checkout.hold_expires_at) <= Date.now())}>
                 {creating ? <Loader2 size={16} className="spin" /> : <CreditCard size={16} />}
-                {creating ? 'Preparing payment…' : loading ? 'Loading profile…' : `Pay ₱${total.toLocaleString()} with PayMongo`}
+                {creating ? websiteText("Preparing payment…") : loading ? websiteText("Loading profile…") : websiteText("Pay ₱{value1} with PayMongo", { value1: String(total.toLocaleString()) })}
               </button>
             </div>
           )}
@@ -188,18 +191,16 @@ export function RentalPayment({ vehicle, bookingId, holdExpiresAt, startDate, en
             <div className="modal-backdrop" onClick={() => setShowProfileModal(false)}>
               <div className="modal-card" onClick={(event) => event.stopPropagation()}>
                 <div className="modal-icon-row"><AlertTriangle size={28} className="modal-icon-alert" /></div>
-                <h2>Complete your profile first</h2>
+                <h2>{websiteText("Complete your profile first")}</h2>
                 <p className="muted">
-                  {!profile?.phone && <span>Your <strong>phone number</strong> is missing. </span>}
-                  {(!defaultAddress?.line1 || !defaultAddress?.city) && <span>Your <strong>address</strong> is missing. </span>}
-                  Please update your profile before proceeding with payment.
-                </p>
-                <button className="button dark-button" onClick={() => setShowProfileModal(false)}>Got it</button>
+                  {!profile?.phone && <span>{websiteText("Your")} <strong>{websiteText("phone number")}</strong>{' '}{websiteText("is missing.")} </span>}
+                  {(!defaultAddress?.line1 || !defaultAddress?.city) && <span>{websiteText("Your")} <strong>{websiteText("address")}</strong>{' '}{websiteText("is missing.")} </span>}{' '}{websiteText("Please update your profile before proceeding with payment.")}</p>
+                <button className="button dark-button" onClick={() => setShowProfileModal(false)}>{websiteText("Got it")}</button>
               </div>
             </div>
           )}
-          <div className="booking-policy"><Gauge size={22} /><div><strong>{vehicle.mileagePolicy || 'Mileage terms provided at pickup'}</strong><span>{vehicle.maxTrip || 'Rental duration confirmed above'}</span></div></div>
-          {vehicle.deliveryMethods?.length ? <p className="delivery-note">Delivery: {vehicle.deliveryMethods.join(' · ')}</p> : null}
+          <div className="booking-policy"><Gauge size={22} /><div><strong>{vehicle.mileagePolicy || websiteText("Mileage terms provided at pickup")}</strong><span>{vehicle.maxTrip || websiteText("Rental duration confirmed above")}</span></div></div>
+          {vehicle.deliveryMethods?.length ? <p className="delivery-note">{websiteText("Delivery:")} {vehicle.deliveryMethods.join(' · ')}</p> : null}
         </aside>
       </div>
     </div>

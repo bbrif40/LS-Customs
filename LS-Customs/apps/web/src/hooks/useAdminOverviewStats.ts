@@ -56,8 +56,8 @@ export function useAdminOverviewStats(): UseAdminOverviewStatsResult {
       const fourteenDaysAgoIso = fourteenDaysAgo.toISOString()
 
       const [currentRevenueRes, previousRevenueRes] = await Promise.all([
-        supabase.from('payments').select('amount').eq('status', 'succeeded').gte('created_at', sevenDaysAgoIso),
-        supabase.from('payments').select('amount').eq('status', 'succeeded').gte('created_at', fourteenDaysAgoIso).lt('created_at', sevenDaysAgoIso),
+        supabase.from('financial_collections').select('amount').eq('status', 'succeeded').gte('created_at', sevenDaysAgoIso),
+        supabase.from('financial_collections').select('amount').eq('status', 'succeeded').gte('created_at', fourteenDaysAgoIso).lt('created_at', sevenDaysAgoIso),
       ])
       if (currentRevenueRes.error) throw currentRevenueRes.error
       if (previousRevenueRes.error) throw previousRevenueRes.error
@@ -218,3 +218,4 @@ function computeTrend(current: number, previous: number): RevenueTrend {
     trendUp: percentage >= 0,
   }
 }
+

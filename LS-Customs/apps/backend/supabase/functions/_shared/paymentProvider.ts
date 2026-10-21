@@ -59,6 +59,7 @@ export interface WebhookVerificationResult {
 // ---------------------------------------------------------------------------
 
 export interface CreateRefundResult {
+  status?: string;
   refundReference: string;  // e.g. "re_123..." (Stripe) or "re_..." (PayMongo)
   amount: number;           // in display units (e.g. 7500.00 PHP), same as CreatePaymentIntentResult
   currency: string;
@@ -337,14 +338,15 @@ async function createStripePaymentIntent(
 export async function createRefund(
   providerReference: string,
   amount?: number,
+  idempotencyKey?: string,
 ): Promise<CreateRefundResult> {
   const config = getProviderConfig();
 
   if (config.provider === "paymongo") {
-    return createPaymongoRefund(config, providerReference, amount);
+    return createPaymongoRefund(config, providerReference, amount, idempotencyKey);
   }
 
-  return createStripeRefund(config, providerReference, amount);
+  return createStripeRefund(config, providerReference, amount, idempotencyKey);
 }
 
 /**
@@ -361,6 +363,7 @@ async function createPaymongoRefund(
   config: ProviderConfig,
   providerReference: string,
   amount?: number,
+  idempotencyKey?: string,
 ): Promise<CreateRefundResult> {
   const authHeader = "Basic " + btoa(`${config.secretKey}:`);
   let paymentId = providerReference;
@@ -371,6 +374,7 @@ async function createPaymongoRefund(
     try {
       const sessionRes = await fetch(`${config.baseUrl}/v1/checkout_sessions/${providerReference}`, {
         headers: { Authorization: authHeader, Accept: "application/json" },
+        signal: AbortSignal.timeout(8000),
       });
       if (sessionRes.ok) {
         const sessionData = await sessionRes.json();
@@ -386,6 +390,7 @@ async function createPaymongoRefund(
     try {
       const intentRes = await fetch(`${config.baseUrl}/v1/payment_intents/${providerReference}`, {
         headers: { Authorization: authHeader, Accept: "application/json" },
+        signal: AbortSignal.timeout(8000),
       });
       if (intentRes.ok) {
         const intentData = await intentRes.json();
@@ -414,8 +419,10 @@ async function createPaymongoRefund(
       Authorization: authHeader,
       "Content-Type": "application/json",
       Accept: "application/json",
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
     },
     body: JSON.stringify({ data: { attributes } }),
+    signal: AbortSignal.timeout(8000),
   });
 
   if (!response.ok) {
@@ -442,6 +449,7 @@ async function createPaymongoRefund(
     amount: refundAmount,
     currency: refundCurrency,
     provider: "paymongo",
+    status: attributes_?.status ?? 'pending',
   };
 }
 
@@ -457,6 +465,7 @@ async function createStripeRefund(
   config: ProviderConfig,
   providerReference: string,
   amount?: number,
+  idempotencyKey?: string,
 ): Promise<CreateRefundResult> {
   const params: Record<string, string> = {
     payment_intent: providerReference,
@@ -471,8 +480,10 @@ async function createStripeRefund(
     headers: {
       Authorization: `Bearer ${config.secretKey}`,
       "Content-Type": "application/x-www-form-urlencoded",
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
     },
     body: new URLSearchParams(params),
+    signal: AbortSignal.timeout(8000),
   });
 
   if (!response.ok) {
@@ -485,6 +496,7 @@ async function createStripeRefund(
 
   return {
     refundReference: refund.id,
+    status: refund.status ?? 'pending',
     amount: (refund.amount ?? 0) / 100, // convert back to display units
     currency: refund.currency ?? "php",
     provider: "stripe",
@@ -795,7 +807,7 @@ function mapPaymongoEventType(eventType: string): string {
     "payment_intent.failed": "payment_intent.payment_failed",
     "payment_intent.payment_failed": "payment_intent.payment_failed",
     "payment.refunded": "payment_intent.refunded",
-    "refund.created": "payment_intent.refunded",
+    "refund.created": "refund.pending",
     "payment_intent.refunded": "payment_intent.refunded",
     "payment_intent.awaiting_payment_method": "payment_intent.awaiting_payment_method",
     "payment_intent.chargeable": "payment_intent.chargeable",

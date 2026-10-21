@@ -112,14 +112,14 @@ Deno.serve(async (req: Request) => {
     // ------------------------------------------------------------------
     // Authorization remains scoped to the caller before the trusted transaction.
     const { data: booking, error: bookingError } = await supabase.from('service_bookings')
-      .select('customer_id').eq('id', bookingId).maybeSingle();
+      .select('customer_id,checkout_state').eq('id', bookingId).maybeSingle();
     if (bookingError) throw bookingError;
     if (!booking) return jsonResponse(null, { code: 'NOT_FOUND', message: 'Booking not found' }, 404);
     if (!isServiceRole && booking.customer_id !== callerId) {
       const { data: profile } = await supabase.from('profiles').select('role').eq('id', callerId).maybeSingle();
       if (profile?.role !== 'admin') return jsonResponse(null, { code: 'FORBIDDEN', message: 'Booking access denied' }, 403);
     }
-    const { data, error } = await supabase.rpc('assign_booking_mechanic', { p_booking_id: bookingId });
+    const { data, error } = await supabase.rpc(booking.checkout_state === 'offering' ? 'offer_booking_mechanics' : 'assign_booking_mechanic', { p_booking_id: bookingId });
     if (error) {
       console.error('Assignment rejected:', error.message);
       const noCapacity = error.message.includes('No mechanic');

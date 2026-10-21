@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 import { useEffect, useRef, useState } from 'react'
 import { Quote, Star } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
@@ -32,6 +33,8 @@ const SAMPLE_REVIEWS: SidebarTestimonial[] = [
 ]
 
 export function SidebarTestimonials() {
+  const websiteText = useWebsiteText("Navigation")
+
   const [reviews, setReviews] = useState<SidebarTestimonial[]>(import.meta.env.DEV ? SAMPLE_REVIEWS : [])
   const [loading, setLoading] = useState(!import.meta.env.DEV)
   const [activeIndex, setActiveIndex] = useState(0)
@@ -116,7 +119,7 @@ const visibleReviews = reviews.length > 1 ? [reviews[activeIndex], reviews[(acti
     <section
       ref={sectionRef}
       className="sidebar-testimonials"
-      aria-label="Customer reviews"
+      aria-label={websiteText("Customer reviews")}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       onFocusCapture={() => setFocused(true)}
@@ -125,12 +128,12 @@ const visibleReviews = reviews.length > 1 ? [reviews[activeIndex], reviews[(acti
       }}
     >
       <header className="sidebar-testimonials-heading">
-        <h2>{import.meta.env.DEV ? 'Customer reviews · Sample preview' : 'From our customers'}</h2>
+        <h2>{import.meta.env.DEV ? websiteText("Customer reviews · Sample preview") : websiteText("From our customers")}</h2>
         <Quote size={17} aria-hidden="true" />
       </header>
 
       <div className="workspace-review-grid">{visibleReviews.map((current) => (<article key={current.review_id} className="sidebar-testimonial-content" aria-live={isAutoPlaying ? 'off' : 'polite'} aria-atomic="true">
-        <div className="sidebar-testimonial-stars" role="img" aria-label={`${current.rating} out of 5 stars`}>
+        <div className="sidebar-testimonial-stars" role="img" aria-label={websiteText("{value1} out of 5 stars", { value1: String(current.rating) })}>
           {Array.from({ length: 5 }, (_, index) => (
             <Star
               key={index}
@@ -142,7 +145,7 @@ const visibleReviews = reviews.length > 1 ? [reviews[activeIndex], reviews[(acti
         </div>
         <blockquote>{current.comment}</blockquote>
         <div className="sidebar-testimonial-attribution">
-          <strong>{import.meta.env.DEV ? 'Sample review · For demonstration' : 'Verified customer'}</strong>
+          <strong>{import.meta.env.DEV ? websiteText("Sample review · For demonstration") : websiteText("Verified customer")}</strong>
           <span>{current.acquired_label}</span>
         </div>
       </article>))}</div>

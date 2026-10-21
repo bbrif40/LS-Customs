@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "@supabase/supabase-js";
 import { createServiceClient } from "../_shared/supabaseClient.ts";
 import { getCorsHeaders, jsonResponse } from "../_shared/cors.ts";
 

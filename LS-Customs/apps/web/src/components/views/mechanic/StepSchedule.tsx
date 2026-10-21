@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../../hooks/useWebsiteText"
 /**
  * StepSchedule — interactive calendar & time slot picker.
  * Redesigned for supreme mobile usability, intuitive calendar navigation,
@@ -6,6 +7,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CalendarDays, Check, ChevronLeft, ChevronRight, Clock3, Sparkles, Sun, Sunset } from 'lucide-react'
 import type { Service } from '../../../types'
+import { supabase } from '../../../supabaseClient'
 
 interface StepScheduleProps {
   service: Service | null
@@ -16,36 +18,8 @@ interface StepScheduleProps {
   onNext: () => void
 }
 
-const MORNING_SLOTS = [
-  '08:00', '08:30',
-  '09:00', '09:30',
-  '10:00', '10:30',
-  '11:00', '11:30',
-]
-
-const AFTERNOON_SLOTS = [
-  '13:00', '13:30',
-  '14:00', '14:30',
-  '15:00', '15:30',
-  '16:00', '16:30',
-]
-
-const ALL_SLOTS = [...MORNING_SLOTS, ...AFTERNOON_SLOTS]
-
 function isSlotDisabled(slot: string, selectedDate: string | null): boolean {
-  if (!selectedDate) return false
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const selected = new Date(selectedDate + 'T00:00:00')
-  // If selected date is today, disable slots before the current time
-  if (selected.getTime() === today.getTime()) {
-    const now = new Date()
-    const [slotHour, slotMinute] = slot.split(':').map(Number)
-    const currentMinutes = now.getHours() * 60 + now.getMinutes()
-    const slotMinutes = slotHour * 60 + slotMinute
-    return slotMinutes <= currentMinutes
-  }
-  return false
+  return !!selectedDate && Date.parse(`${selectedDate}T${slot}:00+08:00`) <= Date.now()
 }
 
 type TimeFormat = '12h' | '24h'
@@ -88,7 +62,24 @@ function getInitialTimeFormat(): TimeFormat {
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 export function StepSchedule({ service, date, time, onChange, onBack, onNext }: StepScheduleProps) {
+  const websiteText = useWebsiteText("Mechanic")
+
   const [timeFormat, setTimeFormat] = useState<TimeFormat>(getInitialTimeFormat)
+  const [hours, setHours] = useState<{ scheduled_open: string; scheduled_close: string } | null>(null)
+  useEffect(() => {
+    void supabase.from('service_operating_hours').select('scheduled_open,scheduled_close').eq('id', true).single()
+      .then(({ data, error }) => { if (!error) setHours(data) })
+  }, [])
+  const ALL_SLOTS = useMemo(() => {
+    if (!hours) return []
+    const minutes = (value: string) => { const [h, m] = value.split(':').map(Number); return h * 60 + m }
+    const result = []
+    for (let start = minutes(hours.scheduled_open); start + (service?.durationMinutes ?? 60) <= minutes(hours.scheduled_close); start += 30)
+      result.push(`${String(Math.floor(start / 60)).padStart(2, '0')}:${String(start % 60).padStart(2, '0')}`)
+    return result
+  }, [hours, service?.durationMinutes])
+  const MORNING_SLOTS = ALL_SLOTS.filter(slot => slot < '12:00')
+  const AFTERNOON_SLOTS = ALL_SLOTS.filter(slot => slot >= '12:00')
 
   const today = useMemo(() => {
     const t = new Date()
@@ -244,7 +235,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
     })
   }, [viewYear, viewMonth])
 
-  const canProceed = Boolean(date && time)
+  const canProceed = Boolean(date && time && ALL_SLOTS.includes(time) && !isSlotDisabled(time, date))
 
   const selectedSummary = useMemo(() => {
     if (date && time) {
@@ -260,12 +251,13 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
     <section className="step-panel">
       <header className="step-panel-head">
         <button type="button" className="text-button step-back" onClick={onBack}>
-          <ChevronLeft size={16} /> Back
-        </button>
-        <p className="eyebrow">STEP 3 OF 6</p>
-        <h2>Pick a date & time</h2>
+          <ChevronLeft size={16} />{' '}{websiteText("Back")}</button>
+        <p className="eyebrow">{websiteText("STEP 3 OF 6")}</p>
+        <h2>{websiteText("Pick a date & time")}</h2>
+        <p>{websiteText("All appointment times are Philippine time. Only starts that fit the service duration within operating hours are offered.")}</p>
+        {!hours && <p role="status">{websiteText("Loading supported appointment hours. If this persists, retry the page or contact support.")}</p>}
         <p className="muted schedule-intro">
-          {service ? `${service.name} · Est. ${service.duration}` : 'Choose your preferred appointment schedule.'}
+          {service ? websiteText("{value1} · Est. {value2}", { value1: String(service.name), value2: String(service.duration) }) : websiteText("Choose your preferred appointment schedule.")}
         </p>
       </header>
 
@@ -275,8 +267,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
         <span className="selection-text">{selectedSummary}</span>
         {date && time && (
           <span className="selection-badge">
-            <Check size={14} /> Selected
-          </span>
+            <Check size={14} />{' '}{websiteText("Selected")}</span>
         )}
       </div>
 
@@ -286,13 +277,13 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
           <div className="schedule-block schedule-date-panel">
             <div className="schedule-section-heading">
               <div>
-                <p className="eyebrow">SELECT DATE</p>
-                <h3>{date ? fullDateLabel(date) : 'Choose date'}</h3>
+                <p className="eyebrow">{websiteText("SELECT DATE")}</p>
+                <h3>{date ? fullDateLabel(date) : websiteText("Choose date")}</h3>
               </div>
             </div>
 
             {/* Quick date chips */}
-            <div className="quick-date-row" role="group" aria-label="Quick date selection">
+            <div className="quick-date-row" role="group" aria-label={websiteText("Quick date selection")}>
               {quickPicks.map((pick) => {
                 const isActive = date === pick.iso
                 return (
@@ -303,7 +294,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
                     onClick={() => selectDate(pick.iso)}
                   >
                     <Sparkles size={12} />
-                    <span>{pick.label}</span>
+                    <span>{websiteText(pick.label)}</span>
                     <small style={{ opacity: 0.85 }}>({pick.sub})</small>
                   </button>
                 )
@@ -319,7 +310,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
                   className="calendar-nav-btn"
                   onClick={handlePrevMonth}
                   disabled={!canGoPrevMonth}
-                  aria-label="Previous month"
+                  aria-label={websiteText("Previous month")}
                 >
                   <ChevronLeft size={16} />
                 </button>
@@ -328,7 +319,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
                   className="calendar-nav-btn"
                   onClick={handleNextMonth}
                   disabled={!canGoNextMonth}
-                  aria-label="Next month"
+                  aria-label={websiteText("Next month")}
                 >
                   <ChevronRight size={16} />
                 </button>
@@ -339,13 +330,13 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
             <div className="calendar-weekdays" aria-hidden="true">
               {WEEKDAYS.map((w) => (
                 <div key={w} className="calendar-weekday">
-                  {w}
+                  {websiteText(w)}
                 </div>
               ))}
             </div>
 
             {/* Days Grid */}
-            <div className="calendar-days-grid" role="grid" aria-label="Calendar">
+            <div className="calendar-days-grid" role="grid" aria-label={websiteText("Calendar")}>
               {/* Blank cells for offset */}
               {Array.from({ length: calendarGrid.firstDayIndex }).map((_, i) => (
                 <div key={`blank-${i}`} className="calendar-day-cell is-empty" aria-hidden="true" />
@@ -376,35 +367,30 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
           <div className="schedule-block schedule-time-panel">
             <div className="schedule-section-heading">
               <div>
-                <p className="eyebrow">SELECT TIME</p>
-                <h3>{time ? formatTime(time, timeFormat) : 'Choose slot'}</h3>
+                <p className="eyebrow">{websiteText("SELECT TIME")}</p>
+                <h3>{time ? formatTime(time, timeFormat) : websiteText("Choose slot")}</h3>
               </div>
-              <div className="time-format-control" role="group" aria-label="Time format">
+              <div className="time-format-control" role="group" aria-label={websiteText("Time format")}>
                 <button
                   type="button"
                   className={timeFormat === '12h' ? 'active' : ''}
                   onClick={() => setTimeFormat('12h')}
                   aria-pressed={timeFormat === '12h'}
-                >
-                  AM/PM
-                </button>
+                >{websiteText("AM/PM")}</button>
                 <button
                   type="button"
                   className={timeFormat === '24h' ? 'active' : ''}
                   onClick={() => setTimeFormat('24h')}
                   aria-pressed={timeFormat === '24h'}
-                >
-                  24h
-                </button>
+                >{websiteText("24h")}</button>
               </div>
             </div>
 
             {/* Morning Slots */}
             <div>
               <div className="time-group-label">
-                <Sun size={14} /> Morning (8:00 AM – 11:30 AM)
-              </div>
-              <div className="time-slots-grid" role="radiogroup" aria-label="Morning time slots">
+                <Sun size={14} />{' '}{websiteText("Morning (8:00 AM – 11:30 AM)")}</div>
+              <div className="time-slots-grid" role="radiogroup" aria-label={websiteText("Morning time slots")}>
                 {MORNING_SLOTS.map((slot) => {
                   const disabled = isSlotDisabled(slot, date)
                   const isSelected = time === slot
@@ -420,7 +406,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
                     >
                       <span>{formatTime(slot, timeFormat)}</span>
                       {isSelected && <Check size={14} />}
-                      {disabled && <span className="slot-past-tag">Past</span>}
+                      {disabled && <span className="slot-past-tag">{websiteText("Past")}</span>}
                     </button>
                   )
                 })}
@@ -430,9 +416,8 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
             {/* Afternoon Slots */}
             <div>
               <div className="time-group-label">
-                <Sunset size={14} /> Afternoon (1:00 PM – 4:30 PM)
-              </div>
-              <div className="time-slots-grid" role="radiogroup" aria-label="Afternoon time slots">
+                <Sunset size={14} />{' '}{websiteText("Afternoon (1:00 PM – 4:30 PM)")}</div>
+              <div className="time-slots-grid" role="radiogroup" aria-label={websiteText("Afternoon time slots")}>
                 {AFTERNOON_SLOTS.map((slot) => {
                   const disabled = isSlotDisabled(slot, date)
                   const isSelected = time === slot
@@ -448,7 +433,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
                     >
                       <span>{formatTime(slot, timeFormat)}</span>
                       {isSelected && <Check size={14} />}
-                      {disabled && <span className="slot-past-tag">Past</span>}
+                      {disabled && <span className="slot-past-tag">{websiteText("Past")}</span>}
                     </button>
                   )
                 })}
@@ -459,7 +444,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
             {service?.durationMinutes && (
               <div className="service-duration-hint">
                 <Clock3 size={15} />
-                <span>Estimated service duration: ~{service.durationMinutes} minutes</span>
+                <span>{websiteText("Estimated service duration: ~")}{service.durationMinutes}{' '}{websiteText("minutes")}</span>
               </div>
             )}
           </div>
@@ -474,7 +459,7 @@ export function StepSchedule({ service, date, time, onChange, onBack, onNext }: 
           disabled={!canProceed}
           onClick={onNext}
         >
-          {canProceed ? 'Continue to Location' : 'Select Date & Time to Continue'}
+          {canProceed ? websiteText("Continue to Location") : websiteText("Select Date & Time to Continue")}
         </button>
       </div>
     </section>

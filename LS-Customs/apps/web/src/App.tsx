@@ -1,10 +1,12 @@
+import { useWebsiteText } from "./hooks/useWebsiteText"
+import { clearBookingDrafts } from './utils/bookingDraft'
 import { LoadingMessage } from './components/common/LoadingMessage'
 /**
  * App â€” root component. Thin orchestrator that manages global state
  * (view routing, admin routes, toast, cart, sign-out) and delegates rendering to
  * small, single-purpose child components.
  */
-import { useState, useEffect, lazy, Component, type ErrorInfo, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, lazy, Component, type ErrorInfo, type ReactNode } from 'react'
 import { App as CapacitorApp } from '@capacitor/app'
 import { SplashScreen } from '@capacitor/splash-screen'
 import { X, AlertTriangle, RefreshCw, Home, ChevronDown, Copy, Check } from 'lucide-react'
@@ -176,6 +178,8 @@ class RootErrorBoundary extends Component<{ children: ReactNode }, { error: Erro
 }
 
 export function App() {
+  const websiteText = useWebsiteText("Shared")
+
   const { signedIn, userId, identity, authLoading, profileChecked, authMode, authOpen, setAuthMode, setAuthOpen, openAuth } = useAuth()
   const adminAuth = useAdminAuth()
 
@@ -190,7 +194,7 @@ export function App() {
 
   const [publicView, setPublicView] = useState<PublicView>(() => resolvePublicView(window.location.pathname) ?? 'help')
 
-  const [view, setView] = useState<View>(() => {
+  const [view, setViewState] = useState<View>(() => {
     const path = window.location.pathname
     if (path === '/services' || path.startsWith('/services')) return 'services'
     if (path === '/rentals' || path.startsWith('/rentals')) return 'rentals'
@@ -198,6 +202,11 @@ export function App() {
     if (path === '/profile' || path.startsWith('/profile')) return 'profile'
     return 'home'
   })
+  const setView = useCallback((next: View) => {
+    const paths: Record<View, string> = { home: '/', rentals: '/rentals', services: '/services', bookings: '/bookings', profile: '/profile' }
+    if (window.location.pathname !== paths[next]) window.history.pushState({}, '', paths[next])
+    setViewState(next)
+  }, [])
   const [menuOpen, setMenuOpen] = useState(false)
   const pageSlideRef = usePageSlide(navItems.findIndex(item => item.id === view), ':scope > :not(header):not(footer)')
   const [toast, setToast] = useState('')
@@ -206,7 +215,7 @@ export function App() {
   // notifications now go through ToastProvider/useToast instead.
   // Set by Header when the user clicks a notification tied to a specific
   // booking. Bookings reads this to expand the matching card.
-  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null)
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(() => new URLSearchParams(window.location.search).get('booking_id'))
   const { unreadCount } = useCustomerNotifications(userId, 'nav')
   const activeBookingsCount = useCustomerActiveBookingsCount(userId)
   const [emergencyModalOpen, setEmergencyModalOpen] = useState(false)
@@ -243,15 +252,15 @@ export function App() {
       } else {
         setAppMode('customer')
         if (path === '/services' || path.startsWith('/services')) {
-          setView('services')
+          setViewState('services')
         } else if (path === '/rentals' || path.startsWith('/rentals')) {
-          setView('rentals')
+          setViewState('rentals')
         } else if (path === '/bookings' || path === '/tracker' || path.startsWith('/bookings')) {
-          setView('bookings')
+          setViewState('bookings')
         } else if (path === '/profile' || path.startsWith('/profile')) {
-          setView('profile')
+          setViewState('profile')
         } else if (path === '/' || path === '/home') {
-          setView('home')
+          setViewState('home')
         }
       }
     }
@@ -337,7 +346,7 @@ export function App() {
     if (adminAuth.isLoading) {
       return (
         <RootErrorBoundary>
-          <div className="auth-loading"><LoadingMessage label="Opening your command center…" /></div>
+          <div className="auth-loading"><LoadingMessage label={websiteText("Opening your command center…")} /></div>
         </RootErrorBoundary>
       )
     }
@@ -390,9 +399,9 @@ export function App() {
         <main className="ls-screen" aria-busy="true">
           <div className="ls-loader">
             <div className="ls-loader-ring">
-              <img src="/logo.png" alt="LS Customs" className="ls-loader-logo" />
+              <img src="/logo.png" alt={websiteText("LS Customs")} className="ls-loader-logo" />
             </div>
-            <span className="ls-loader-text">Loading LS Customs</span>
+            <span className="ls-loader-text">{websiteText("Loading LS Customs")}</span>
           </div>
         </main>
       </RootErrorBoundary>
@@ -415,7 +424,7 @@ export function App() {
               onClose={() => setAuthOpen(false)}
               onAuthenticated={() => {
                 setAuthOpen(false)
-                if (!assistantSelection) setView('home')
+                // Preserve the requested page after authentication.
               }}
             />
           )}
@@ -572,7 +581,7 @@ export function App() {
                 onClick={() => setView(id)}
               >
                 <Icon size={19} />
-                <span>{label === 'Workspace' ? 'Home' : label}</span>
+                <span>{label === 'Workspace' ? websiteText("Home") : label}</span>
               </button>
             ))}
           </nav>
@@ -580,7 +589,7 @@ export function App() {
           {toast && (
             <div className="toast">
               {toast}
-              <button onClick={() => setToast('')} aria-label="Dismiss">
+              <button onClick={() => setToast('')} aria-label={websiteText("Dismiss")}>
                 <X size={15} />
               </button>
             </div>

@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * ToastProvider — global stacked toast notification system.
  *
@@ -42,6 +43,8 @@ const VARIANT_META: Record<ToastVariant, { icon: typeof CheckCircle2; label: str
 }
 
 function ToastItem({ item, onDismiss }: { item: ToastItem; onDismiss: (id: string) => void }) {
+  const websiteText = useWebsiteText("Shared")
+
   const { icon: Icon, label } = VARIANT_META[item.variant]
   return (
     <div className={`toast-item toast-${item.variant}`} role="alert" aria-live="polite">
@@ -55,7 +58,7 @@ function ToastItem({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
       <button
         className="toast-item-close"
         onClick={() => onDismiss(item.id)}
-        aria-label="Dismiss notification"
+        aria-label={websiteText("Dismiss notification")}
         type="button"
       >
         <X size={14} />
@@ -65,6 +68,8 @@ function ToastItem({ item, onDismiss }: { item: ToastItem; onDismiss: (id: strin
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const websiteText = useWebsiteText("Shared")
+
   const [toasts, setToasts] = useState<ToastItem[]>([])
 
   const dismiss = useCallback((id: string) => {
@@ -91,7 +96,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={ctx}>
       {children}
       {toasts.length > 0 && (
-        <div className="toast-stack" aria-label="Notifications" role="region">
+        <div className="toast-stack" aria-label={websiteText("Notifications")} role="region">
           {toasts.map((item) => (
             <ToastItem key={item.id} item={item} onDismiss={dismiss} />
           ))}

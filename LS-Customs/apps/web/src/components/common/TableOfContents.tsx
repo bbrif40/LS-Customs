@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * TableOfContents — sticky sidebar navigation for long-form content pages
  * (legal documents, documentation). Highlights the current section as the user
@@ -12,6 +13,8 @@ interface TableOfContentsProps {
 }
 
 export function TableOfContents({ items, activeId: controlledActiveId }: TableOfContentsProps) {
+  const websiteText = useWebsiteText("Shared")
+
   const [activeId, setActiveId] = useState(controlledActiveId ?? '')
 
   // If controlled, defer to the parent's active state.
@@ -31,8 +34,8 @@ export function TableOfContents({ items, activeId: controlledActiveId }: TableOf
   }
 
   return (
-    <nav className="legal-toc" aria-label="Table of contents">
-      <h3>Contents</h3>
+    <nav className="legal-toc" aria-label={websiteText("Table of contents")}>
+      <h3>{websiteText("Contents")}</h3>
       <ul>
         {items.map((item) => (
           <li key={item.id}>

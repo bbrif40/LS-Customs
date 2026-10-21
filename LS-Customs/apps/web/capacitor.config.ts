@@ -4,7 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.lscustoms.app',
   appName: 'LS Customs',
   webDir: 'dist',
+  android: { useLegacyBridge: true },
   plugins: {
+    CapacitorHttp: { enabled: true },
     SplashScreen: {
       launchShowDuration: 3000,
       launchAutoHide: true,

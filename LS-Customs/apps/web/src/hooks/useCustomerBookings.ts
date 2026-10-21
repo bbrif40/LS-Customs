@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 
 export interface CustomerVehicleBooking {
+  payment_method: string
   id: string
   vehicle_id: string
   start_date: string
@@ -23,6 +24,7 @@ export interface CustomerVehicleBooking {
 }
 
 export interface CustomerServiceBooking {
+  payment_method: string
   id: string
   scheduled_at: string
   is_emergency: boolean
@@ -62,8 +64,8 @@ export function useCustomerBookings(userId: string | undefined) {
     if (!userId) { setVehicleBookings([]); setServiceBookings([]); setLoading(false); return }
     setLoading(true); setError(null)
     const [vehiclesResult, servicesResult] = await Promise.all([
-      supabase.from('vehicle_bookings').select('id, vehicle_id, start_date, end_date, hold_expires_at, pickup_location, status, total_price, created_at, vehicles(name, image_url)').eq('customer_id', userId).order('created_at', { ascending: false }),
-      supabase.from('service_bookings').select('id, scheduled_at, is_emergency, status, total_price, notes, created_at, pin_lat, pin_lng, mechanic_id, mechanic_profiles(current_lat, current_lng, profiles(full_name, phone)), service_booking_items(mechanic_services(name))').eq('customer_id', userId).order('scheduled_at', { ascending: false }),
+      supabase.from('vehicle_bookings').select('id, payment_method, vehicle_id, start_date, end_date, hold_expires_at, pickup_location, status, total_price, created_at, vehicles(name, image_url)').eq('customer_id', userId).order('created_at', { ascending: false }),
+      supabase.from('service_bookings').select('id, payment_method, scheduled_at, is_emergency, status, total_price, notes, created_at, pin_lat, pin_lng, mechanic_id, mechanic_profiles(current_lat, current_lng, profiles(full_name, phone)), service_booking_items(mechanic_services(name))').eq('customer_id', userId).order('scheduled_at', { ascending: false }),
     ])
     if (vehiclesResult.error || servicesResult.error) {
       setError((vehiclesResult.error ?? servicesResult.error)?.message ?? 'Failed to load bookings')
@@ -81,6 +83,7 @@ export function useCustomerBookings(userId: string | undefined) {
         .from('payments')
         .select('id, booking_type, booking_id, status, amount, currency, provider, created_at')
         .in('booking_id', allIds)
+        .is('account_quote_id', null)
 
       if (!paymentsError && paymentsData) {
         const paymentByBooking = new Map<string, typeof paymentsData[0]>()

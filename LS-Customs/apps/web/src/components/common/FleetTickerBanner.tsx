@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * FleetTickerBanner — continuous infinite moving carousel banner
  * showcasing authentic stock car brand logos offered in LS Customs.
@@ -82,6 +83,8 @@ const STOCK_BRAND_LOGOS: StockBrandLogo[] = [
 ]
 
 export function FleetTickerBanner({ vehicles }: FleetTickerBannerProps) {
+  const websiteText = useWebsiteText("Shared")
+
   // Determine available brands from active vehicles if present
   const availableBrands = useMemo(() => {
     if (vehicles && vehicles.length > 0) {
@@ -113,7 +116,7 @@ export function FleetTickerBanner({ vehicles }: FleetTickerBannerProps) {
     <div
       className="fleet-ticker-banner"
       role="region"
-      aria-label="Available Car Brands Catalog"
+      aria-label={websiteText("Available Car Brands Catalog")}
     >
       <div className="fleet-ticker-track" aria-hidden="false">
         {marqueeItems.map((brand, index) => (

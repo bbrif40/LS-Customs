@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import { virtualJourney } from '../../../backend/supabase/functions/_shared/virtualJourney'
 
 export interface TrackingFix {
   booking_id: string; mechanic_id: string; lat: number; lng: number
@@ -15,7 +14,7 @@ export interface TrackingRoute {
   durationSeconds: number; distanceMeters: number; calculatedAt: string
   provider?: 'geoapify' | 'osrm'
   trafficModel?: 'approximated' | 'none'
-  mode?: 'virtual'; startedAt?: string; serverTime?: string
+  mode?: 'gps'
   destinationLat?: number; destinationLng?: number; destinationSource?: 'live' | 'saved'
 }
 
@@ -27,7 +26,6 @@ export function useBookingTracking(bookingId?: string) {
   const [now, setNow] = useState(Date.now())
   const [route, setRoute] = useState<TrackingRoute | null>(null)
   const [routeError, setRouteError] = useState<string | null>(null)
-  const [clockOffset, setClockOffset] = useState(0)
 
   useEffect(() => {
     setBooking(null); setFix(null); setRoute(null); setConnected(false); setError(null)
@@ -38,12 +36,12 @@ export function useBookingTracking(bookingId?: string) {
       busy = true
       try {
         const [b, f] = await Promise.all([
-          supabase.from('service_bookings').select('id,mechanic_id,status,pin_lat,pin_lng').eq('id', bookingId).maybeSingle(),
+          supabase.from('service_bookings').select('id,mechanic_id,status,pin_lat,pin_lng,confirmed_lat,confirmed_lng').eq('id', bookingId).maybeSingle(),
           supabase.from('booking_locations').select('*').eq('booking_id', bookingId).maybeSingle(),
         ])
         if (cancelled) return
         if (b.error || !b.data) { setBooking(null); setFix(null); setError('Tracking is unavailable for this booking.'); return }
-        setBooking(b.data as TrackingBooking)
+        setBooking({ ...b.data, pin_lat: b.data.confirmed_lat ?? b.data.pin_lat, pin_lng: b.data.confirmed_lng ?? b.data.pin_lng } as TrackingBooking)
         setFix(f.error ? null : f.data as TrackingFix | null)
         setError(f.error ? 'Location updates are unavailable.' : null)
       } catch { if (!cancelled) { setFix(null); setError('Tracking connection interrupted.') } }
@@ -67,7 +65,7 @@ export function useBookingTracking(bookingId?: string) {
   const active = !!booking && ['assigned', 'en_route', 'in_progress'].includes(booking.status)
   const currentFix = active && fix?.mechanic_id === booking?.mechanic_id ? fix : null
   const ageSeconds = currentFix ? Math.max(0, (now - Date.parse(currentFix.recorded_at)) / 1000) : Infinity
-  const fresh = ageSeconds <= 30
+  const fresh = ageSeconds < 60
 
   useEffect(() => {
     setRoute(null); setRouteError(null)
@@ -88,7 +86,6 @@ export function useBookingTracking(bookingId?: string) {
         }
         else {
           setRoute(data.data as TrackingRoute); setRouteError(null)
-          if (data.data.serverTime) setClockOffset(Date.parse(data.data.serverTime) - Date.now())
         }
       } catch { if (!cancelled) { setRoute(null); setRouteError('Arrival estimate unavailable') } }
       finally { busy = false }
@@ -98,8 +95,6 @@ export function useBookingTracking(bookingId?: string) {
     return () => { cancelled = true; clearInterval(interval) }
   }, [bookingId, booking?.status, booking?.mechanic_id, booking?.pin_lat, booking?.pin_lng])
 
-  const virtualRoute = booking?.status === 'en_route' && route?.mode === 'virtual' && route.startedAt ? route : null
-  const journey = virtualRoute ? virtualJourney(virtualRoute.geometry.coordinates, virtualRoute.durationSeconds, virtualRoute.startedAt!, now + clockOffset) : null
-  return { booking, fix: currentFix, connected, error, ageSeconds, fresh, journey,
-    route: virtualRoute || (fresh && route && now - Date.parse(route.calculatedAt) <= 60_000 ? route : null), routeError }
+  return { booking, fix: currentFix, connected, error, ageSeconds, fresh,
+    route: fresh && route?.mode === 'gps' && now - Date.parse(route.calculatedAt) < 60_000 ? route : null, routeError }
 }

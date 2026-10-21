@@ -27,7 +27,7 @@ interface UseAdminPaymentsResult {
   loading: boolean
   error: string | null
   warning: string | null
-  updatePaymentStatus: (paymentId: string, status: PaymentStatus) => Promise<boolean>
+  updatePaymentStatus: (paymentId: string, status: PaymentStatus, reason?: string) => Promise<boolean>
   refund: (paymentId: string) => Promise<void>
   refetch: () => Promise<void>
 }
@@ -114,13 +114,16 @@ export function useAdminPayments(): UseAdminPaymentsResult {
     }
   }, [])
 
-  const updatePaymentStatus = useCallback(async (paymentId: string, newStatus: PaymentStatus): Promise<boolean> => {
+  const updatePaymentStatus = useCallback(async (paymentId: string, newStatus: PaymentStatus, reason?: string): Promise<boolean> => {
     const original = payments.find((p) => p.id === paymentId)
     if (!original) return false
 
     if (newStatus === 'refunded') {
       try {
-        requireFunctionData(await supabase.functions.invoke('refund-payment', { body: { payment_id: paymentId } }), 'Refund provider request failed.')
+        const refundReason = reason ?? window.prompt('Reason for this refund (required):')
+        if (!refundReason || refundReason.trim().length < 3) return false
+        requireFunctionData(await supabase.functions.invoke('refund-payment', { body: { payment_id: paymentId, reason: refundReason } }), 'Refund request failed.')
+        setWarning('Refund requested. The payment changes only after the provider confirms settlement.')
         await fetchPayments()
         return true
       } catch (refundError) {

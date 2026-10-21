@@ -22,6 +22,7 @@ import {
 import { useDialog } from '../../hooks/useDialog'
 
 export type AdminView =
+  | 'operations'
   | 'overview'
   | 'fleet'
   | 'services'
@@ -30,6 +31,7 @@ export type AdminView =
   | 'bookings'
   | 'revenue'
   | 'tickets'
+  | 'website-text'
   | 'settings'
   | 'audit-logs'
 
@@ -45,6 +47,7 @@ interface AdminSidebarProps {
 }
 
 const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: 'operations', label: 'Action Queue & Balances', icon: FileBarChart },
   { id: 'overview',      label: 'Overview',         icon: LayoutDashboard },
   { id: 'fleet',         label: 'Fleet',             icon: Car },
   { id: 'services',      label: 'Services',          icon: Wrench },
@@ -53,6 +56,7 @@ const navItems: { id: AdminView; label: string; icon: typeof LayoutDashboard }[]
   { id: 'bookings',      label: 'Bookings',          icon: FileBarChart },
   { id: 'tickets',       label: 'Ticket Requests',   icon: TicketPlus },
   { id: 'revenue',       label: 'Revenue',           icon: DollarSign },
+  { id: 'website-text', label: 'Website Text', icon: Palette },
   { id: 'audit-logs',    label: 'Audit Logs',        icon: ShieldCheck },
 ]
 

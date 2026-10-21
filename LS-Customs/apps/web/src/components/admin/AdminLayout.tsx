@@ -1,3 +1,4 @@
+import { AdminWebsiteText } from './AdminWebsiteText'
 /**
  * AdminLayout — shell layout wrapping the admin sidebar + main content area.
  * Manages admin view state and routing between admin pages.
@@ -9,6 +10,7 @@ import { useState, Component, type ReactNode, type ErrorInfo } from 'react'
 import { Menu, X } from 'lucide-react'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminOverview } from './AdminOverview'
+import { AdminOperations } from './AdminOperations'
 import { AdminFleet } from './AdminFleet'
 import { AdminServices } from './AdminServices'
 import { AdminMechanics } from './AdminMechanics'
@@ -57,6 +59,7 @@ class AdminPaneBoundary extends Component<{ children: ReactNode; paneName: strin
 }
 
 const ALL_VIEWS: AdminView[] = [
+  'operations',
   'overview',
   'fleet',
   'services',
@@ -66,11 +69,21 @@ const ALL_VIEWS: AdminView[] = [
   'tickets',
   'revenue',
   'audit-logs',
+  'website-text',
 ]
 
 export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [currentView, setCurrentView] = useState<AdminView>('overview')
+  const [currentView, setCurrentViewState] = useState<AdminView>(() => {
+    const saved = new URL(window.location.href).searchParams.get('view') as AdminView
+    return ALL_VIEWS.includes(saved) ? saved : 'overview'
+  })
+  const setCurrentView = (view: AdminView) => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('view', view)
+    window.history.replaceState({}, '', url)
+    setCurrentViewState(view)
+  }
   const pageSlideRef = usePageSlide(ALL_VIEWS.indexOf(currentView), ':scope > .admin-view-pane.is-active')
   const openTicketCount = useOpenTicketCount()
   const activeBookingsCount = useAdminBookingsCount()
@@ -79,6 +92,8 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
   // This keeps cached data warm and avoids a loading spinner on every switch.
   const renderView = (view: AdminView) => {
     switch (view) {
+      case 'operations':
+        return <AdminOperations />
       case 'overview':
         return <AdminOverview onViewChange={setCurrentView} ticketCount={openTicketCount} bookingCount={activeBookingsCount} />
       case 'fleet':
@@ -95,6 +110,8 @@ export function AdminLayout({ userName, onSignOut }: AdminLayoutProps) {
         return <AdminTickets />
       case 'revenue':
         return <AdminRevenue />
+      case 'website-text':
+        return <AdminWebsiteText />
       case 'audit-logs':
         return <AdminAuditLogs />
       default:

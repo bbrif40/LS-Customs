@@ -1,3 +1,4 @@
+import { useWebsiteText } from '../../../hooks/useWebsiteText'
 /**
  * MapBoundary — shared error boundary for the map components.
  *
@@ -5,8 +6,7 @@
  * failure, a malformed pin) would bubble up to the nearest error
  * boundary (or none, in which case the whole page white-screens).
  * With it, the map shows a "Map unavailable" skeleton and, in dev
- * mode, surfaces the underlying error message on the page itself so
- * the cause is visible without opening DevTools.
+ * mode, logs the underlying error to the developer console.
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 
@@ -18,6 +18,11 @@ interface Props {
 interface State {
   hasError: boolean
   message: string
+}
+
+function MapUnavailableCopy() {
+  const websiteText = useWebsiteText('Shared')
+  return <div><div role="alert" style={{ fontWeight: 600, marginBottom: 4 }}>{websiteText('We couldn’t open the map')}</div><p>{websiteText('Please check your connection and reload to restore your route.')}</p><button type="button" className="outline-button" onClick={() => window.location.reload()}>{websiteText('Reload map')}</button></div>
 }
 
 export class MapBoundary extends Component<Props, State> {
@@ -36,7 +41,7 @@ export class MapBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div
-          className="map-skeleton"
+          className="map-skeleton map-unavailable"
           style={{
             height: this.props.height,
             display: 'grid',
@@ -45,16 +50,7 @@ export class MapBoundary extends Component<Props, State> {
             textAlign: 'center',
           }}
         >
-          <div>
-            <div role="alert" style={{ fontWeight: 600, marginBottom: 4 }}>We couldn’t open the map</div>
-            <p>Please check your connection and reload to restore your route.</p>
-            <button type="button" className="outline-button" onClick={() => window.location.reload()}>Reload map</button>
-            {import.meta.env.DEV && this.state.message && (
-              <div style={{ fontSize: 11, color: '#666', maxWidth: 400 }}>
-                {this.state.message}
-              </div>
-            )}
-          </div>
+          <MapUnavailableCopy />
         </div>
       )
     }

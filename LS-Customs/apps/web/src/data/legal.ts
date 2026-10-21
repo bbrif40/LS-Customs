@@ -4,7 +4,7 @@
  */
 import type { LegalSection } from '../types'
 
-export const TERMS_LAST_UPDATED = 'September 14, 2026'
+export const TERMS_LAST_UPDATED = 'October 21, 2026'
 
 export const PRIVACY_LAST_UPDATED = 'September 14, 2026'
 
@@ -37,13 +37,21 @@ export const termsSections: LegalSection[] = [
     id: 'payment',
     title: 'Payment & Billing',
     level: 2,
-    content: `Service bookings require valid payment information. Charges are processed through our secure payment provider. All fees are non-refundable unless otherwise stated. You authorize us to charge your payment method for any bookings you confirm.`,
+    content: `Choose online payment or cash. Mechanic bookings require mechanic acceptance before checkout: cash confirms on acceptance and is due after service; online confirms only after successful payment within the displayed hold. Rentals require an approved matching driver’s license valid through return. Pay online within three hours of approval, or pay cash before handover. Confirmed cash rentals cannot be cancelled by customers. Additional work requires an itemized quote and your approval. Account balances can be settled online or through an authorized cash collection.`,
   },
   {
     id: 'cancellation',
     title: 'Cancellation & Refunds',
     level: 2,
-    content: `Cancellations are subject to our policy displayed at the time of booking. Refunds, if applicable, are processed within 7-10 business days. Certain premium and extended rentals may have different cancellation windows.`,
+    content: `Paid mechanic cancellation requests remain subject to admin review: full refund before travel, 45% of the amount paid during travel before work, and support review after work starts. Cash mechanic cancellation is free before work; three cancellations within 30 days trigger admin review. Provider cancellation or a declined provider time change receives a full refund. Prepaid rental cancellation before handover receives a full refund; early returns have no automatic refund. Refunds remain pending until confirmed by the provider or an audited cash repayment. The provider determines when funds reach your account.`,
+  },
+  {
+    id: 'rental-rules', title: 'Rental Returns, Fees and Reports', level: 2,
+    content: `Rental days are 24-hour periods. Standard pickup and return hours are 8 AM–6 PM Philippine time; other arrangements require admin approval. Cash pickup holds expire three hours after pickup unless an admin records arrival or extends the deadline. Handover requires payment, a valid approved license and acknowledgement of the latest condition report. Late return costs PHP250 for each completed late hour, based on the admin-recorded actual return. Unpaid late fees immediately block new rentals; after 24 hours your account is flagged. An additional PHP1000 is added at 48 hours and each completed day after that until the debt is fully settled or waived. Settlement clears the debt flag when all blocking debts are resolved. Rental extensions require availability, a license valid through the new return, approval and payment before the original deadline; each started extra 24 hours uses the current daily rate. Damage estimates include evidence and allow 48 hours from the first successful notification to dispute before admin finalization. Pending estimates are not debt; finalized damage debt blocks new rentals without daily penalties.`,
+  },
+  {
+    id: 'mechanic-rules', title: 'Mechanic and Roadside Rules', level: 2,
+    content: `Service coverage follows an admin-configured radius, initially 100 km centered on Manila and reaching Bulacan and Cavite, with separately configured scheduled and roadside operating hours, initially 8 AM–6 PM Philippine time. Mechanics have five minutes to accept offers; online checkout opens immediately after acceptance with a ten-minute hold. No acceptance means no confirmed booking or charge. A failed payment may switch to cash while the hold is valid, but a processing payment cannot. Money received after expiry enters full-refund processing. Rescheduling requires fresh acceptance; the original appointment stays until the replacement and any price difference are secured. Your confirmed destination stays fixed until an approved location change is accepted and any increase paid. Extra work requires your itemized approval. Live tracking uses actual mechanic GPS while travelling; a fix older than 60 seconds displays last seen without an ETA. GPS failure does not prevent service and alerts admin.`,
   },
   {
     id: 'prohibited',

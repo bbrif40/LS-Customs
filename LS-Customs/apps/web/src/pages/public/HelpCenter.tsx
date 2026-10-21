@@ -1,8 +1,9 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * Help Center — public knowledge-base landing page.
  * Features a hero with search, category cards, and popular articles.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Search, CarFront, Wrench, ClipboardList, UserRound, CreditCard, Bug } from 'lucide-react'
 import { SearchBox } from '../../components/common/SearchBox'
 import { HELP_CATEGORIES, POPULAR_ARTICLES } from '../../data/helpArticles'
@@ -18,7 +19,28 @@ const CATEGORY_ICONS: Record<string, JSX.Element> = {
 }
 
 export function HelpCenter() {
+  const websiteText = useWebsiteText("Help Center")
+
   const [query, setQuery] = useState('')
+
+  const categories = HELP_CATEGORIES.map((category) => ({
+    ...category,
+    label: websiteText(category.label),
+    description: websiteText(category.description),
+  }))
+  const articles = POPULAR_ARTICLES.map((article) => ({
+    ...article,
+    title: websiteText(article.title),
+    description: websiteText(article.description),
+    category: websiteText(article.category),
+  }))
+  const search = query.trim().toLowerCase()
+  const filteredArticles = search
+    ? articles.filter((article) =>
+      article.title.toLowerCase().includes(search)
+      || article.description.toLowerCase().includes(search)
+      || article.category.toLowerCase().includes(search))
+    : articles
 
   useEffect(() => {
     document.title = 'Help Center — LS Customs'
@@ -28,14 +50,6 @@ export function HelpCenter() {
     )
   }, [])
 
-  const filteredArticles = useMemo(() => {
-    if (!query.trim()) return POPULAR_ARTICLES
-    const q = query.toLowerCase()
-    return POPULAR_ARTICLES.filter(
-      (a) => a.title.toLowerCase().includes(q) || a.description.toLowerCase().includes(q)
-    )
-  }, [query])
-
   const handleSearch = (q: string) => {
     setQuery(q)
   }
@@ -43,26 +57,22 @@ export function HelpCenter() {
   return (
     <div className="public-page">
       <header className="public-hero">
-        <h1>How can we <em>help</em> you?</h1>
-        <p className="subhead">
-          Find answers, guides, and troubleshooting steps for all LS Customs services.
-        </p>
+        <h1>{websiteText("How can we")} <em>{websiteText("help")}</em>{' '}{websiteText("you?")}</h1>
+        <p className="subhead">{websiteText("Find answers, guides, and troubleshooting steps for all LS Customs services.")}</p>
       </header>
 
       <SearchBox
-        placeholder="Search help articles..."
+        placeholder={websiteText("Search help articles...")}
         value={query}
         onChange={handleSearch}
       />
 
       {filteredArticles.length === 0 ? (
-        <p className="muted" style={{ textAlign: 'center', marginTop: 42 }}>
-          No articles found for "{query}". Try a different search term.
-        </p>
+        <p className="muted" style={{ textAlign: 'center', marginTop: 42 }}>{websiteText("No articles found for \"")}{query}{websiteText("\". Try a different search term.")}</p>
       ) : (
         <>
           <div className="category-grid">
-            {HELP_CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <a
                 key={cat.id}
                 href={cat.href}
@@ -79,9 +89,7 @@ export function HelpCenter() {
             ))}
           </div>
 
-          <h2 style={{ margin: '48px 0 20px', fontSize: 18, letterSpacing: '-0.3px' }}>
-            Popular articles
-          </h2>
+          <h2 style={{ margin: '48px 0 20px', fontSize: 18, letterSpacing: '-0.3px' }}>{websiteText("Popular articles")}</h2>
           <div className="article-list">
             {filteredArticles.map((article) => (
               <div key={article.id} className="article-card">

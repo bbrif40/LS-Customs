@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * Header — top bar with mobile menu toggle, breadcrumb, notifications, and user chip.
  */
@@ -158,6 +159,9 @@ function NotificationItem({
 }
 
 export function Header({ view, menuOpen, displayName, initials, avatarUrl, onToggleMenu, onView, onNotify, userId, onSelectBooking }: HeaderProps) {
+  const websiteText = useWebsiteText("Navigation")
+
+  const currentNavLabel = navItems.find((item) => item.id === view)?.label
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useCustomerNotifications(userId, 'panel')
   const [open, setOpen] = useState(false)
 
@@ -171,19 +175,19 @@ export function Header({ view, menuOpen, displayName, initials, avatarUrl, onTog
 
   return (
     <header className="topbar">
-      <button className="mobile-menu" onClick={onToggleMenu} aria-label="Open menu">
+      <button className="mobile-menu" onClick={onToggleMenu} aria-label={websiteText("Open menu")}>
         <Menu size={21} />
       </button>
       <div className="breadcrumb">
-        <span>My workspace</span>
+        <span>{websiteText("My workspace")}</span>
         <ChevronRight size={15} />
-        <strong>{navItems.find((item) => item.id === view)?.label}</strong>
+        <strong>{currentNavLabel ? websiteText(currentNavLabel) : null}</strong>
       </div>
       <div className="top-actions">
         <button
           className="icon-button"
           onClick={() => setOpen((value) => !value)}
-          aria-label="Notifications"
+          aria-label={websiteText("Notifications")}
           aria-expanded={open}
           aria-haspopup="dialog"
         >
@@ -191,17 +195,16 @@ export function Header({ view, menuOpen, displayName, initials, avatarUrl, onTog
           {unreadCount > 0 && <i />}
         </button>
         {open && (
-          <div className="notification-panel" role="dialog" aria-label="Notifications" aria-live="polite">
+          <div className="notification-panel" role="dialog" aria-label={websiteText("Notifications")} aria-live="polite">
             <div className="notification-head">
-              <strong>Notifications</strong>
+              <strong>{websiteText("Notifications")}</strong>
               {unreadCount > 0 && (
                 <button onClick={() => void markAllAsRead()}>
-                  <Check size={14} /> Mark all read
-                </button>
+                  <Check size={14} />{' '}{websiteText("Mark all read")}</button>
               )}
             </div>
             {notifications.length === 0 ? (
-              <p className="muted">No notifications yet.</p>
+              <p className="muted">{websiteText("No notifications yet.")}</p>
             ) : (
               notifications.map((item) => (
                 <NotificationItem
@@ -219,7 +222,7 @@ export function Header({ view, menuOpen, displayName, initials, avatarUrl, onTog
             )}
           </div>
         )}
-        <button className="user-chip" aria-label={`Open ${displayName}'s profile`} onClick={() => onView('profile')}>
+        <button className="user-chip" aria-label={websiteText("Open {value1}'s profile", { value1: String(displayName) })} onClick={() => onView('profile')}>
           {avatarUrl && <span className="avatar"><img src={avatarUrl} alt="" /></span>}
           <span>{displayName}</span>
           <ChevronRight size={15} />

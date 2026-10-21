@@ -1,0 +1,862 @@
+[
+  {
+    "section": "Navigation",
+    "label": "Workspace",
+    "default_text": "Workspace"
+  },
+  {
+    "section": "Navigation",
+    "label": "Rentals",
+    "default_text": "Rentals"
+  },
+  {
+    "section": "Navigation",
+    "label": "Mechanic",
+    "default_text": "Mechanic"
+  },
+  {
+    "section": "Navigation",
+    "label": "Bookings",
+    "default_text": "Bookings"
+  },
+  {
+    "section": "Navigation",
+    "label": "Profile",
+    "default_text": "Profile"
+  },
+  {
+    "section": "Workspace",
+    "label": "Workspace",
+    "default_text": "Workspace"
+  },
+  {
+    "section": "Workspace",
+    "label": "Rentals",
+    "default_text": "Rentals"
+  },
+  {
+    "section": "Workspace",
+    "label": "Mechanic",
+    "default_text": "Mechanic"
+  },
+  {
+    "section": "Workspace",
+    "label": "Bookings",
+    "default_text": "Bookings"
+  },
+  {
+    "section": "Workspace",
+    "label": "Profile",
+    "default_text": "Profile"
+  },
+  {
+    "section": "Workspace",
+    "label": "Browse rentals",
+    "default_text": "Browse rentals"
+  },
+  {
+    "section": "Shared",
+    "label": "Help Center",
+    "default_text": "Help Center"
+  },
+  {
+    "section": "Shared",
+    "label": "Contact Support",
+    "default_text": "Contact Support"
+  },
+  {
+    "section": "Shared",
+    "label": "Terms of Service",
+    "default_text": "Terms of Service"
+  },
+  {
+    "section": "Shared",
+    "label": "Privacy Policy",
+    "default_text": "Privacy Policy"
+  },
+  {
+    "section": "Shared",
+    "label": "FAQs",
+    "default_text": "FAQs"
+  },
+  {
+    "section": "Shared",
+    "label": "Documentation",
+    "default_text": "Documentation"
+  },
+  {
+    "section": "Footer",
+    "label": "+63 (02) 8888-5700",
+    "default_text": "+63 (02) 8888-5700"
+  },
+  {
+    "section": "Rentals",
+    "label": "All vehicles",
+    "default_text": "All vehicles"
+  },
+  {
+    "section": "Rentals",
+    "label": "Hybrid EV",
+    "default_text": "Hybrid EV"
+  },
+  {
+    "section": "Rentals",
+    "label": "Hatchbacks",
+    "default_text": "Hatchbacks"
+  },
+  {
+    "section": "Rentals",
+    "label": "Sedans",
+    "default_text": "Sedans"
+  },
+  {
+    "section": "Rentals",
+    "label": "Minivans",
+    "default_text": "Minivans"
+  },
+  {
+    "section": "Rentals",
+    "label": "SUVs",
+    "default_text": "SUVs"
+  },
+  {
+    "section": "Rentals",
+    "label": "Van",
+    "default_text": "Van"
+  },
+  {
+    "section": "Rentals",
+    "label": "Pick Up Trucks",
+    "default_text": "Pick Up Trucks"
+  },
+  {
+    "section": "Bookings",
+    "label": "Pending",
+    "default_text": "Pending"
+  },
+  {
+    "section": "Bookings",
+    "label": "Confirmed",
+    "default_text": "Confirmed"
+  },
+  {
+    "section": "Bookings",
+    "label": "In Progress",
+    "default_text": "In Progress"
+  },
+  {
+    "section": "Bookings",
+    "label": "Completed",
+    "default_text": "Completed"
+  },
+  {
+    "section": "Bookings",
+    "label": "Assigned",
+    "default_text": "Assigned"
+  },
+  {
+    "section": "Bookings",
+    "label": "En Route",
+    "default_text": "En Route"
+  },
+  {
+    "section": "Bookings",
+    "label": "Everything",
+    "default_text": "Everything"
+  },
+  {
+    "section": "Bookings",
+    "label": "Rentals",
+    "default_text": "Rentals"
+  },
+  {
+    "section": "Bookings",
+    "label": "Mechanical services",
+    "default_text": "Mechanical services"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Category",
+    "default_text": "Category"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Service",
+    "default_text": "Service"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Schedule",
+    "default_text": "Schedule"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Location",
+    "default_text": "Location"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Review",
+    "default_text": "Review"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Payment",
+    "default_text": "Payment"
+  },
+  {
+    "section": "Mechanic",
+    "label": "completed",
+    "default_text": "completed"
+  },
+  {
+    "section": "Mechanic",
+    "label": "current step",
+    "default_text": "current step"
+  },
+  {
+    "section": "Mechanic",
+    "label": "upcoming",
+    "default_text": "upcoming"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Today",
+    "default_text": "Today"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Tomorrow",
+    "default_text": "Tomorrow"
+  },
+  {
+    "section": "Mechanic",
+    "label": "This Saturday",
+    "default_text": "This Saturday"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Sun",
+    "default_text": "Sun"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Mon",
+    "default_text": "Mon"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Tue",
+    "default_text": "Tue"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Wed",
+    "default_text": "Wed"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Thu",
+    "default_text": "Thu"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Fri",
+    "default_text": "Fri"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Sat",
+    "default_text": "Sat"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Available in",
+    "default_text": "Available in"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Routine & Fluid Service",
+    "default_text": "Routine & Fluid Service"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Tire & Wheel Care",
+    "default_text": "Tire & Wheel Care"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Electrical & Battery Care",
+    "default_text": "Electrical & Battery Care"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Diagnostics & Repair",
+    "default_text": "Diagnostics & Repair"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Lighting & Visibility",
+    "default_text": "Lighting & Visibility"
+  },
+  {
+    "section": "Mechanic",
+    "label": "Quick Fixes",
+    "default_text": "Quick Fixes"
+  },
+  {
+    "section": "Help Center",
+    "label": "Rentals",
+    "default_text": "Rentals"
+  },
+  {
+    "section": "Help Center",
+    "label": "Booking, extending, and returning vehicle rentals.",
+    "default_text": "Booking, extending, and returning vehicle rentals."
+  },
+  {
+    "section": "Help Center",
+    "label": "Mobile Mechanic",
+    "default_text": "Mobile Mechanic"
+  },
+  {
+    "section": "Help Center",
+    "label": "Scheduling, tracking, and service guarantees.",
+    "default_text": "Scheduling, tracking, and service guarantees."
+  },
+  {
+    "section": "Help Center",
+    "label": "Bookings",
+    "default_text": "Bookings"
+  },
+  {
+    "section": "Help Center",
+    "label": "Checking status, rescheduling, and receipts.",
+    "default_text": "Checking status, rescheduling, and receipts."
+  },
+  {
+    "section": "Help Center",
+    "label": "Account",
+    "default_text": "Account"
+  },
+  {
+    "section": "Help Center",
+    "label": "Profile, passwords, vehicles, and privacy.",
+    "default_text": "Profile, passwords, vehicles, and privacy."
+  },
+  {
+    "section": "Help Center",
+    "label": "Billing",
+    "default_text": "Billing"
+  },
+  {
+    "section": "Help Center",
+    "label": "Payments, refunds, and pricing questions.",
+    "default_text": "Payments, refunds, and pricing questions."
+  },
+  {
+    "section": "Help Center",
+    "label": "Troubleshooting",
+    "default_text": "Troubleshooting"
+  },
+  {
+    "section": "Help Center",
+    "label": "App issues, login problems, and error messages.",
+    "default_text": "App issues, login problems, and error messages."
+  },
+  {
+    "section": "Help Center",
+    "label": "Tracking your mobile mechanic in real time",
+    "default_text": "Tracking your mobile mechanic in real time"
+  },
+  {
+    "section": "Help Center",
+    "label": "Use the live map and status notifications to follow your mechanic from arrival.",
+    "default_text": "Use the live map and status notifications to follow your mechanic from arrival."
+  },
+  {
+    "section": "Help Center",
+    "label": "How to cancel a rental booking",
+    "default_text": "How to cancel a rental booking"
+  },
+  {
+    "section": "Help Center",
+    "label": "Free cancellation up to 24 hours before pickup. See extended rental policies.",
+    "default_text": "Free cancellation up to 24 hours before pickup. See extended rental policies."
+  },
+  {
+    "section": "Help Center",
+    "label": "Rescheduling your service appointment",
+    "default_text": "Rescheduling your service appointment"
+  },
+  {
+    "section": "Help Center",
+    "label": "Move your booking up to 12 hours ahead. Emergency reschedule fees apply.",
+    "default_text": "Move your booking up to 12 hours ahead. Emergency reschedule fees apply."
+  },
+  {
+    "section": "Help Center",
+    "label": "Fixing a failed or declined payment",
+    "default_text": "Fixing a failed or declined payment"
+  },
+  {
+    "section": "Help Center",
+    "label": "Common reasons payments don't go through and how to retry.",
+    "default_text": "Common reasons payments don't go through and how to retry."
+  },
+  {
+    "section": "Help Center",
+    "label": "All",
+    "default_text": "All"
+  },
+  {
+    "section": "Help Center",
+    "label": "How do I book a rental vehicle?",
+    "default_text": "How do I book a rental vehicle?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Choose a vehicle, pickup and return times, and online or cash payment. Upload your driver’s license in the payment section for admin review. Approval opens online payment for three hours or confirms a cash reservation, payable before handover.",
+    "default_text": "Choose a vehicle, pickup and return times, and online or cash payment. Upload your driver’s license in the payment section for admin review. Approval opens online payment for three hours or confirms a cash reservation, payable before handover."
+  },
+  {
+    "section": "Help Center",
+    "label": "What is the cancellation policy for rentals?",
+    "default_text": "What is the cancellation policy for rentals?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Prepaid rentals cancelled before handover receive a full refund after admin approval. Confirmed cash rentals cannot be cancelled by customers; contact support. Early returns have no automatic refund.",
+    "default_text": "Prepaid rentals cancelled before handover receive a full refund after admin approval. Confirmed cash rentals cannot be cancelled by customers; contact support. Early returns have no automatic refund."
+  },
+  {
+    "section": "Help Center",
+    "label": "Can I extend my rental after pickup?",
+    "default_text": "Can I extend my rental after pickup?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Request an extension from your booking before the original return deadline. Availability, license validity, admin approval and payment must be secured before that deadline. Each started extra 24 hours costs the current daily rate.",
+    "default_text": "Request an extension from your booking before the original return deadline. Availability, license validity, admin approval and payment must be secured before that deadline. Each started extra 24 hours costs the current daily rate."
+  },
+  {
+    "section": "Help Center",
+    "label": "What mileage is included with rentals?",
+    "default_text": "What mileage is included with rentals?"
+  },
+  {
+    "section": "Help Center",
+    "label": "All rentals include unlimited kilometers. Fuel is not included — you return the vehicle with the same fuel level as pickup, or we charge a refueling fee.",
+    "default_text": "All rentals include unlimited kilometers. Fuel is not included — you return the vehicle with the same fuel level as pickup, or we charge a refueling fee."
+  },
+  {
+    "section": "Help Center",
+    "label": "Where do I pick up my rental vehicle?",
+    "default_text": "Where do I pick up my rental vehicle?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Pick-up is at your selected LS Customs location or our partner facilities. You’ll receive the exact address and meeting instructions in your confirmation email.",
+    "default_text": "Pick-up is at your selected LS Customs location or our partner facilities. You’ll receive the exact address and meeting instructions in your confirmation email."
+  },
+  {
+    "section": "Help Center",
+    "label": "How does the mobile mechanic service work?",
+    "default_text": "How does the mobile mechanic service work?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Book a service on the Mechanic page, select your location on the map, choose a time slot, and a certified mechanic will arrive at your address. You can track their arrival in real time through the app.",
+    "default_text": "Book a service on the Mechanic page, select your location on the map, choose a time slot, and a certified mechanic will arrive at your address. You can track their arrival in real time through the app."
+  },
+  {
+    "section": "Help Center",
+    "label": "How far in advance should I book a mechanic?",
+    "default_text": "How far in advance should I book a mechanic?"
+  },
+  {
+    "section": "Help Center",
+    "label": "We recommend booking at least 24 hours ahead for standard services. Same-day appointments are available for emergency repairs, subject to technician availability in your area.",
+    "default_text": "We recommend booking at least 24 hours ahead for standard services. Same-day appointments are available for emergency repairs, subject to technician availability in your area."
+  },
+  {
+    "section": "Help Center",
+    "label": "What if the mechanic can’t fix my issue?",
+    "default_text": "What if the mechanic can’t fix my issue?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Open booking-linked support. If approved extra work is declined and the original service cannot proceed, the mechanic escalates the issue for admin review. Refunds depend on the booking stage and reviewed outcome.",
+    "default_text": "Open booking-linked support. If approved extra work is declined and the original service cannot proceed, the mechanic escalates the issue for admin review. Refunds depend on the booking stage and reviewed outcome."
+  },
+  {
+    "section": "Help Center",
+    "label": "Do I need to provide tools or parts?",
+    "default_text": "Do I need to provide tools or parts?"
+  },
+  {
+    "section": "Help Center",
+    "label": "No — the mechanic brings all necessary tools and supplies. If a part is needed, they’ll let you know its cost before ordering. You only pay for parts used plus the service fee.",
+    "default_text": "No — the mechanic brings all necessary tools and supplies. If a part is needed, they’ll let you know its cost before ordering. You only pay for parts used plus the service fee."
+  },
+  {
+    "section": "Help Center",
+    "label": "Can I track my mechanic's arrival?",
+    "default_text": "Can I track my mechanic's arrival?"
+  },
+  {
+    "section": "Help Center",
+    "label": "During travel, the map shows actual mechanic GPS. A location older than 60 seconds is marked last seen and has no ETA. GPS availability depends on device permissions and connectivity.",
+    "default_text": "During travel, the map shows actual mechanic GPS. A location older than 60 seconds is marked last seen and has no ETA. GPS availability depends on device permissions and connectivity."
+  },
+  {
+    "section": "Help Center",
+    "label": "What payment methods do you accept?",
+    "default_text": "What payment methods do you accept?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Choose online payment through the methods available at checkout or cash. Rental cash is collected before handover; mechanic cash is due after service. Admins can also record cash payments toward account balances.",
+    "default_text": "Choose online payment through the methods available at checkout or cash. Rental cash is collected before handover; mechanic cash is due after service. Admins can also record cash payments toward account balances."
+  },
+  {
+    "section": "Help Center",
+    "label": "When will I be charged for my booking?",
+    "default_text": "When will I be charged for my booking?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Online mechanic checkout opens immediately after a mechanic accepts, with a ten-minute hold. Online rental payment is due within three hours of license approval. A processing payment cannot be switched to cash.",
+    "default_text": "Online mechanic checkout opens immediately after a mechanic accepts, with a ten-minute hold. Online rental payment is due within three hours of license approval. A processing payment cannot be switched to cash."
+  },
+  {
+    "section": "Help Center",
+    "label": "Why was I charged more than expected?",
+    "default_text": "Why was I charged more than expected?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Late rental return costs PHP250 per completed late hour. Unpaid late fees block new rentals immediately, flag the account after 24 hours, and add PHP1000 at 48 hours and each full day thereafter until fully settled or waived. Approved extras and finalized damage charges appear in your account balance.",
+    "default_text": "Late rental return costs PHP250 per completed late hour. Unpaid late fees block new rentals immediately, flag the account after 24 hours, and add PHP1000 at 48 hours and each full day thereafter until fully settled or waived. Approved extras and finalized damage charges appear in your account balance."
+  },
+  {
+    "section": "Help Center",
+    "label": "How do I get a refund?",
+    "default_text": "How do I get a refund?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Submit a cancellation request from the booking. Paid mechanic refunds are 100% before travel, 45% during travel before work, and support-reviewed after work starts. Prepaid rental cancellation before handover is fully refunded. Provider cancellation or a declined provider time change is fully refunded. Provider confirmation and settlement timing appear separately from approval.",
+    "default_text": "Submit a cancellation request from the booking. Paid mechanic refunds are 100% before travel, 45% during travel before work, and support-reviewed after work starts. Prepaid rental cancellation before handover is fully refunded. Provider cancellation or a declined provider time change is fully refunded. Provider confirmation and settlement timing appear separately from approval."
+  },
+  {
+    "section": "Help Center",
+    "label": "Can I update my payment method?",
+    "default_text": "Can I update my payment method?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Yes — go to Profile → Payment Methods to add, remove, or set a new primary payment method. Changes apply to future bookings only.",
+    "default_text": "Yes — go to Profile → Payment Methods to add, remove, or set a new primary payment method. Changes apply to future bookings only."
+  },
+  {
+    "section": "Help Center",
+    "label": "How do I update my profile?",
+    "default_text": "How do I update my profile?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Go to Profile in your workspace. Click \"Edit\" to update your name, phone number, address, or profile photo. Changes save automatically.",
+    "default_text": "Go to Profile in your workspace. Click \"Edit\" to update your name, phone number, address, or profile photo. Changes save automatically."
+  },
+  {
+    "section": "Help Center",
+    "label": "How do I reset my password?",
+    "default_text": "How do I reset my password?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Click \"Forgot password\" on the sign-in screen. We’ll email a reset link that expires in 24 hours. If you use Google Sign-In, manage your password through your Google account.",
+    "default_text": "Click \"Forgot password\" on the sign-in screen. We’ll email a reset link that expires in 24 hours. If you use Google Sign-In, manage your password through your Google account."
+  },
+  {
+    "section": "Help Center",
+    "label": "Can I have multiple vehicles on my account?",
+    "default_text": "Can I have multiple vehicles on my account?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Yes — add vehicles in Profile → My Vehicles. Each vehicle can have its own service history, and you can set a default for new bookings.",
+    "default_text": "Yes — add vehicles in Profile → My Vehicles. Each vehicle can have its own service history, and you can set a default for new bookings."
+  },
+  {
+    "section": "Help Center",
+    "label": "How do I close my account?",
+    "default_text": "How do I close my account?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Contact our support team through the Help Center or live chat. We’ll verify your identity and process the closure within 30 days. Some data may be retained for legal or accounting purposes.",
+    "default_text": "Contact our support team through the Help Center or live chat. We’ll verify your identity and process the closure within 30 days. Some data may be retained for legal or accounting purposes."
+  },
+  {
+    "section": "Help Center",
+    "label": "How do I check my booking status?",
+    "default_text": "How do I check my booking status?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Your bookings appear in the Bookings section of your workspace. Each card shows the current status: confirmed, assigned, en route, in progress, or completed.",
+    "default_text": "Your bookings appear in the Bookings section of your workspace. Each card shows the current status: confirmed, assigned, en route, in progress, or completed."
+  },
+  {
+    "section": "Help Center",
+    "label": "Can I message my mechanic directly?",
+    "default_text": "Can I message my mechanic directly?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Yes — once a mechanic is assigned to your service booking, a chat thread opens on the booking card. You’ll also get real-time status notifications.",
+    "default_text": "Yes — once a mechanic is assigned to your service booking, a chat thread opens on the booking card. You’ll also get real-time status notifications."
+  },
+  {
+    "section": "Help Center",
+    "label": "What if I need to reschedule my mechanic?",
+    "default_text": "What if I need to reschedule my mechanic?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Request a new time from your booking before travel. Your original appointment stays active until a mechanic accepts the replacement and any price difference is secured. You can decline a provider-proposed time change for a full refund.",
+    "default_text": "Request a new time from your booking before travel. Your original appointment stays active until a mechanic accepts the replacement and any price difference is secured. You can decline a provider-proposed time change for a full refund."
+  },
+  {
+    "section": "Help Center",
+    "label": "Do I receive a receipt for my booking?",
+    "default_text": "Do I receive a receipt for my booking?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Yes — an itemized receipt is emailed to you upon completion. You can also download receipts from the Bookings section at any time.",
+    "default_text": "Yes — an itemized receipt is emailed to you upon completion. You can also download receipts from the Bookings section at any time."
+  },
+  {
+    "section": "Help Center",
+    "label": "What areas do you serve?",
+    "default_text": "What areas do you serve?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Coverage initially follows a 100 km radius centered on Manila, reaching north into Bulacan and south through Cavite. Your map pin must be within the current service radius; operating hours and mechanic availability also apply.",
+    "default_text": "Coverage initially follows a 100 km radius centered on Manila, reaching north into Bulacan and south through Cavite. Your map pin must be within the current service radius; operating hours and mechanic availability also apply."
+  },
+  {
+    "section": "Help Center",
+    "label": "How do I contact support?",
+    "default_text": "How do I contact support?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Open support from the relevant booking to include its context. Scheduled and roadside services initially operate 8 AM–6 PM Philippine time, subject to current configured hours.",
+    "default_text": "Open support from the relevant booking to include its context. Scheduled and roadside services initially operate 8 AM–6 PM Philippine time, subject to current configured hours."
+  },
+  {
+    "section": "Help Center",
+    "label": "Is there a mobile app?",
+    "default_text": "Is there a mobile app?"
+  },
+  {
+    "section": "Help Center",
+    "label": "Yes — LS Customs is available as a Progressive Web App (install from your browser) and on iOS and Android. Search \"LS Customs\" in your app store or add to Home Screen for the full experience.",
+    "default_text": "Yes — LS Customs is available as a Progressive Web App (install from your browser) and on iOS and Android. Search \"LS Customs\" in your app store or add to Home Screen for the full experience."
+  },
+  {
+    "section": "Help Center",
+    "label": "Getting Started",
+    "default_text": "Getting Started"
+  },
+  {
+    "section": "Help Center",
+    "label": "Set up your account, profile, and first booking.",
+    "default_text": "Set up your account, profile, and first booking."
+  },
+  {
+    "section": "Help Center",
+    "label": "Browse, book, extend, and return vehicles.",
+    "default_text": "Browse, book, extend, and return vehicles."
+  },
+  {
+    "section": "Help Center",
+    "label": "Book, track, and manage mobile service appointments.",
+    "default_text": "Book, track, and manage mobile service appointments."
+  },
+  {
+    "section": "Help Center",
+    "label": "Bookings & History",
+    "default_text": "Bookings & History"
+  },
+  {
+    "section": "Help Center",
+    "label": "View past services, receipts, and booking status.",
+    "default_text": "View past services, receipts, and booking status."
+  },
+  {
+    "section": "Help Center",
+    "label": "Profile settings, vehicles, passwords, and data.",
+    "default_text": "Profile settings, vehicles, passwords, and data."
+  },
+  {
+    "section": "Help Center",
+    "label": "Payments, refunds, invoices, and pricing.",
+    "default_text": "Payments, refunds, invoices, and pricing."
+  },
+  {
+    "section": "Help Center",
+    "label": "Creating Your Account",
+    "default_text": "Creating Your Account"
+  },
+  {
+    "section": "Help Center",
+    "label": "Sign up with email, Google, or Apple in under a minute.",
+    "default_text": "Sign up with email, Google, or Apple in under a minute."
+  },
+  {
+    "section": "Help Center",
+    "label": "Your First Rental Booking",
+    "default_text": "Your First Rental Booking"
+  },
+  {
+    "section": "Help Center",
+    "label": "Step-by-step guide to browsing, selecting, and confirming your first vehicle.",
+    "default_text": "Step-by-step guide to browsing, selecting, and confirming your first vehicle."
+  },
+  {
+    "section": "Help Center",
+    "label": "Your First Mobile Service",
+    "default_text": "Your First Mobile Service"
+  },
+  {
+    "section": "Help Center",
+    "label": "How to schedule a mechanic, set your location, and prepare for arrival.",
+    "default_text": "How to schedule a mechanic, set your location, and prepare for arrival."
+  },
+  {
+    "section": "Help Center",
+    "label": "Browsing and Filtering Vehicles",
+    "default_text": "Browsing and Filtering Vehicles"
+  },
+  {
+    "section": "Help Center",
+    "label": "Use categories, price ranges, and features to find the right car.",
+    "default_text": "Use categories, price ranges, and features to find the right car."
+  },
+  {
+    "section": "Help Center",
+    "label": "Pickup and Drop-off Process",
+    "default_text": "Pickup and Drop-off Process"
+  },
+  {
+    "section": "Help Center",
+    "label": "What to bring, where to go, and how to inspect your vehicle.",
+    "default_text": "What to bring, where to go, and how to inspect your vehicle."
+  },
+  {
+    "section": "Help Center",
+    "label": "Extending a Rental Booking",
+    "default_text": "Extending a Rental Booking"
+  },
+  {
+    "section": "Help Center",
+    "label": "How to extend your rental and what pricing applies.",
+    "default_text": "How to extend your rental and what pricing applies."
+  },
+  {
+    "section": "Help Center",
+    "label": "Service Categories & Pricing",
+    "default_text": "Service Categories & Pricing"
+  },
+  {
+    "section": "Help Center",
+    "label": "Oil changes, brake service, diagnostics, and more — with typical prices.",
+    "default_text": "Oil changes, brake service, diagnostics, and more — with typical prices."
+  },
+  {
+    "section": "Help Center",
+    "label": "Scheduling Your Appointment",
+    "default_text": "Scheduling Your Appointment"
+  },
+  {
+    "section": "Help Center",
+    "label": "Choose a date, time slot, and service address on the interactive calendar.",
+    "default_text": "Choose a date, time slot, and service address on the interactive calendar."
+  },
+  {
+    "section": "Help Center",
+    "label": "Using Live Tracking",
+    "default_text": "Using Live Tracking"
+  },
+  {
+    "section": "Help Center",
+    "label": "Follow your mechanic's real-time location on the map.",
+    "default_text": "Follow your mechanic's real-time location on the map."
+  },
+  {
+    "section": "Help Center",
+    "label": "Viewing Your Bookings",
+    "default_text": "Viewing Your Bookings"
+  },
+  {
+    "section": "Help Center",
+    "label": "Find, filter, and search past and upcoming bookings.",
+    "default_text": "Find, filter, and search past and upcoming bookings."
+  },
+  {
+    "section": "Help Center",
+    "label": "Downloading Receipts",
+    "default_text": "Downloading Receipts"
+  },
+  {
+    "section": "Help Center",
+    "label": "Access and print your booking receipts as PDF.",
+    "default_text": "Access and print your booking receipts as PDF."
+  },
+  {
+    "section": "Help Center",
+    "label": "Managing Your Vehicles",
+    "default_text": "Managing Your Vehicles"
+  },
+  {
+    "section": "Help Center",
+    "label": "Add, edit, or remove vehicles from your account.",
+    "default_text": "Add, edit, or remove vehicles from your account."
+  },
+  {
+    "section": "Help Center",
+    "label": "Updating Your Profile",
+    "default_text": "Updating Your Profile"
+  },
+  {
+    "section": "Help Center",
+    "label": "Change your name, email, phone, and address.",
+    "default_text": "Change your name, email, phone, and address."
+  },
+  {
+    "section": "Help Center",
+    "label": "Payment Methods",
+    "default_text": "Payment Methods"
+  },
+  {
+    "section": "Help Center",
+    "label": "Adding, removing, and managing saved payment cards.",
+    "default_text": "Adding, removing, and managing saved payment cards."
+  },
+  {
+    "section": "Help Center",
+    "label": "Exporting Invoices",
+    "default_text": "Exporting Invoices"
+  },
+  {
+    "section": "Help Center",
+    "label": "Generate and export invoices for business or tax records.",
+    "default_text": "Generate and export invoices for business or tax records."
+  }
+]

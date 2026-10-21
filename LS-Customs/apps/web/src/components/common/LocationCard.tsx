@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * LocationCard — geolocation picker with map embed.
  * Uses the geocode-address Edge Function for address-to-coordinate lookup
@@ -15,6 +16,8 @@ interface LocationCardProps {
 }
 
 export function LocationCard({ onNotify, isExpanded: isExpandedProp, onToggleExpand }: LocationCardProps) {
+  const websiteText = useWebsiteText("Shared")
+
   const [internalExpanded, setInternalExpanded] = useState(false)
   const isExpanded = isExpandedProp !== undefined ? isExpandedProp : internalExpanded
   const setIsExpanded = (expanded: boolean) => {
@@ -76,8 +79,8 @@ export function LocationCard({ onNotify, isExpanded: isExpandedProp, onToggleExp
     <article className={`location-card ${isExpanded ? 'expanded' : ''}`}>
       <div className="card-top">
         <div>
-          <p className="eyebrow">SHARE YOUR LOCATION</p>
-          <h3>{coordinates ? address : 'Open your location'}</h3>
+          <p className="eyebrow">{websiteText("SHARE YOUR LOCATION")}</p>
+          <h3>{coordinates ? address : websiteText("Open your location")}</h3>
         </div>
         <MapPin className="pin" size={24} />
       </div>
@@ -103,7 +106,7 @@ export function LocationCard({ onNotify, isExpanded: isExpandedProp, onToggleExp
             onClick={toggleExpand}
             role="button"
             tabIndex={0}
-            title="Click to view interactive map"
+            title={websiteText("Click to view interactive map")}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault()
@@ -118,20 +121,19 @@ export function LocationCard({ onNotify, isExpanded: isExpandedProp, onToggleExp
               <MapPin size={16} />
             </div>
             <div className="map-lines-hint">
-              <span>Click to view map</span>
+              <span>{websiteText("Click to view map")}</span>
             </div>
           </div>
         )}
       </div>
 
-      <p className="location-helper">Let mechanics see where to meet you for on-site service.</p>
+      <p className="location-helper">{websiteText("Let mechanics see where to meet you for on-site service.")}</p>
       
       <div className="location-actions">
         <button className="text-button" onClick={useCurrentLocation} disabled={loading}>
-          {loading ? 'Locating...' : 'Open my location'} <MapPin size={14} />
+          {loading ? websiteText("Locating...") : websiteText("Open my location")} <MapPin size={14} />
         </button>
-        <button className="text-button" onClick={() => void geocodeAddress()} disabled={loading}>
-          Find address <ChevronRight size={14} />
+        <button className="text-button" onClick={() => void geocodeAddress()} disabled={loading}>{websiteText("Find address")} <ChevronRight size={14} />
         </button>
       </div>
     </article>

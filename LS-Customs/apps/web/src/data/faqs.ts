@@ -9,19 +9,19 @@ export const faqItems: FaqItem[] = [
   {
     id: 'rental-1',
     question: 'How do I book a rental vehicle?',
-    answer: 'Browse vehicles on the Rentals page, select your preferred car, choose pickup and drop-off dates, and confirm with a valid payment method. You’ll receive an instant confirmation with pickup instructions.',
+    answer: 'Choose a vehicle, pickup and return times, and online or cash payment. Upload your driver’s license in the payment section for admin review. Approval opens online payment for three hours or confirms a cash reservation, payable before handover.',
     category: 'rentals',
   },
   {
     id: 'rental-2',
     question: 'What is the cancellation policy for rentals?',
-    answer: 'Free cancellation is available up to 24 hours before pickup for short-term rentals. Extended and premium rentals may have different windows shown at checkout. Refunds are processed within 7–10 business days.',
+    answer: 'Prepaid rentals cancelled before handover receive a full refund after admin approval. Confirmed cash rentals cannot be cancelled by customers; contact support. Early returns have no automatic refund.',
     category: 'rentals',
   },
   {
     id: 'rental-3',
     question: 'Can I extend my rental after pickup?',
-    answer: 'Yes — use the "Extend Booking" button in the Bookings section. If your vehicle is available, you can extend in 24-hour increments up to 14 days. Pricing is prorated.',
+    answer: 'Request an extension from your booking before the original return deadline. Availability, license validity, admin approval and payment must be secured before that deadline. Each started extra 24 hours costs the current daily rate.',
     category: 'rentals',
   },
   {
@@ -53,7 +53,7 @@ export const faqItems: FaqItem[] = [
   {
     id: 'mechanic-3',
     question: 'What if the mechanic can’t fix my issue?',
-    answer: 'All our mechanics come with a 30-day workmanship guarantee. If there’s a problem with the service, contact us within 30 days and we’ll make it right or provide a full refund.',
+    answer: 'Open booking-linked support. If approved extra work is declined and the original service cannot proceed, the mechanic escalates the issue for admin review. Refunds depend on the booking stage and reviewed outcome.',
     category: 'mechanic',
   },
   {
@@ -65,7 +65,7 @@ export const faqItems: FaqItem[] = [
   {
     id: 'mechanic-5',
     question: 'Can I track my mechanic\'s arrival?',
-    answer: 'Yes — once a mechanic is assigned, you’ll see them on the live map in the app. You’ll get status updates: dispatched, en route, and arrived.',
+    answer: 'During travel, the map shows actual mechanic GPS. A location older than 60 seconds is marked last seen and has no ETA. GPS availability depends on device permissions and connectivity.',
     category: 'mechanic',
   },
 
@@ -73,25 +73,25 @@ export const faqItems: FaqItem[] = [
   {
     id: 'billing-1',
     question: 'What payment methods do you accept?',
-    answer: 'We accept Visa, Mastercard, American Express, Discover, Apple Pay, and Google Pay. All payments are processed securely through PCI-compliant partners.',
+    answer: 'Choose online payment through the methods available at checkout or cash. Rental cash is collected before handover; mechanic cash is due after service. Admins can also record cash payments toward account balances.',
     category: 'billing',
   },
   {
     id: 'billing-2',
     question: 'When will I be charged for my booking?',
-    answer: 'Your payment method is charged at the time of booking confirmation. For rentals, a temporary hold for the estimated total is placed until completion. Final charges reflect any adjustments.',
+    answer: 'Online mechanic checkout opens immediately after a mechanic accepts, with a ten-minute hold. Online rental payment is due within three hours of license approval. A processing payment cannot be switched to cash.',
     category: 'billing',
   },
   {
     id: 'billing-3',
     question: 'Why was I charged more than expected?',
-    answer: 'Additional charges may apply for late returns, fuel top-ups, tolls, or cleaning fees. You’ll receive an itemized receipt via email after completion. If you have questions, contact our billing team.',
+    answer: 'Late rental return costs PHP250 per completed late hour. Unpaid late fees block new rentals immediately, flag the account after 24 hours, and add PHP1000 at 48 hours and each full day thereafter until fully settled or waived. Approved extras and finalized damage charges appear in your account balance.',
     category: 'billing',
   },
   {
     id: 'billing-4',
     question: 'How do I get a refund?',
-    answer: 'Refunds are processed automatically to the original payment method within 7–10 business days of approval. You’ll receive an email confirmation when the refund is initiated.',
+    answer: 'Submit a cancellation request from the booking. Paid mechanic refunds are 100% before travel, 45% during travel before work, and support-reviewed after work starts. Prepaid rental cancellation before handover is fully refunded. Provider cancellation or a declined provider time change is fully refunded. Provider confirmation and settlement timing appear separately from approval.',
     category: 'billing',
   },
   {
@@ -143,7 +143,7 @@ export const faqItems: FaqItem[] = [
   {
     id: 'bookings-3',
     question: 'What if I need to reschedule my mechanic?',
-    answer: 'Use the "Reschedule" button on your booking card up to 12 hours before the scheduled time. Availability may vary. Emergency changes within 12 hours incur a $25 fee.',
+    answer: 'Request a new time from your booking before travel. Your original appointment stays active until a mechanic accepts the replacement and any price difference is secured. You can decline a provider-proposed time change for a full refund.',
     category: 'bookings',
   },
   {
@@ -157,13 +157,13 @@ export const faqItems: FaqItem[] = [
   {
     id: 'general-1',
     question: 'What areas do you serve?',
-    answer: 'We currently serve the San Francisco Bay Area, Los Angeles, San Diego, and Seattle. Check our coverage map on the website — enter your ZIP code to see if service is available in your neighborhood.',
+    answer: 'Coverage initially follows a 100 km radius centered on Manila, reaching north into Bulacan and south through Cavite. Your map pin must be within the current service radius; operating hours and mechanic availability also apply.',
     category: 'general',
   },
   {
     id: 'general-2',
     question: 'How do I contact support?',
-    answer: 'Visit the Contact Support page for our hours and channels. You can also use the live chat widget (bottom-right corner) for fastest response. Emergency roadside assistance is available 24/7 for signed-in users.',
+    answer: 'Open support from the relevant booking to include its context. Scheduled and roadside services initially operate 8 AM–6 PM Philippine time, subject to current configured hours.',
     category: 'general',
   },
   {

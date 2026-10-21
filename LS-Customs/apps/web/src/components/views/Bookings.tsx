@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 import { useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { CarFront, Loader2, MapPin, Phone, RefreshCw, Star, UserCircle2, Wrench, X, Calendar, Hash, Tag, CreditCard, Check, Ban, CalendarX, BookOpen, ChevronLeft, ChevronRight, Ticket } from 'lucide-react'
@@ -6,6 +7,12 @@ import { useDialog } from '../../hooks/useDialog'
 import { usePaymentIntent } from '../../hooks/usePaymentIntent'
 import { usePaymentStatus } from '../../hooks/usePaymentStatus'
 import { PaymentForm } from '../common/PaymentForm'
+import { RentalBookingCheckout, ServiceBookingCheckout } from '../common/BookingCheckout'
+import { CancellationRequest } from '../common/CancellationRequest'
+import { BookingReports } from '../common/BookingReports'
+import { BookingSupport } from '../common/BookingSupport'
+import { BookingChanges } from '../common/BookingChanges'
+import { BookingCashStatus } from '../common/BookingCashStatus'
 import { PageHeading } from '../common/PageHeading'
 import { MapView } from '../common/map'
 import { VirtualMechanicTracker } from '../common/VirtualMechanicTracker'
@@ -56,19 +63,21 @@ function paymentStatusClass(status: string): string {
 /** Mechanic contact block — shown for service bookings that have a
  *  mechanic_id (i.e. status moved past pending). Phone is a tel: link. */
 function MechanicBlock({ name, phone }: { name?: string | null; phone?: string | null }) {
+  const websiteText = useWebsiteText("Bookings")
+
   return (
     <div className="booking-mechanic">
       <div className="booking-mechanic-icon" aria-hidden="true">
         <UserCircle2 size={18} />
       </div>
       <div className="booking-mechanic-copy">
-        <strong>{name ?? 'Assigned mechanic'}</strong>
+        <strong>{name ?? websiteText("Assigned mechanic")}</strong>
         {phone ? (
           <a className="booking-mechanic-phone" href={`tel:${phone.replace(/[^+\d]/g, '')}`}>
             <Phone size={12} /> {phone}
           </a>
         ) : (
-          <span className="muted">Phone not on file</span>
+          <span className="muted">{websiteText("Phone not on file")}</span>
         )}
       </div>
     </div>
@@ -103,6 +112,7 @@ const SERVICE_STATUS_IDX: Record<string, number> = {
 }
 
 function BookingTimeline({ status, kind }: { status: string; kind: 'rental' | 'service' }) {
+  const websiteText = useWebsiteText("Bookings")
   const steps = kind === 'service' ? SERVICE_STEPS : VEHICLE_STEPS
   const statusMap = kind === 'service' ? SERVICE_STATUS_IDX : VEHICLE_STATUS_IDX
   const isCancelled = status === 'cancelled'
@@ -130,7 +140,7 @@ function BookingTimeline({ status, kind }: { status: string; kind: 'rental' | 's
                 {isDone && <Check size={11} />}
                 {isCancelledStep && <X size={11} />}
               </div>
-              <span className="booking-timeline-label">{label}</span>
+              <span className="booking-timeline-label">{websiteText(label)}</span>
             </div>
           )
         })}
@@ -147,6 +157,8 @@ type BookingDetails =
   | { kind: 'rental'; booking: CustomerVehicleBooking }
 
 function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: BookingDetails; userId: string | undefined; onClose: () => void; onNotify: (message: string) => void }) {
+  const websiteText = useWebsiteText("Bookings")
+
   const dialogRef = useDialog(onClose)
   const { createIntent } = usePaymentIntent()
   const isService = details.kind === 'service'
@@ -263,26 +275,32 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="booking-details-title" tabIndex={-1} className="map-modal booking-details-modal" onClick={(event) => event.stopPropagation()}>
         <header>
           <div>
-            <span className="booking-details-eyebrow">Transaction receipt · {isService ? 'Mobile service' : 'Vehicle rental'}</span>
+            <span className="booking-details-eyebrow">{websiteText("Transaction receipt ·")} {isService ? websiteText("Mobile service") : websiteText("Vehicle rental")}</span>
             <h3 id="booking-details-title">{isService ? (serviceNames || 'Mobile mechanic service') : (details.booking.vehicles?.name ?? 'Vehicle rental')}</h3>
           </div>
-          <button onClick={onClose} aria-label="Close details"><X size={18} /></button>
+          <button onClick={onClose} aria-label={websiteText("Close details")}><X size={18} /></button>
         </header>
         <div className="booking-details-body">
+          <BookingReports bookingId={shared.id} bookingType={details.kind === 'rental' ? 'vehicle' : 'service'} originalTotal={shared.total_price} />
+          <BookingSupport bookingId={shared.id} bookingType={details.kind === 'rental' ? 'vehicle' : 'service'} />
+          {!['cancelled', 'completed'].includes(shared.status) && <BookingChanges bookingId={shared.id} bookingType={details.kind === 'rental' ? 'vehicle' : 'service'} />}
+          <CancellationRequest bookingId={shared.id} bookingType={details.kind === 'rental' ? 'vehicle' : 'service'} />
+          {details.kind === 'rental' && <RentalBookingCheckout bookingId={shared.id} />}
+          {details.kind === 'service' && shared.status === 'pending' && <ServiceBookingCheckout bookingId={shared.id} userId={userId} name={serviceNames || 'Mechanic service'} total={shared.total_price} scheduledAt={details.booking.scheduled_at} />}
           <div className="booking-details-status">
             <span className={`status-pill ${statusClass(shared.status)}`}>{statusLabel(shared.status)}</span>
-            <span className="muted"><Hash size={11} /> {isService ? `service-${shared.id.slice(0, 8)}` : `booking-${shared.id.slice(0, 8)}`}</span>
+            <span className="muted"><Hash size={11} /> {isService ? websiteText("service-{value1}", { value1: String(shared.id.slice(0, 8)) }) : websiteText("booking-{value1}", { value1: String(shared.id.slice(0, 8)) })}</span>
           </div>
-          {details.kind === 'rental' && details.booking.hold_expires_at && (originalPaymentStatus?.status ?? shared.payments?.status) !== 'succeeded' && shared.status === 'pending' && <p>Unpaid reservation expires: {new Date(details.booking.hold_expires_at).toLocaleString()}</p>}
+          {details.kind === 'rental' && details.booking.hold_expires_at && (originalPaymentStatus?.status ?? shared.payments?.status) !== 'succeeded' && shared.status === 'pending' && <p>{websiteText("Unpaid reservation expires:")} {new Date(details.booking.hold_expires_at).toLocaleString()}</p>}
           <BookingTimeline status={shared.status} kind={isService ? 'service' : 'rental'} />
 
           {/* Payment section */}
-          {shared.payments ? (
+          {details.kind === 'service' && details.booking.payment_method === 'cash' ? <BookingCashStatus bookingId={shared.id} status={shared.status} /> : shared.payments ? (
             <div className="booking-payment-section">
-              <h4>Payment</h4>
+              <h4>{websiteText("Payment")}</h4>
               <div className="booking-payment-status-row">
                 <span className={`status-pill ${paymentStatusClass(originalPaymentStatus?.status ?? shared.payments.status)}`}>{paymentStatusLabel(originalPaymentStatus?.status ?? shared.payments.status)}</span>
-                <span className="muted">{shared.payments.provider ?? 'Unknown provider'} · ₱{Number(shared.payments.amount).toLocaleString()}</span>
+                <span className="muted">{shared.payments.provider ?? websiteText("Unknown provider")} · ₱{Number(shared.payments.amount).toLocaleString()}</span>
               </div>
               {['pending', 'failed'].includes(shared.payments.status) && !['cancelled', 'completed'].includes(shared.status) && !retryIntent && (
                 <button
@@ -291,20 +309,20 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
                   onClick={() => void preparePayment()}
                 >
                   {retryingPayment ? <Loader2 size={14} className="spin" /> : <CreditCard size={14} />}
-                  {retryingPayment ? 'Preparing…' : shared.payments.status === 'pending' ? 'Resume payment' : 'Retry payment'}
+                  {retryingPayment ? websiteText("Preparing…") : shared.payments.status === 'pending' ? websiteText("Resume payment") : websiteText("Retry payment")}
                 </button>
               )}
               {retryError && <p className="form-helper review-error">{retryError}</p>}
             </div>
           ) : (
             <div className="booking-payment-section">
-              <h4>Payment</h4>
-              <p className="muted">No payment has been recorded.</p>
-              {shared.status === 'pending' && !(details.kind === 'service' && details.booking.is_emergency) && !retryIntent && <button type="button" disabled={retryingPayment} onClick={() => void preparePayment()}>Pay now</button>}
+              <h4>{websiteText("Payment")}</h4>
+              <p className="muted">{websiteText("No payment has been recorded.")}</p>
+              {shared.status === 'pending' && !(details.kind === 'service' && details.booking.is_emergency) && !retryIntent && <button type="button" disabled={retryingPayment} onClick={() => void preparePayment()}>{websiteText("Pay now")}</button>}
             </div>
           )}
 
-          {(originalPaymentStatus?.status ?? shared.payments?.status) === 'succeeded' && <button type="button" onClick={() => void emailReceipt()}>Email payment receipt</button>}
+          {(originalPaymentStatus?.status ?? shared.payments?.status) === 'succeeded' && <button type="button" onClick={() => void emailReceipt()}>{websiteText("Email payment receipt")}</button>}
           {/* Resume payment form */}
           {retryIntent && retryPaymentInfo?.status !== 'succeeded' && retryPaymentInfo?.status !== 'refunded' && (
             <div className="payment-retry-form">
@@ -347,10 +365,10 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
 
           {isService ? (
             <>
-              <DetailRow icon={Calendar} label="Scheduled" value={new Date(details.booking.scheduled_at).toLocaleString()} />
+              <DetailRow icon={Calendar} label={websiteText("Scheduled")} value={new Date(details.booking.scheduled_at).toLocaleString()} />
               <DetailRow
                 icon={MapPin}
-                label="Service location"
+                label={websiteText("Service location")}
                 value={
                   extractAddressFromNotes(details.booking.notes) ??
                   (details.booking.pin_lat != null && details.booking.pin_lng != null
@@ -358,29 +376,29 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
                     : 'Location to be confirmed')
                 }
               />
-              {isAssigned && mechName && <DetailRow icon={UserCircle2} label="Mechanic" value={mechName} />}
-              {isAssigned && mechPhone && <DetailRow icon={Phone} label="Mechanic phone" value={mechPhone} />}
-              {serviceNames && <DetailRow icon={Tag} label="Services" value={serviceNames} />}
+              {isAssigned && mechName && <DetailRow icon={UserCircle2} label={websiteText("Mechanic")} value={mechName} />}
+              {isAssigned && mechPhone && <DetailRow icon={Phone} label={websiteText("Mechanic phone")} value={mechPhone} />}
+              {serviceNames && <DetailRow icon={Tag} label={websiteText("Services")} value={serviceNames} />}
               {(() => {
                 const promo = parsePromoFromText(details.booking.notes)
                 if (!promo) return null
-                return <DetailRow icon={Ticket} label="Voucher / Promo" value={`${promo.code} (${promo.discount})`} />
+                return <DetailRow icon={Ticket} label={websiteText("Voucher / Promo")} value={`${promo.code} (${promo.discount})`} />
               })()}
-              <DetailRow icon={Tag} label="Total" value={`₱${Number(shared.total_price).toLocaleString()}`} />
-              <DetailRow icon={Calendar} label="Booked on" value={new Date(shared.created_at).toLocaleString()} />
+              <DetailRow icon={Tag} label={websiteText("Total")} value={`₱${Number(shared.total_price).toLocaleString()}`} />
+              <DetailRow icon={Calendar} label={websiteText("Booked on")} value={new Date(shared.created_at).toLocaleString()} />
             </>
           ) : (
             <>
-              <DetailRow icon={Calendar} label="Pickup window" value={`${details.booking.start_date} → ${details.booking.end_date}`} />
-              <DetailRow icon={MapPin} label="Pickup location" value={details.booking.pickup_location ?? 'Pickup location to be confirmed'} />
-              {details.booking.vehicles?.image_url && <DetailRow icon={CarFront} label="Vehicle" value={details.booking.vehicles.name} />}
+              <DetailRow icon={Calendar} label={websiteText("Pickup window")} value={`${details.booking.start_date} → ${details.booking.end_date}`} />
+              <DetailRow icon={MapPin} label={websiteText("Pickup location")} value={details.booking.pickup_location ?? 'Pickup location to be confirmed'} />
+              {details.booking.vehicles?.image_url && <DetailRow icon={CarFront} label={websiteText("Vehicle")} value={details.booking.vehicles.name} />}
               {(() => {
                 const promo = parsePromoFromText(details.booking.pickup_location)
                 if (!promo) return null
-                return <DetailRow icon={Ticket} label="Voucher / Promo" value={`${promo.code} (${promo.discount})`} />
+                return <DetailRow icon={Ticket} label={websiteText("Voucher / Promo")} value={`${promo.code} (${promo.discount})`} />
               })()}
-              <DetailRow icon={Tag} label="Total" value={`₱${Number(shared.total_price).toLocaleString()}`} />
-              <DetailRow icon={Calendar} label="Booked on" value={new Date(shared.created_at).toLocaleString()} />
+              <DetailRow icon={Tag} label={websiteText("Total")} value={`₱${Number(shared.total_price).toLocaleString()}`} />
+              <DetailRow icon={Calendar} label={websiteText("Booked on")} value={new Date(shared.created_at).toLocaleString()} />
             </>
           )}
 
@@ -392,21 +410,21 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
           {canRate && (
             <div className="booking-rating-panel">
               <div>
-                <strong>{reviewId ? 'Your rating' : `Rate this ${isService ? 'mechanic' : 'vehicle'}`}</strong>
-                <span>{reviewId ? 'You can update it within 24 hours.' : 'Share your experience with future customers.'}</span>
+                <strong>{reviewId ? websiteText("Your rating") : websiteText("Rate this {value1}", { value1: String(isService ? 'mechanic' : 'vehicle') })}</strong>
+                <span>{reviewId ? websiteText("You can update it within 24 hours.") : websiteText("Share your experience with future customers.")}</span>
               </div>
-              <div className="rating-stars" aria-label="Choose a rating from 1 to 5">
+              <div className="rating-stars" aria-label={websiteText("Choose a rating from 1 to 5")}>
                 {[1, 2, 3, 4, 5].map((value) => (
-                  <button key={value} type="button" className={value <= rating ? 'active' : ''} aria-label={`${value} star${value === 1 ? '' : 's'}`} onClick={() => setRating(value)}>
+                  <button key={value} type="button" className={value <= rating ? 'active' : ''} aria-label={websiteText("{value1} star{value2}", { value1: String(value), value2: String(value === 1 ? '' : 's') })} onClick={() => setRating(value)}>
                     <Star size={20} fill={value <= rating ? 'currentColor' : 'none'} />
                   </button>
                 ))}
               </div>
-              <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Add an optional comment" rows={2} />
+              <textarea value={comment} onChange={(event) => setComment(event.target.value)} placeholder={websiteText("Add an optional comment")} rows={2} />
               {ratingError && <p className="form-helper review-error">{ratingError}</p>}
               <button className="button dark-button" type="button" disabled={!rating || savingRating} onClick={() => void saveRating()}>
                 {savingRating ? <Loader2 size={15} className="spin" /> : <Star size={15} />}
-                {reviewId ? 'Update rating' : 'Submit rating'}
+                {reviewId ? websiteText("Update rating") : websiteText("Submit rating")}
               </button>
             </div>
           )}
@@ -420,11 +438,10 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
                 type="button"
                 onClick={() => setConfirmCancel(true)}
               >
-                <Ban size={13} /> Cancel booking
-              </button>
+                <Ban size={13} />{' '}{websiteText("Cancel booking")}</button>
             ) : (
               <div className="cancel-confirm-row">
-                <p>Are you sure you want to cancel this booking? This cannot be undone.</p>
+                <p>{websiteText("Are you sure you want to cancel this booking? This cannot be undone.")}</p>
                 <button
                   className="booking-cancel-btn"
                   type="button"
@@ -432,16 +449,14 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
                   onClick={() => void cancelBooking()}
                 >
                   {cancelling ? <Loader2 size={13} className="spin" /> : <Ban size={13} />}
-                  {cancelling ? 'Cancelling…' : 'Yes, cancel'}
+                  {cancelling ? websiteText("Cancelling…") : websiteText("Yes, cancel")}
                 </button>
                 <button
                   className="outline-button"
                   type="button"
                   style={{ fontSize: 12, padding: '6px 12px' }}
                   onClick={() => setConfirmCancel(false)}
-                >
-                  Keep booking
-                </button>
+                >{websiteText("Keep booking")}</button>
                 {cancelError && <p style={{ color: '#dc2626' }}>{cancelError}</p>}
               </div>
             )}
@@ -459,11 +474,9 @@ function BookingDetailsModal({ details, userId, onClose, onNotify }: { details: 
                 onClose()
                 details.onViewMap()
               }}
-            >
-              View live map
-            </button>
+            >{websiteText("View live map")}</button>
           )}
-          <button className="outline-button" onClick={onClose}>Close</button>
+          <button className="outline-button" onClick={onClose}>{websiteText("Close")}</button>
         </footer>
       </div>
     </div>,
@@ -480,6 +493,8 @@ export function Bookings({
   onBookServiceWithDate,
   onRentCarWithDate,
 }: BookingsProps) {
+  const websiteText = useWebsiteText("Bookings")
+
   const { vehicleBookings, serviceBookings, loading, error, refetch } = useCustomerBookings(userId)
   const [liveBooking, setLiveBooking] = useState<CustomerServiceBooking | null>(null)
   const [details, setDetails] = useState<BookingDetails | null>(null)
@@ -494,8 +509,11 @@ export function Bookings({
     const match = serviceBookings.find((b) => b.id === selectedBookingId)
     if (match) {
       setDetails({ kind: 'service', booking: match, onViewMap: () => setLiveBooking(match) })
+    } else {
+      const rental = vehicleBookings.find(b => b.id === selectedBookingId)
+      if (rental) setDetails({ kind: 'rental', booking: rental })
     }
-  }, [selectedBookingId, serviceBookings])
+  }, [selectedBookingId, serviceBookings, vehicleBookings])
 
   // Terminal statuses move out of "Active" and into "All history" so the
   // active queue only shows work that still needs the customer's attention.
@@ -542,12 +560,12 @@ export function Bookings({
 
   return (
     <div className={`page ${scrollRef.className}`} ref={scrollRef.ref}>
-      <PageHeading eyebrow="YOUR ACTIVITY" title="Bookings & progress" detail="Keep an eye on your rentals and mobile service appointments." action={<button className="outline-button" onClick={() => void refetch()}><RefreshCw size={15} /> Refresh</button>} />
+      <PageHeading eyebrow={websiteText("YOUR ACTIVITY")} title={websiteText("Bookings & progress")} detail={websiteText("Keep an eye on your rentals and mobile service appointments.")} action={<button className="outline-button" onClick={() => void refetch()}><RefreshCw size={15} />{' '}{websiteText("Refresh")}</button>} />
       <div className="booking-tabs" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
         <div style={{ display: 'flex', gap: 20 }}>
-          <button className={tab === 'active' ? 'active' : ''} onClick={() => setTab('active')}>Active <b>{activeCount}</b></button>
-          <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>All history <b>{historyCount}</b></button>
-          <button className={tab === 'calendar' ? 'active' : ''} onClick={() => setTab('calendar')}>Schedule Calendar <b>{totalCount}</b></button>
+          <button className={tab === 'active' ? 'active' : ''} onClick={() => setTab('active')}>{websiteText("Active")} <b>{activeCount}</b></button>
+          <button className={tab === 'history' ? 'active' : ''} onClick={() => setTab('history')}>{websiteText("All history")} <b>{historyCount}</b></button>
+          <button className={tab === 'calendar' ? 'active' : ''} onClick={() => setTab('calendar')}>{websiteText("Schedule Calendar")} <b>{totalCount}</b></button>
         </div>
         <div style={{ display: 'flex', gap: 4, background: '#f1f5f9', padding: 3, borderRadius: 20, marginBottom: 12 }}>
           <button
@@ -564,9 +582,7 @@ export function Bookings({
               color: tab !== 'calendar' ? '#ffffff' : 'var(--muted)',
               transition: 'all 0.15s ease',
             }}
-          >
-            List View
-          </button>
+          >{websiteText("List View")}</button>
           <button
             type="button"
             onClick={() => setTab('calendar')}
@@ -585,16 +601,14 @@ export function Bookings({
               transition: 'all 0.15s ease',
             }}
           >
-            <Calendar size={13} />
-            Calendar View
-          </button>
+            <Calendar size={13} />{' '}{websiteText("Calendar View")}</button>
         </div>
       </div>
-      <div className="booking-type-filter" aria-label="Filter bookings by type">
-        <span>Show</span>
+      <div className="booking-type-filter" aria-label={websiteText("Filter bookings by type")}>
+        <span>{websiteText("Show")}</span>
         {(['all', 'rentals', 'services'] as const).map((type) => (
           <button key={type} className={bookingType === type ? 'active' : ''} onClick={() => setBookingType(type)}>
-            {type === 'all' ? 'Everything' : type === 'rentals' ? 'Rentals' : 'Mechanical services'}
+            {type === 'all' ? websiteText("Everything") : type === 'rentals' ? websiteText("Rentals") : websiteText("Mechanical services")}
           </button>
         ))}
       </div>
@@ -639,17 +653,17 @@ export function Bookings({
         )
       ) : loading ? (
         <BookingGridSkeleton count={4} />
-      ) : error ? <div className="empty-state"><p>{error}</p><button className="button dark-button" onClick={() => void refetch()}>Retry</button></div> : vehicleBookings.length === 0 && serviceBookings.length === 0 ? (
+      ) : error ? <div className="empty-state"><p>{error}</p><button className="button dark-button" onClick={() => void refetch()}>{websiteText("Retry")}</button></div> : vehicleBookings.length === 0 && serviceBookings.length === 0 ? (
         <div className="bookings-empty-state">
           <div className="bookings-empty-icon"><BookOpen size={28} /></div>
-          <h3>No bookings yet</h3>
-          <p>Your rental and service bookings will appear here once you make your first booking.</p>
+          <h3>{websiteText("No bookings yet")}</h3>
+          <p>{websiteText("Your rental and service bookings will appear here once you make your first booking.")}</p>
           <div className="bookings-empty-actions">
-            <button className="button dark-button" onClick={() => onView?.('rentals')} type="button"><CalendarX size={14} /> Rent a vehicle</button>
-            <button className="outline-button" onClick={() => onView?.('services')} type="button">Book a mechanic</button>
+            <button className="button dark-button" onClick={() => onView?.('rentals')} type="button"><CalendarX size={14} />{' '}{websiteText("Rent a vehicle")}</button>
+            <button className="outline-button" onClick={() => onView?.('services')} type="button">{websiteText("Book a mechanic")}</button>
           </div>
         </div>
-      ) : visibleVehicles.length === 0 && visibleServices.length === 0 ? <div className="empty-state"><p>{tab === 'active' ? 'No active bookings right now. Completed and cancelled bookings live in All history.' : 'No completed or cancelled bookings yet.'}</p></div> : (
+      ) : visibleVehicles.length === 0 && visibleServices.length === 0 ? <div className="empty-state"><p>{tab === 'active' ? websiteText("No active bookings right now. Completed and cancelled bookings live in All history.") : websiteText("No completed or cancelled bookings yet.")}</p></div> : (
         <>
           <div className="booking-grid">
             {paginatedListBookings.map((item) => {
@@ -662,21 +676,21 @@ export function Bookings({
                     className={`booking-card booking-card-clickable ${isSelected ? 'selected' : ''}`}
                     key={`vehicle-${booking.id}`}
                     onClick={() => setDetails({ kind: 'rental', booking })}
-                    aria-label={`View details for ${booking.vehicles?.name ?? 'rental'}`}
+                    aria-label={websiteText("View details for {value1}", { value1: String(booking.vehicles?.name ?? 'rental') })}
                   >
                     <div className="booking-card-head">
                       <div>
                         <span className={`status-pill ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span>
                         {booking.payments && <span className={`status-pill ${paymentStatusClass(booking.payments.status)}`}>{paymentStatusLabel(booking.payments.status)}</span>}
-                        <p>Rental · {booking.start_date} to {booking.end_date}</p>
+                        <p>{websiteText("Rental ·")} {booking.start_date}{' '}{websiteText("to")} {booking.end_date}</p>
                       </div>
                       <CarFront size={22} />
                     </div>
-                    <h3>{booking.vehicles?.name ?? 'Vehicle rental'}</h3>
-                    <p className="muted">{booking.pickup_location ?? 'Pickup location to be confirmed'}</p>
+                    <h3>{booking.vehicles?.name ?? websiteText("Vehicle rental")}</h3>
+                    <p className="muted">{booking.pickup_location ?? websiteText("Pickup location to be confirmed")}</p>
                     <div className="booking-actions">
                       <strong>₱{Number(booking.total_price).toLocaleString()}</strong>
-                      <span className="muted">booking-{booking.id.slice(0, 8)}</span>
+                      <span className="muted">{websiteText("booking-")}{booking.id.slice(0, 8)}</span>
                     </div>
                   </button>
                 )
@@ -691,25 +705,25 @@ export function Bookings({
                   className={`booking-card booking-card-clickable ${isSelected ? 'selected' : ''}`}
                   key={`service-${booking.id}`}
                   onClick={() => setDetails({ kind: 'service', booking, onViewMap: () => setLiveBooking(booking) })}
-                  aria-label={`View details for service booking`}
+                  aria-label={websiteText("View details for service booking")}
                 >
                   <div className="booking-card-head">
                     <div>
                       <span className={`status-pill ${statusClass(booking.status)}`}>{statusLabel(booking.status)}</span>
                       {booking.payments && <span className={`status-pill ${paymentStatusClass(booking.payments.status)}`}>{paymentStatusLabel(booking.payments.status)}</span>}
-                      <p>Mobile service · {new Date(booking.scheduled_at).toLocaleString()}</p>
+                      <p>{websiteText("Mobile service ·")} {new Date(booking.scheduled_at).toLocaleString()}</p>
                     </div>
                     <Wrench size={22} />
                   </div>
-                  <h3>{booking.service_booking_items?.map((it) => it.mechanic_services?.name).filter(Boolean).join(', ') || 'Mobile mechanic service'}</h3>
-                  <p className="muted"><MapPin size={13} /> Location saved for this booking</p>
+                  <h3>{booking.service_booking_items?.map((it) => it.mechanic_services?.name).filter(Boolean).join(', ') || websiteText("Mobile mechanic service")}</h3>
+                  <p className="muted"><MapPin size={13} />{' '}{websiteText("Location saved for this booking")}</p>
                   {/* Only display the mechanic once assigned */}
                   {['assigned', 'en_route', 'in_progress', 'completed'].includes(booking.status) && booking.mechanic_id && mech && (
                     <MechanicBlock name={mech.profiles?.full_name ?? null} phone={mech.profiles?.phone ?? null} />
                   )}
                   <div className="booking-actions">
                     <strong>₱{Number(booking.total_price).toLocaleString()}</strong>
-                    <span className="muted">service-{booking.id.slice(0, 8)}</span>
+                    <span className="muted">{websiteText("service-")}{booking.id.slice(0, 8)}</span>
                   </div>
                 </button>
               )
@@ -734,11 +748,9 @@ export function Bookings({
                 color: 'var(--muted, #64748b)',
               }}
             >
-              <span>
-                Showing {(safeListPage - 1) * LIST_PAGE_SIZE + 1} to{' '}
-                {Math.min(safeListPage * LIST_PAGE_SIZE, combinedBookings.length)} of{' '}
-                {combinedBookings.length} bookings
-              </span>
+              <span>{websiteText("Showing")} {(safeListPage - 1) * LIST_PAGE_SIZE + 1}{' '}{websiteText("to")}{' '}
+                {Math.min(safeListPage * LIST_PAGE_SIZE, combinedBookings.length)}{' '}{websiteText("of")}{' '}
+                {combinedBookings.length}{' '}{websiteText("bookings")}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <button
                   type="button"
@@ -755,10 +767,8 @@ export function Bookings({
                     gap: 5,
                   }}
                 >
-                  <ChevronLeft size={14} /> Previous
-                </button>
-                <span style={{ fontWeight: 700, color: 'var(--ink, #1a202c)', minWidth: 70, textAlign: 'center' }}>
-                  Page {safeListPage} of {totalListPages}
+                  <ChevronLeft size={14} />{' '}{websiteText("Previous")}</button>
+                <span style={{ fontWeight: 700, color: 'var(--ink, #1a202c)', minWidth: 70, textAlign: 'center' }}>{websiteText("Page")} {safeListPage}{' '}{websiteText("of")} {totalListPages}
                 </span>
                 <button
                   type="button"
@@ -774,8 +784,7 @@ export function Bookings({
                     alignItems: 'center',
                     gap: 5,
                   }}
-                >
-                  Next <ChevronRight size={14} />
+                >{websiteText("Next")} <ChevronRight size={14} />
                 </button>
               </div>
             </div>
@@ -801,8 +810,8 @@ export function Bookings({
           <div className="map-modal-backdrop" onClick={() => setLiveBooking(null)}>
             <div className="map-modal" onClick={(event) => event.stopPropagation()} style={{ maxWidth: isEnRoute ? 640 : 540 }}>
               <header>
-                <h3>{isEnRoute ? 'Mechanic location' : 'Service location'}</h3>
-                <button onClick={() => setLiveBooking(null)} aria-label="Close map"><X size={18} /></button>
+                <h3>{isEnRoute ? websiteText("Mechanic location") : websiteText("Service location")}</h3>
+                <button onClick={() => setLiveBooking(null)} aria-label={websiteText("Close map")}><X size={18} /></button>
               </header>
               <div style={{ padding: '12px 16px' }}>
                 {['assigned', 'en_route', 'in_progress'].includes(liveBooking.status) && (

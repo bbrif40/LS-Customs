@@ -1,0 +1,6 @@
+# Centralize admin items requiring action
+
+Accepted during the design interview on 2026-10-20; implemented locally; target deployment and device/provider checks remain in IMPLEMENTATION_PLAN.md. Add an admin dashboard action queue covering license reviews, cancellation requests, failed refunds, unpaid balances, and damage disputes. Order items by urgency and deadline, and link each directly to its relevant customer, booking, payment, review, or dispute record.
+
+This makes time-sensitive obligations visible together instead of requiring admins to discover them across separate panels. Use the agreed deadlines, including the 1-hour license-review hold and 48-hour damage dispute window; do not invent new deadlines for items whose response period has not been agreed. Admins may claim queue items so other admins can see who is handling them, and may reassign them. Ownership coordinates work and does not restrict access: all admins retain access under the single-role policy. Prevent duplicate financial actions even when two admins act on the same record.
+

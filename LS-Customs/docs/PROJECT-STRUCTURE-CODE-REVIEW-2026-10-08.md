@@ -15,7 +15,7 @@ Reviewed 2026-10-08. This is a source-based map of the current project, with exc
 | Shared compiler configuration | `packages/config` | TypeScript base settings and ESLint preset. |
 | Documentation | `docs` | Design/specification/API/schema records; older documents may describe planned rather than current functionality. |
 | Local evidence | `artifacts` | Simulation report and test evidence; APK and private/local diagnostic outputs should not be blindly committed. |
-| Commit protection | `.githooks/pre-commit`, backend `scripts/check-secrets.mjs` | Checks staged content for credentials. |
+| Commit protection | `.githooks/pre-commit`, backend `scripts/check-secrets.ts` | Checks staged content for credentials. |
 
 ```mermaid
 flowchart LR
@@ -252,3 +252,4 @@ Corrected: phantom payments/revenue, invented admin cash/timestamps, nonexistent
 Remaining structural debt: `App.tsx`, `AdminBookings.tsx` and `useAdminData.ts` combine many responsibilities; extract narrow domain hooks/modules when making future substantial changes. Shared generated types must be refreshed after schema changes. Some casts and older static datasets are retained; they are not authoritative payment/authorization sources. Initial production JavaScript remains large; the build reports a chunk-size warning, so performance is not certified by the functional tests. Older `ARCHITECTURE.md` sections call the now-existing frontend a future phase; use this source map for current runtime behavior.
 
 Verification limits: no real charge/refund was performed; no new physical APK was exercised in this remediation; original email/SMS arrival was confirmed by the user, not by inbox/handset inspection. Gmail/SMS provider acceptance cannot establish delivery/read status. Fleet photographs, a real confirmed customer pin for historical bookings, provider delivery receipts, and native device verification require real operator/device evidence. These limits cannot honestly be eliminated through source changes alone.
+

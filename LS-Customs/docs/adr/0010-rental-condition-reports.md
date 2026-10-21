@@ -1,0 +1,11 @@
+# Record vehicle condition at handover and return
+
+Accepted during the design interview on 2026-10-20; implemented locally; target deployment and device/provider checks remain in IMPLEMENTATION_PLAN.md. Admins record vehicle condition at both handover and return, including photos and notes. Make both reports visible to the rental customer so pre-existing damage can be compared with condition at return. This provides shared evidence for the rental lifecycle instead of relying on a return-only assessment. Before vehicle release, let the customer review the handover report and raise discrepancies for resolution, then require acknowledgement. Save the acknowledgement with the report version so it identifies the exact photos and notes reviewed. Before finalizing a damage charge, show the customer the handover/return comparison and proposed amount. Allow the customer to dispute the return report and provide evidence; require admin review before posting the charge. Customers have 48 hours from the first successful email or in-app notification delivery to dispute a proposed damage charge. Record that first successful delivery timestamp and calculate the deadline from it; a failed delivery attempt does not start the window. Show the exact response deadline and keep the charge pending during that window. If no dispute arrives, an admin may finalize it after the deadline; if disputed, require admin review before posting. Proposed damage charges require an itemized repair estimate and supporting evidence. Show each repair item, its cost, and linked supporting photos to both customer and admin before review. Finalized unpaid damage charges block new vehicle rental bookings until settled. Customers may settle them online or through cash collected and recorded by an admin. Do not apply the ₱1,000 daily unpaid late-fee penalty to damage charges; that penalty remains specific to late-return debt. Pending or disputed damage proposals are not finalized debt and do not trigger this restriction. Report correction rules remain unresolved.
+
+
+
+
+
+
+Restore rental booking access only when every blocking balance is settled, including late-return debt, its accumulated penalties, and finalized damage charges. Clearing one debt or its flag must not remove a restriction caused by another outstanding balance.
+

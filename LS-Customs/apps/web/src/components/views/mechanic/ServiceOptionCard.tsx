@@ -1,3 +1,5 @@
+import { useWebsiteText } from "../../../hooks/useWebsiteText"
+import { serviceCategoryLabel } from '../../../utils/serviceCategory'
 /**
  * ServiceOptionCard — selectable card for a single mechanic service.
  * Wraps the existing `.service-row` visual with a button affordance so
@@ -13,6 +15,8 @@ interface ServiceOptionCardProps {
 }
 
 export function ServiceOptionCard({ service, selected, onSelect }: ServiceOptionCardProps) {
+  const websiteText = useWebsiteText("Mechanic")
+
   return (
     <button
       type="button"
@@ -22,17 +26,17 @@ export function ServiceOptionCard({ service, selected, onSelect }: ServiceOption
     >
       <div className="service-row-icon"><Wrench size={22} /></div>
       <div className="service-row-copy">
-        <span className="eyebrow">{service.category.replace(/_/g, ' ')}</span>
+        <span className="eyebrow">{websiteText(serviceCategoryLabel(service.category))}</span>
         <h3>{service.name}</h3>
-        <p>{service.description || 'Professional service performed at your location, with transparent pricing.'}</p>
+        <p>{service.description || websiteText("Professional service performed at your location, with transparent pricing.")}</p>
         <small>
-          <Clock3 size={13} /> Est. {service.duration}
+          <Clock3 size={13} />{' '}{websiteText("Est.")} {service.duration}
         </small>
       </div>
       <div className="service-row-price">
         <strong>{service.price}</strong>
-        <small className="distance-fee-hint">+ ₱85/5km travel fee</small>
-        <span className="select-indicator">{selected ? 'Selected' : 'Choose'}</span>
+        <small className="distance-fee-hint">{websiteText("+ ₱85/5km travel fee")}</small>
+        <span className="select-indicator">{selected ? websiteText("Selected") : websiteText("Choose")}</span>
       </div>
     </button>
   )

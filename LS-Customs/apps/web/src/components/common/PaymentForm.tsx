@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * PaymentForm — provider-agnostic payment collection.
  *
@@ -52,6 +53,8 @@ export function PaymentForm({
   onError,
   disabled,
 }: PaymentFormProps) {
+  const websiteText = useWebsiteText("Shared")
+
   const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
   const stripePromise = useMemo(() => publishableKey ? loadStripe(publishableKey) : null, [publishableKey])
   if (provider === 'paymongo') {
@@ -72,7 +75,7 @@ export function PaymentForm({
   if (!publishableKey) {
     return (
       <div className="payment-form-error">
-        <p>Stripe is not configured. Please contact support.</p>
+        <p>{websiteText("Stripe is not configured. Please contact support.")}</p>
       </div>
     )
   }
@@ -132,6 +135,8 @@ function StripeCardForm({
   onError,
   disabled,
 }: StripeCardFormProps) {
+  const websiteText = useWebsiteText("Shared")
+
   const stripe = useStripe()
   const elements = useElements()
   const [loading, setLoading] = useState(false)
@@ -175,7 +180,7 @@ function StripeCardForm({
   return (
     <div className="payment-form-stripe">
       <div className="payment-amount-summary">
-        <span className="muted">Total amount</span>
+        <span className="muted">{websiteText("Total amount")}</span>
         <strong>{currency} {amount.toFixed(2)}</strong>
       </div>
 
@@ -196,7 +201,7 @@ function StripeCardForm({
           style={{ width: '100%' }}
         >
           {loading ? <Loader2 size={16} className="spin" /> : <CreditCard size={16} />}
-          {loading ? 'Processing…' : disabled ? 'Loading…' : `Pay ${currency} ${amount.toFixed(2)}`}
+          {loading ? websiteText("Processing…") : disabled ? websiteText("Loading…") : websiteText("Pay {value1} {value2}", { value1: String(currency), value2: String(amount.toFixed(2)) })}
         </button>
       </form>
     </div>
@@ -233,6 +238,8 @@ function PaymongoForm({
   onError,
   disabled,
 }: PaymongoFormProps) {
+  const websiteText = useWebsiteText("Shared")
+
   const [waitingForPayment, setWaitingForPayment] = useState(false)
   const popupTimer = useRef<ReturnType<typeof setInterval> | null>(null)
   useEffect(() => () => { if (popupTimer.current) clearInterval(popupTimer.current) }, [])
@@ -291,21 +298,19 @@ function PaymongoForm({
   return (
     <div className="payment-form-paymongo" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       <div className="payment-amount-summary" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px' }}>
-        <span className="muted">Total to pay</span>
+        <span className="muted">{websiteText("Total to pay")}</span>
         <strong style={{ fontSize: '18px', color: '#10b981' }}>₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
       </div>
 
-      <PaymentMethodBadges compact title="PayMongo Secure Channels" />
+      <PaymentMethodBadges compact title={websiteText("PayMongo Secure Channels")} />
 
       {waitingForPayment ? (
         <div style={{ background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#34d399', fontWeight: 600, marginBottom: '6px' }}>
             <Loader2 size={16} className="spin" />
-            <span>Awaiting PayMongo Confirmation…</span>
+            <span>{websiteText("Awaiting PayMongo Confirmation…")}</span>
           </div>
-          <p className="muted" style={{ fontSize: '12px', margin: '0 0 10px 0' }}>
-            Please finish your payment in the checkout window. This page will update automatically once verified.
-          </p>
+          <p className="muted" style={{ fontSize: '12px', margin: '0 0 10px 0' }}>{websiteText("Please finish your payment in the checkout window. This page will update automatically once verified.")}</p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
             <button
               type="button"
@@ -313,16 +318,13 @@ function PaymongoForm({
               onClick={() => handlePay(false)}
               style={{ fontSize: '12px', padding: '4px 8px' }}
             >
-              <ExternalLink size={12} /> Re-open window
-            </button>
+              <ExternalLink size={12} />{' '}{websiteText("Re-open window")}</button>
             <button
               type="button"
               className="button text-button"
               onClick={() => handlePay(true)}
               style={{ fontSize: '12px', padding: '4px 8px' }}
-            >
-              Continue in this tab
-            </button>
+            >{websiteText("Continue in this tab")}</button>
           </div>
         </div>
       ) : (
@@ -335,19 +337,15 @@ function PaymongoForm({
         >
           {disabled ? (
             <>
-              <Loader2 size={16} className="spin" /> Loading…
-            </>
+              <Loader2 size={16} className="spin" />{' '}{websiteText("Loading…")}</>
           ) : (
             <>
-              <ExternalLink size={16} /> Pay ₱{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} via PayMongo
-            </>
+              <ExternalLink size={16} />{' '}{websiteText("Pay ₱")}{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}{websiteText("via PayMongo")}</>
           )}
         </button>
       )}
 
-      <p className="muted" style={{ fontSize: '12px', textAlign: 'center', margin: 0 }}>
-        Powered by PayMongo Philippines · 256-bit encrypted checkout
-      </p>
+      <p className="muted" style={{ fontSize: '12px', textAlign: 'center', margin: 0 }}>{websiteText("Powered by PayMongo Philippines · 256-bit encrypted checkout")}</p>
     </div>
   )
 }

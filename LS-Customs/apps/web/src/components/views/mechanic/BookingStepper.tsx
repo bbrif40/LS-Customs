@@ -1,52 +1,16 @@
-/**
- * BookingStepper — visual progress for the multi-step mechanic flow.
- * Shows 1 — 2 — 3 — 4 — 5 with current, completed, and future states.
- * Clicking a past step jumps the user back to it.
- */
+import { useWebsiteText } from "../../../hooks/useWebsiteText"
+import { Check } from 'lucide-react'
 import { STEP_ORDER, STEP_LABEL, type Step } from './steps'
 
-interface BookingStepperProps {
-  current: Step
-  onJump: (target: Step) => void
-}
+export function BookingStepper({ current, onJump }: { current: Step; onJump: (target: Step) => void }) {
+  const websiteText = useWebsiteText("Mechanic")
 
-export function BookingStepper({ current, onJump }: BookingStepperProps) {
-  const currentIndex = STEP_ORDER.indexOf(current)
-
-  return (
-    <>
-    <p className="booking-mobile-progress" role="status">Step {currentIndex + 1} of {STEP_ORDER.length}<strong>{STEP_LABEL[current]}</strong></p>
-    <ol className="booking-stepper" aria-label="Booking progress">
-      {STEP_ORDER.map((step, i) => {
-        const isDone = i < currentIndex
-        const isCurrent = i === currentIndex
-        const isClickable = isDone
-        return (
-          <li
-            key={step}
-            className={
-              isCurrent
-                ? 'stepper-item current'
-                : isDone
-                  ? 'stepper-item done'
-                  : 'stepper-item future'
-            }
-          >
-            <button
-              type="button"
-              className="stepper-button"
-              disabled={!isClickable}
-              onClick={() => isClickable && onJump(step)}
-              aria-current={isCurrent ? 'step' : undefined}
-            >
-              <span className="stepper-bubble">{i + 1}</span>
-              <span className="stepper-label">{STEP_LABEL[step]}</span>
-            </button>
-            {i < STEP_ORDER.length - 1 && <span className="stepper-connector" aria-hidden="true" />}
-          </li>
-        )
-      })}
-    </ol>
-    </>
-  )
+  const index = STEP_ORDER.indexOf(current)
+  return <nav className="mechanic-progress" aria-label={websiteText("Booking progress")}>
+    <ol className="mechanic-progress-track">{STEP_ORDER.map((step, i) => <li key={step} className={i < index ? 'is-complete' : i === index ? 'is-current' : ''}>
+      <button type="button" disabled={i > index} aria-current={step === current ? 'step' : undefined}
+        aria-label={`${websiteText(STEP_LABEL[step])}${i < index ? `, ${websiteText("completed")}` : i === index ? `, ${websiteText("current step")}` : `, ${websiteText("upcoming")}`}`}
+        onClick={() => onJump(step)}><span className="mechanic-progress-number">{i < index ? <Check size={15} strokeWidth={2.2} /> : i + 1}</span><span className="mechanic-progress-label">{websiteText(STEP_LABEL[step])}</span></button>
+    </li>)}</ol>
+  </nav>
 }

@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 import { useState, useEffect } from 'react'
 import { Mail, Phone, Clock, CheckCircle2, Loader2 } from 'lucide-react'
 import { supabase } from '../../supabaseClient'
@@ -15,6 +16,8 @@ const CATEGORIES: { value: Category; label: string; helper: string }[] = [
 ]
 
 export function ContactSupport() {
+  const websiteText = useWebsiteText("Help Center")
+
   const { settings } = useCustomerSiteSettings()
   const [category, setCategory] = useState<Category>('general')
   const [description, setDescription] = useState('')
@@ -150,37 +153,32 @@ export function ContactSupport() {
   return (
     <div className="public-page">
       <header className="contact-hero">
-        <h1>Contact <em>Support</em></h1>
-        <p className="subhead">
-          We're here to help. Submit a ticket and our team will respond within 2 hours
-          during business hours.
-        </p>
+        <h1>{websiteText("Contact")} <em>{websiteText("Support")}</em></h1>
+        <p className="subhead">{websiteText("We're here to help. Submit a ticket and our team will respond within 2 hours during business hours.")}</p>
       </header>
 
       <div className="contact-channels">
         <div className="contact-channel">
           <Mail size={24} />
-          <div className="channel-label">Email</div>
-          <div className="channel-value">{settings.supportEmail || 'support@lscustoms.com'}</div>
-          <div className="channel-hours">Mon–Fri, 8am–8pm PST</div>
+          <div className="channel-label">{websiteText("Email")}</div>
+          <div className="channel-value">{websiteText("support@lscustoms.com", undefined, settings.supportEmail || 'support@lscustoms.com')}</div>
+          <div className="channel-hours">{websiteText("Mon–Fri, 8am–8pm PST")}</div>
         </div>
         <div className="contact-channel">
           <Phone size={24} />
-          <div className="channel-label">Phone</div>
+          <div className="channel-label">{websiteText("Phone")}</div>
           <div className="channel-value">{settings.supportPhone || '+63 (02) 8888-5700'}</div>
-          <div className="channel-hours">Mon–Fri, 8am–8pm PST</div>
+          <div className="channel-hours">{websiteText("Mon–Fri, 8am–8pm PST")}</div>
         </div>
         <div className="contact-channel">
           <Clock size={24} />
-          <div className="channel-label">Hours</div>
+          <div className="channel-label">{websiteText("Hours")}</div>
           <div className="channel-value">24 / 7</div>
-          <div className="channel-hours">{settings.workingHours || 'Live chat for signed-in users'}</div>
+          <div className="channel-hours">{websiteText("Live chat for signed-in users", undefined, settings.workingHours || 'Live chat for signed-in users')}</div>
         </div>
       </div>
 
-      <h2 style={{ margin: '42px 0 20px', fontSize: 18, letterSpacing: '-0.3px' }}>
-        Send us a message
-      </h2>
+      <h2 style={{ margin: '42px 0 20px', fontSize: 18, letterSpacing: '-0.3px' }}>{websiteText("Send us a message")}</h2>
 
       {error && (
         <div
@@ -198,34 +196,34 @@ export function ContactSupport() {
 
       <form className="ticket-form" onSubmit={handleSubmit} style={{ maxWidth: 520 }}>
         <div className="ticket-form-field">
-          <label className="ticket-form-label">Name</label>
+          <label className="ticket-form-label">{websiteText("Name")}</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value.slice(0, 100))}
             disabled={submitting}
             className="ticket-form-select"
-            placeholder="Your full name"
+            placeholder={websiteText("Your full name")}
             required
           />
         </div>
 
         <div className="ticket-form-field">
-          <label className="ticket-form-label">Email</label>
+          <label className="ticket-form-label">{websiteText("Email")}</label>
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value.slice(0, 200))}
             disabled={submitting}
             className="ticket-form-select"
-            placeholder="you@example.com"
+            placeholder={websiteText("you@example.com")}
             required
           />
-          <span className="ticket-form-helper">We'll reply to this address.</span>
+          <span className="ticket-form-helper">{websiteText("We'll reply to this address.")}</span>
         </div>
 
         <label className="ticket-form-field">
-          <span className="ticket-form-label">Issue type</span>
+          <span className="ticket-form-label">{websiteText("Issue type")}</span>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value as Category)}
@@ -242,9 +240,7 @@ export function ContactSupport() {
         </label>
 
         <label className="ticket-form-field">
-          <span className="ticket-form-label">
-            Your message
-            <span className="ticket-form-counter">{description.length} / 4000</span>
+          <span className="ticket-form-label">{websiteText("Your message")}<span className="ticket-form-counter">{description.length} / 4000</span>
           </span>
           <textarea
             value={description}
@@ -252,12 +248,10 @@ export function ContactSupport() {
             disabled={submitting}
             className="ticket-form-textarea"
             rows={6}
-            placeholder="Describe your issue. Include any booking IDs, error messages, or steps to reproduce."
+            placeholder={websiteText("Describe your issue. Include any booking IDs, error messages, or steps to reproduce.")}
             required
           />
-          <span className="ticket-form-helper">
-            Minimum 5 characters required.
-          </span>
+          <span className="ticket-form-helper">{websiteText("Minimum 5 characters required.")}</span>
         </label>
 
         <div className="ticket-form-actions">
@@ -268,14 +262,10 @@ export function ContactSupport() {
           >
             {submitting ? (
               <>
-                <Loader2 size={14} className="spin" />
-                Submitting...
-              </>
+                <Loader2 size={14} className="spin" />{' '}{websiteText("Submitting...")}</>
             ) : (
               <>
-                <CheckCircle2 size={14} />
-                Submit ticket
-              </>
+                <CheckCircle2 size={14} />{' '}{websiteText("Submit ticket")}</>
             )}
           </button>
         </div>

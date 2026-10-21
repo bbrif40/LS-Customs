@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../hooks/useWebsiteText"
 /**
  * VehicleCard — compact vehicle listing with image, tag, and booking action.
  */
@@ -20,6 +21,8 @@ interface VehicleCardProps {
 }
 
 export function VehicleCard({ vehicle, onBook, onView, unavailable, isFavorite = false, onToggleFavorite, actionLabel = 'Book now' }: VehicleCardProps) {
+  const websiteText = useWebsiteText("Shared")
+
   return (
     <article
       className={`vehicle-card ${unavailable ? 'is-unavailable' : ''} ${onView ? 'is-viewable' : ''}`}
@@ -37,9 +40,8 @@ export function VehicleCard({ vehicle, onBook, onView, unavailable, isFavorite =
           <Heart size={16} fill={isFavorite ? 'currentColor' : 'none'} />
         </button>
         {unavailable && (
-          <span className="vehicle-unavailable-badge" aria-label="Unavailable for selected dates">
-            <Lock size={12} /> Booked for these dates
-          </span>
+          <span className="vehicle-unavailable-badge" aria-label={websiteText("Unavailable for selected dates")}>
+            <Lock size={12} />{' '}{websiteText("Booked for these dates")}</span>
         )}
       </div>
       <div className="vehicle-info">
@@ -50,11 +52,9 @@ export function VehicleCard({ vehicle, onBook, onView, unavailable, isFavorite =
         <p>{vehicle.detail}</p>
         <div className="vehicle-divider" />
         <div className="vehicle-footer">
-          <strong className="vehicle-price">{vehicle.price}<small>/ day</small></strong>
+          <strong className="vehicle-price">{vehicle.price}<small>{websiteText("/ day")}</small></strong>
           {unavailable ? (
-            <button className="small-button" type="button" disabled aria-disabled="true">
-              Unavailable
-            </button>
+            <button className="small-button" type="button" disabled aria-disabled="true">{websiteText("Unavailable")}</button>
           ) : (
             <button className="small-button" onClick={(event) => { event.stopPropagation(); onBook() }}>{actionLabel} <ArrowUpRight size={14} /></button>
           )}

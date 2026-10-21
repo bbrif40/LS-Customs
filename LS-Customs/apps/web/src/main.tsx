@@ -1,3 +1,5 @@
+import { WebsiteTextProvider } from './components/common/WebsiteTextProvider'
+import './website-text.css'
 import { StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { IonApp } from '@ionic/react';
@@ -12,12 +14,14 @@ import './workspace-design.css';
 import { App } from './App';
 import { LoadingMessage } from './components/common/LoadingMessage';
 import { ToastProvider } from './components/common/ToastProvider';
+import { TransactionTermsProvider } from './components/common/TransactionTerms';
+import './transactions.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <IonApp>
       <ToastProvider>
-        <Suspense fallback={<LoadingMessage />}><App /></Suspense>
+        <WebsiteTextProvider><TransactionTermsProvider><Suspense fallback={<LoadingMessage />}><App /></Suspense></TransactionTermsProvider></WebsiteTextProvider>
       </ToastProvider>
     </IonApp>
   </StrictMode>,

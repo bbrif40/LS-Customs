@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * check-secrets.mjs
+ * check-secrets.ts
  *
  * Pre-commit guard: scans staged files for common secret patterns
  * (OpenRouter, Stripe, Supabase service-role JWTs, Google, Twilio,
@@ -10,7 +10,7 @@
  * staged diff) so already-tracked secrets in the working tree don't
  * cause every commit to fail.
  *
- * Run directly:    node apps/backend/scripts/check-secrets.mjs
+ * Run directly:    node apps/backend/scripts/check-secrets.ts
  * Run via hook:    .githooks/pre-commit invokes this automatically
  *
  * Exits 0 if clean, 1 if any match found.
@@ -56,7 +56,7 @@ const IGNORE_PATH_PATTERNS = [
   /pnpm-lock\.yaml$/,
   /\.claude\//,            // internal session scratch
   /\.worktrees?\//,
-  /apps\/backend\/scripts\/check-secrets\.mjs$/, // self-reference
+  /apps\/backend\/scripts\/check-secrets\.ts$/, // self-reference
   /\.env\.example$/,       // documentation only, values are empty
 ];
 
@@ -198,8 +198,9 @@ function main() {
   console.error('Move these values to apps/backend/supabase/.env (gitignored) or to a');
   console.error('Supabase secret via `supabase secrets set <NAME>=<value>`. Then re-stage.');
   console.error('If the match is a known-safe placeholder, add it to ALLOWED_LINE_FRAGMENTS');
-  console.error('in apps/backend/scripts/check-secrets.mjs.');
+  console.error('in apps/backend/scripts/check-secrets.ts.');
   process.exit(1);
 }
 
 main();
+

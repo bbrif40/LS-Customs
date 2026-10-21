@@ -1,3 +1,4 @@
+import { useWebsiteText } from "../../../hooks/useWebsiteText"
 /**
  * MapView — read-only map that renders N pins.
  *
@@ -56,6 +57,8 @@ export function MapView({
   follow,
   recenterKey,
 }: MapViewProps) {
+  const websiteText = useWebsiteText("Shared")
+
   const c: [number, number] = center
     ? [center.lat, center.lng]
     : pins[0]
@@ -65,7 +68,7 @@ export function MapView({
   return (
     <div className={className} style={{ width: '100%', height: typeof height === 'string' && height.endsWith('%') ? height : '100%' }}>
       <MapBoundary height={height}>
-        <Suspense fallback={<div className="map-skeleton" style={{ height: typeof height === 'number' ? height : '100%' }}><LoadingMessage label="Loading map…" /></div>}>
+        <Suspense fallback={<div className="map-skeleton" style={{ height: typeof height === 'number' ? height : '100%' }}><LoadingMessage label={websiteText("Loading map…")} /></div>}>
           <MapSurface
             center={c}
             zoom={zoom}
