@@ -151,7 +151,7 @@ export function EmergencyMechanicModal({ open, onClose, onNotify, userId, active
         <button type="button" onClick={() => { onViewBookings?.(); onClose() }}>{websiteText("View booking details")}</button>
       </> : <form onSubmit={event => { event.preventDefault(); void request() }} className="roadside-form">
         <label>{websiteText("Assistance type")}<select value={issue} onChange={event => setIssue(event.target.value)}>{scenarios.map(([id, label, cost]) => <option key={id} value={id}>{label} · ₱{cost.toLocaleString()}</option>)}</select></label>
-        
+
         <LocationPicker showServiceCoverage height={260} id="emergency-location" value={latitude && longitude ? { lat: Number(latitude), lng: Number(longitude) } : null}
           onChange={position => { setLatitude(String(position.lat)); setLongitude(String(position.lng)); setConfirmedLocation(false) }} />
         <div className="transaction-coordinate-grid"><label>{websiteText("Latitude")}<input required type="number" step="any" min="-90" max="90" value={latitude} onChange={event => { setLatitude(event.target.value); setConfirmedLocation(false) }} /></label>

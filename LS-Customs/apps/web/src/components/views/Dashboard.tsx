@@ -228,4 +228,3 @@ export function Dashboard({ userId, displayName, initials, onView, onNotify, onS
     </div>
   )
 }
-

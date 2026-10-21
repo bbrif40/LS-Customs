@@ -266,7 +266,7 @@ export function App() {
     }
 
     window.addEventListener('popstate', handleLocationChange)
-    
+
     const urlListener = CapacitorApp.addListener('appUrlOpen', async (event) => {
       const url = new URL(event.url)
       // Pass the custom scheme URL (like com.lscustoms.app://login#access_token=...) to Supabase
@@ -275,7 +275,7 @@ export function App() {
         window.location.hash = url.hash
         window.location.search = url.search
         // Supabase will automatically pick it up and process it via the onAuthStateChange listener
-        
+
         try {
           const { Browser } = await import('@capacitor/browser')
           await Browser.close()

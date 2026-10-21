@@ -84,7 +84,7 @@ export function LocationCard({ onNotify, isExpanded: isExpandedProp, onToggleExp
         </div>
         <MapPin className="pin" size={24} />
       </div>
-      
+
       <div className={`location-map-wrapper ${isExpanded ? 'is-expanded' : ''}`}>
         {coordinates ? (
           <MapView
@@ -128,7 +128,7 @@ export function LocationCard({ onNotify, isExpanded: isExpandedProp, onToggleExp
       </div>
 
       <p className="location-helper">{websiteText("Let mechanics see where to meet you for on-site service.")}</p>
-      
+
       <div className="location-actions">
         <button className="text-button" onClick={useCurrentLocation} disabled={loading}>
           {loading ? websiteText("Locating...") : websiteText("Open my location")} <MapPin size={14} />

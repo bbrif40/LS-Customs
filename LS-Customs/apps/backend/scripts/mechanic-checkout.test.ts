@@ -81,4 +81,3 @@ isolated('late successful payment refunds instead of confirming expired mechanic
   assert.equal((await db.query(`select checkout_state from service_bookings where id='${b.id}'`)).rows[0].checkout_state,'expired')
   assert.equal((await db.query("select * from operations_queue where kind='refund_required'")).rows.length,1)
 })
-

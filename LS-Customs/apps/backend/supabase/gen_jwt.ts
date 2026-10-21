@@ -21,4 +21,3 @@ if (!secret) throw new Error('Set LOCAL_SUPABASE_JWT_SECRET to generate a local 
 const signature = crypto.createHmac('sha256', secret).update(data).digest('base64url');
 
 console.log(data + '.' + signature);
-

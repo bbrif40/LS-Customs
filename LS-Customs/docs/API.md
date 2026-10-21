@@ -632,3 +632,6 @@ All transaction entry points require authenticated ownership, current versioned 
 - `POST operations-worker` uses only the private worker bearer token. It performs expiry/penalty/change maintenance, bounded refund processing and email retries. It is not a customer endpoint.
 
 Relevant frontend surfaces are Bookings (reports, changes, cancellation/refund status and support), Profile (account balance), Mechanic dispatch, and Admin Action queue / Balances / Refund reconciliation. All admins share one role.
+
+### Customer website text
+Public SELECT on `website_text` supplies sectioned plain text and optional overrides. Admins submit `save_website_text(p_changes)` with an array of `{key,value,revision}`; `value:null` restores the default. The function locks and validates the complete batch, rejects stale revisions and changed placeholders, increments changed rows and audits before/after wording. Customers and anonymous users cannot write. Customer pages share one realtime subscription with polling/reconnect fallback. `Admin → Website Text` provides filters, search, previews, explicit save and default restoration.

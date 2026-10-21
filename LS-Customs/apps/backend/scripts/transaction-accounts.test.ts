@@ -126,4 +126,3 @@ isolated('return fee uses completed hours only and requires admin authority', as
   await as('authenticated', admin)
   assert.equal((await db.query(`select record_vehicle_return('${b.id}',now(),'Vehicle returned','${randomUUID()}') as fee`)).rows[0].fee,'250')
 })
-

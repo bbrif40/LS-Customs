@@ -8,4 +8,3 @@ Accepted during the design interview on 2026-10-20; implemented locally; target 
 
 
 Restore rental booking access only when every blocking balance is settled, including late-return debt, its accumulated penalties, and finalized damage charges. Clearing one debt or its flag must not remove a restriction caused by another outstanding balance.
-

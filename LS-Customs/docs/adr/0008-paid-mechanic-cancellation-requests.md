@@ -7,4 +7,3 @@ For an approved customer cancellation before the mechanic starts travelling, ref
 Cash mechanic bookings can be cancelled free of charge before service begins because no upfront payment has been collected. Three customer-initiated cash mechanic booking cancellations within a rolling 30-day period trigger admin review. Exclude provider-initiated cancellations. Keep this review separate from unpaid-fee account flags; the threshold itself does not authorize an automatic ban or booking restriction. The paid-booking 55% retention is not an amount owed on an unpaid cash booking.
 
 Once work begins, cancellation requires support review rather than a standard percentage refund. Let the customer report the issue from the booking; an admin assesses completed work and any refund.
-

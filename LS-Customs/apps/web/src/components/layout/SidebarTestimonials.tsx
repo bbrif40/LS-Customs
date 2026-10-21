@@ -152,5 +152,3 @@ const visibleReviews = reviews.length > 1 ? [reviews[activeIndex], reviews[(acti
     </section>
   )
 }
-
-

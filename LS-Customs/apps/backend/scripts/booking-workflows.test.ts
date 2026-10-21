@@ -102,6 +102,3 @@ isolated('damage proposals stay out of balance until response window and admin r
   await as('service_role'); await db.query(`select refresh_customer_account('${customer}')`)
   assert.equal((await db.query("select * from account_charges where kind='daily_penalty'")).rows.length,0)
 })
-
-
-

@@ -15,4 +15,3 @@ If online payment has failed, allow the customer to switch to cash within the re
 
 
 If online payment succeeds after the accepted mechanic capacity hold expires, refund 100% of that payment rather than automatically confirming the appointment. Keep the appointment unconfirmed and require a fresh availability check for retry, because the mechanic may have another assignment. Show the refund outcome separately from appointment status.
-

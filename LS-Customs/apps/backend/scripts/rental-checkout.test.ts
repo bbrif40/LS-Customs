@@ -107,6 +107,3 @@ isolated('maintenance expires overdue license review but cannot be invoked by cu
   await as('service_role'); await db.query('select run_account_maintenance()')
   assert.equal((await db.query(`select checkout_state from vehicle_bookings where id='${b.id}'`)).rows[0].checkout_state,'expired')
 })
-
-
-

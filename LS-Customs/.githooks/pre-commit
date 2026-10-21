@@ -26,4 +26,3 @@ if [ ! -f "$SCANNER" ]; then
 fi
 
 node "$SCANNER"
-

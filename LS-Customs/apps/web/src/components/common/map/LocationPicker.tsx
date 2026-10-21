@@ -532,7 +532,7 @@ export function LocationPicker({ showServiceCoverage = false,
           </span>
         )}
       </div>
-      
+
       {showServiceCoverage && coverage && <div className="service-coverage-info"><div><strong>{coverage.active ? websiteText("{value1} km service radius", { value1: String(coverage.radius_km) }) : websiteText("Service requests paused")}</strong><p>{websiteText("Coverage follows the radius shown, reaching locations in Bulacan and Cavite within the boundary. Subject to mechanic availability.")}</p></div><button type="button" className="location-picker-btn" aria-pressed={areaView} onClick={() => setAreaView(value => !value)}>{areaView ? websiteText("Back to your pin") : websiteText("View service area")}</button></div>}
       {locError && (
         <div className="map-error-banner">

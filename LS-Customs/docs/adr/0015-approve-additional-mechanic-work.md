@@ -5,6 +5,3 @@ Provide a customer service-completion report listing work performed, parts used,
 Accepted during the design interview on 2026-10-20; implemented locally; target deployment and device/provider checks remain in IMPLEMENTATION_PLAN.md. Additional repair work or parts beyond the booked service require the customer's approval of an itemized quote before the additional work proceeds. Save the approved amount and exact quote version. Unapproved extras must not be posted to the customer's balance.
 
 This preserves the original booking agreement while allowing a mechanic to propose work discovered during service. Mechanics prepare itemized labor and parts quotes and send them directly to the customer without prior admin approval. Make the quote and customer acceptance visible to admins. Approved extras may be paid online or in cash after service. Track these amounts separately from the original booking payment, include them on the final receipt, and let the mechanic record cash collection. If the customer declines extras, record the declined quote, do not charge it, and complete only the original booked service where possible. If the original service cannot proceed without the declined repairs, send the case to admin/support review rather than proceeding without approval.
-
-
-

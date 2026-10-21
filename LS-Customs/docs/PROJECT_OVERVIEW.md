@@ -66,11 +66,11 @@ LS Customs is a two-sided marketplace that combines two automotive services into
 │  │  status_change trigger)│                                       │
 │  └──────────────────────────┘                                       │
 └───────────────────────────────────────────────────────────────────┘
-           │ webhook / REST                                               
-           ▼                                                               
-┌─────────────────────────────────────────┐                                  
-│ Payment Provider (PayMongo / Stripe)    │  — external, Philippines-focused   
-└─────────────────────────────────────────┘                                 
+           │ webhook / REST
+           ▼
+┌─────────────────────────────────────────┐
+│ Payment Provider (PayMongo / Stripe)    │  — external, Philippines-focused
+└─────────────────────────────────────────┘
 ```
 
 ---

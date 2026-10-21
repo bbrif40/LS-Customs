@@ -218,4 +218,3 @@ function computeTrend(current: number, previous: number): RevenueTrend {
     trendUp: percentage >= 0,
   }
 }
-

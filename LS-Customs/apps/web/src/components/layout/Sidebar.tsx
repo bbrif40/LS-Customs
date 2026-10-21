@@ -123,7 +123,7 @@ export function Sidebar({
             aria-label={websiteText("Open Emergency Mechanic Roadside Dispatch")}
           >
             <div className="emergency-btn-shimmer" />
-            
+
             {/* Pulsing Beacon Light */}
             <div className="emergency-beacon-wrapper">
               <span className="beacon-ping" />
@@ -184,4 +184,3 @@ export function Sidebar({
     </>
   )
 }
-

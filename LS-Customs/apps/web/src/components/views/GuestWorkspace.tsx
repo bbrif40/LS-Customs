@@ -189,4 +189,3 @@ export function GuestWorkspace({ onOpenAuth, onEmergencyClick }: GuestWorkspaceP
     </div>
   )
 }
-

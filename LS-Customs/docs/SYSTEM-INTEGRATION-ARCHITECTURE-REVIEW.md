@@ -657,6 +657,3 @@ Source: [vercel.json](<C:/Users/acer/Documents/LS Customs/LS-Customs/vercel.json
     }
   ],
 ```
-
-
-

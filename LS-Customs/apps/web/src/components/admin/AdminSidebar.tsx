@@ -119,11 +119,11 @@ export function AdminSidebar({
 
       {/* Bottom */}
       <div className="admin-sidebar-bottom">
-        <a 
-          href="/" 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="admin-nav-item" 
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="admin-nav-item"
           style={{ textDecoration: 'none', marginBottom: 12, display: 'flex', alignItems: 'center' }}
         >
           <span className="admin-nav-icon"><ExternalLink size={18} /></span>

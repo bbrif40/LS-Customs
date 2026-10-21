@@ -13,7 +13,3 @@ Run the focused database behavior test from `apps/backend`:
 ```sh
 node --test scripts/sidebar-testimonials.test.ts
 ```
-
-
-
-
