@@ -287,3 +287,19 @@ isolated('admin after-hours arrangement preserves duration and price while check
   assert.equal(changed.return_at.getTime()-changed.pickup_at.getTime(),b.return_at.getTime()-b.pickup_at.getTime())
   assert.equal(changed.total_price,b.total_price)
 })
+isolated('assignment SMS text carries the mechanic contact number',async()=>{
+  await as('postgres'); await db.query(`update profiles set full_name='QA Mechanic',phone='+639171234567' where id='${mechanic}'`)
+  await serviceBooking('cash'); await as('postgres')
+  const sms=(await db.query(`select body from notifications where user_id='${customer}' and metadata->>'dispatch_sms'='true'`)).rows
+  assert.equal(sms.length,1); assert.match(sms[0].body,/QA Mechanic \(contact: \+639171234567\)/)
+})
+isolated('claiming a queue item records it in the audit log',async()=>{
+  await as('postgres')
+  const item=(await db.query(`insert into operations_queue(source_key,kind,customer_id,title) values('qa:claim','service_overrun','${customer}','QA overrun') returning id`)).rows[0].id
+  await as('authenticated',customer); await fails(`select claim_operations_item('${item}','${admin}')`,/Administrator access/)
+  await as('authenticated',admin); await db.query(`select claim_operations_item('${item}','${admin}')`)
+  await as('postgres')
+  const log=(await db.query(`select action_type,record_title,details from admin_audit_logs where record_type='operations_queue' and record_id='${item}'`)).rows
+  assert.equal(log.length,1); assert.equal(log[0].action_type,'claim'); assert.equal(log[0].record_title,'QA overrun'); assert.equal(log[0].details.kind,'service_overrun')
+  assert.equal((await db.query(`select claimed_by from operations_queue where id='${item}'`)).rows[0].claimed_by,admin)
+})

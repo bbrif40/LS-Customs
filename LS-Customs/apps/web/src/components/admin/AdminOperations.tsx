@@ -30,7 +30,7 @@ export function AdminOperations() {
   const load = useCallback(async () => {
     const { error: refreshError } = await supabase.rpc('refresh_operations_queue')
     if (refreshError) { setError('Due operations could not be refreshed. Please retry.'); return }
-    const { data, error: loadError } = await supabase.from('operations_queue').select('*').is('closed_at', null).order('due_at', { nullsFirst: false }).order('created_at')
+    const { data, error: loadError } = await supabase.from('operations_queue').select('*').is('closed_at', null).is('claimed_by', null).order('due_at', { nullsFirst: false }).order('created_at')
     // Polling keeps action errors visible; each action clears its own error when it starts.
     if (loadError) setError(loadError.message); else setItems(data ?? [])
   }, [])
@@ -46,11 +46,11 @@ export function AdminOperations() {
     if (arrangementError) setError(arrangementError.message); else { setMessage('Pickup and return shifted together with duration and price preserved.'); await load() }
     setBusy(false)
   }
-  const claim = async (id: string, release = false) => {
+  const claim = async (id: string) => {
     setBusy(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      const { error: claimError } = await supabase.rpc('claim_operations_item', { p_id: id, p_owner: release ? null : user?.id })
+      const { error: claimError } = await supabase.rpc('claim_operations_item', { p_id: id, p_owner: user?.id })
       if (claimError) throw claimError
       await load()
     } catch (failure) { setError(failure instanceof Error ? failure.message : 'Assignment failed') }
@@ -130,14 +130,13 @@ export function AdminOperations() {
     {error && !reviewBooking && <p role="alert">{error}</p>}
     {!items.length && <p>No items requiring action.</p>}
     {items.map(item => <article className="account-panel" key={item.id}><h3>{item.title}</h3><p>{item.kind.replace(/_/g, ' ')} · {item.due_at ? `Due ${new Date(item.due_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} Philippine time` : 'No deadline'}</p>
-      <p>{item.claimed_by ? `Assigned to admin ${item.claimed_by.slice(0, 8)}` : 'Unclaimed'}</p>
       {item.booking_id && <p>Booking {item.booking_id} <button type="button" onClick={() => void openWorkspace(item.booking_id!)}>Open booking workspace</button></p>}
       {item.kind === 'license_review' && item.booking_id && <button type="button" disabled={busy} onClick={() => void openLicense(item.booking_id!)}>Review private driver license</button>}
       {item.customer_id && <p>Customer {item.customer_id}</p>}
       {reviewBooking === item.booking_id && <fieldset disabled={busy}><legend>License review · {reviewBooking}</legend>{error && <p role="alert">{error}</p>}{licenseWindow && <p>{licenseWindow}</p>}{licenseUrl && <>{!licensePdf && <img src={licenseUrl} alt="Customer driver license" style={{ display: 'block', maxWidth: '100%', maxHeight: 480 }} />}<a href={licenseUrl} target="_blank" rel="noreferrer">Open private license in a new tab (10 minutes)</a></>}<label>Verified license expiry<input type="date" value={licenseExpiry} onChange={e => setLicenseExpiry(e.target.value)} /></label><label>Verification / rejection reason<input value={reviewReason} onChange={e => setReviewReason(e.target.value)} /></label><div className="transaction-actions"><button type="button" disabled={!licenseUrl || !licenseExpiry || reviewReason.length < 3} onClick={() => void reviewLicense('approved')}>Approve matching license</button><button type="button" disabled={reviewReason.length < 3} onClick={() => void reviewLicense('unreadable')}>Request readable upload</button><button type="button" disabled={reviewReason.length < 3} onClick={() => void reviewLicense('rejected')}>Reject invalid / mismatched license</button></div></fieldset>}
       {item.kind === 'cancellation_review' && typeof item.details.request_id === 'string' && <div><p>Review reason is required in the notes field below. Work already started requires a support-reviewed refund amount.</p><button type="button" disabled={busy} onClick={() => void reviewCancellation(item.details.request_id as string, true)}>Approve cancellation and quoted refund</button><button type="button" disabled={busy} onClick={() => void reviewCancellation(item.details.request_id as string, false)}>Decline cancellation</button></div>}
       {['extension_review', 'location_review'].includes(item.kind) && typeof item.details.request_id === 'string' && <div><button type="button" disabled={busy} onClick={() => void reviewChange(item.details.request_id as string, item.kind, true)}>Approve after availability / license checks</button><button type="button" disabled={busy} onClick={() => void reviewChange(item.details.request_id as string, item.kind, false)}>Decline proposed change</button></div>}
-      <button type="button" disabled={busy} onClick={() => void claim(item.id)}>Claim / reassign to me</button>{item.claimed_by && <button type="button" disabled={busy} onClick={() => void claim(item.id, true)}>Release claim</button>}
+      <button type="button" disabled={busy} onClick={() => void claim(item.id)}>Claim · moves to audit log</button>
     </article>)}<button type="button" onClick={() => void load()}>Refresh queue</button>
   </section><section className="account-panel"><h2>Rental cash and actual return</h2><p>Return time stops the late-fee clock. Corrections require a reason and retain audit history.</p>
     <label>Booking reference<input value={bookingId} onChange={e => setBookingId(e.target.value)} required /></label>

@@ -96,6 +96,7 @@ before(async () => {
     '20261020190000_booking_changes.sql','20261020200000_location_change_and_corrections.sql',
     '20261020210000_operations_integrity.sql','20261020220000_cash_service_balances.sql','20261020230000_workflow_recovery.sql']) await apply(file)
 
+  if (stage >= 5) await apply('20261021140000_assignment_contact_and_queue_claims.sql')
   if (stage >= 6) await apply('20261021100000_radius_service_coverage.sql')
   if (stage >= 7) await apply('20261021110000_customer_website_text.sql')
 })
