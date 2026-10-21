@@ -460,7 +460,7 @@ export function AdminFleet() {
                   </div>
                   <div className="admin-form-field">
                     <label>Host Rating</label>
-                    <input type="number" value={formData.host_rating} onChange={(e) => setFormData({ ...formData, host_rating: parseFloat(e.target.value) || 0 })} min={0} max={5} step={0.1} />
+                    <input type="number" value={formData.host_rating || ''} onChange={(e) => setFormData({ ...formData, host_rating: parseFloat(e.target.value) || 0 })} min={0} max={5} step="any" placeholder="0 to 5, e.g. 4.8" />
                   </div>
                 </div>
                 <div className="admin-form-row">
@@ -542,10 +542,11 @@ export function AdminFleet() {
                     <label>Price Per Day (₱)</label>
                     <input
                       type="number"
-                      value={formData.price_per_day}
+                      value={formData.price_per_day || ''}
                       onChange={(e) => setFormData({ ...formData, price_per_day: parseFloat(e.target.value) || 0 })}
-                      min={0.01}
-                      step={0.01}
+                      min={1}
+                      step="any"
+                      placeholder="e.g. 2500"
                       required
                     />
                   </div>

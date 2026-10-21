@@ -413,10 +413,11 @@ export function AdminServices() {
                     <label>Base Price (₱)</label>
                     <input
                       type="number"
-                      value={formData.base_price}
+                      value={formData.base_price || ''}
                       onChange={(e) => setFormData({ ...formData, base_price: parseFloat(e.target.value) || 0 })}
-                      min={0.01}
-                      step={0.01}
+                      min={1}
+                      step="any"
+                      placeholder="e.g. 1500"
                       required
                     />
                   </div>
