@@ -544,7 +544,7 @@ export function AdminFleet() {
                       type="number"
                       value={formData.price_per_day}
                       onChange={(e) => setFormData({ ...formData, price_per_day: parseFloat(e.target.value) || 0 })}
-                      min={0}
+                      min={0.01}
                       step={0.01}
                       required
                     />

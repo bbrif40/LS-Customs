@@ -15,6 +15,11 @@ import type {
   ServiceBooking,
 } from '@ls-customs/shared-types'
 
+// Supabase returns plain error objects; callers display `err instanceof Error ? err.message : …`.
+function toError(error: { message?: string; details?: string | null; hint?: string | null }): Error {
+  return new Error([error.message, error.details, error.hint].filter(Boolean).join(' ') || 'Request failed')
+}
+
 // Type aliases for joined data (Supabase returns joined tables as object or array depending on relation)
 export type MechanicWithProfile = MechanicProfile & {
   profiles: Profile | Profile[] | null
@@ -82,7 +87,7 @@ function useAdminList<T>(
         query = query.order(orderBy.column, { ascending: orderBy.ascending ?? false })
       }
       const { data: result, error: queryError } = await query.abortSignal(AbortSignal.timeout(25000))
-      if (queryError) throw queryError
+      if (queryError) throw toError(queryError)
       setData(result as T[])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data')
@@ -115,7 +120,7 @@ export async function createVehicle(vehicle: Omit<Vehicle, 'id' | 'created_at' |
     .insert(vehicle)
     .select()
     .single()
-  if (error) throw error
+  if (error) throw toError(error)
   return data as Vehicle
 }
 
@@ -127,7 +132,7 @@ export async function updateVehicle(id: string, updates: Partial<Vehicle>) {
     .eq('id', id)
     .select()
     .single()
-  if (error) throw error
+  if (error) throw toError(error)
   return data as Vehicle
 }
 
@@ -151,7 +156,7 @@ export async function createMechanicService(service: Omit<MechanicService, 'id' 
     .insert(service)
     .select()
     .single()
-  if (error) throw error
+  if (error) throw toError(error)
   return data as MechanicService
 }
 
@@ -162,7 +167,7 @@ export async function updateMechanicService(id: string, updates: Partial<Mechani
     .eq('id', id)
     .select()
     .single()
-  if (error) throw error
+  if (error) throw toError(error)
   return data as MechanicService
 }
 
@@ -207,7 +212,7 @@ export function useAdminMechanics() {
         `)
         .order('created_at', { ascending: false }).abortSignal(AbortSignal.timeout(25000))
 
-      if (queryError) throw queryError
+      if (queryError) throw toError(queryError)
       setData(result as unknown as MechanicWithProfile[])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch mechanics')
@@ -227,7 +232,7 @@ export function useAdminMechanics() {
       .eq('id', id)
       .select()
       .single()
-    if (updateError) throw updateError
+    if (updateError) throw toError(updateError)
     await fetchData() // refetch
     return data as MechanicProfile
   }
@@ -257,7 +262,7 @@ export async function updateUserPhone(userId: string, phone: string | null): Pro
     .eq('id', userId)
     .select('id, full_name, phone, avatar_url, role, created_at, updated_at')
     .single()
-  if (error) throw error
+  if (error) throw toError(error)
   return data as Profile
 }
 
@@ -280,7 +285,7 @@ export async function upsertUserDefaultAddress(input: AdminAddressInput): Promis
     .eq('customer_id', input.customerId)
     .eq('is_default', true)
     .maybeSingle()
-  if (lookupError) throw lookupError
+  if (lookupError) throw toError(lookupError)
 
   if (existing?.id) {
     const { data, error } = await supabase
@@ -293,7 +298,7 @@ export async function upsertUserDefaultAddress(input: AdminAddressInput): Promis
       .eq('id', existing.id)
       .select('customer_id, line1, city, label')
       .single()
-    if (error) throw error
+    if (error) throw toError(error)
     return data as AdminUserAddress
   }
 
@@ -317,7 +322,7 @@ export async function upsertUserDefaultAddress(input: AdminAddressInput): Promis
     })
     .select('customer_id, line1, city, label')
     .single()
-  if (error) throw error
+  if (error) throw toError(error)
   return data as AdminUserAddress
 }
 
@@ -384,7 +389,7 @@ export function useAdminUserAddresses(): {
         .from('addresses')
         .select('customer_id, line1, city, label')
         .eq('is_default', true)
-      if (queryError) throw queryError
+      if (queryError) throw toError(queryError)
       const map: Record<string, AdminUserAddress> = {}
       for (const row of data ?? []) {
         map[row.customer_id] = row as AdminUserAddress
@@ -441,7 +446,7 @@ export function useAdminVehicleBookings() {
         `)
         .order('created_at', { ascending: false })
 
-      if (queryError) throw queryError
+      if (queryError) throw toError(queryError)
       setData(result as unknown as VehicleBookingWithCustomer[])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch vehicle bookings')
@@ -459,7 +464,7 @@ export function useAdminVehicleBookings() {
       .from('vehicle_bookings')
       .update({ status })
       .eq('id', id)
-    if (updateError) throw updateError
+    if (updateError) throw toError(updateError)
 
     await fetchData()
   }
@@ -498,7 +503,7 @@ export function useAdminServiceBookings() {
       if (queryError) {
         // eslint-disable-next-line no-console
         console.error('[useAdminServiceBookings] first query failed', queryError)
-        throw queryError
+        throw toError(queryError)
       }
 
       const safeRows: ServiceBookingWithDetails[] = ((rows ?? []) as unknown as ServiceBookingWithDetails[]).map(
@@ -702,7 +707,7 @@ export function useAdminServiceBookings() {
       .from('service_bookings')
       .update({ status })
       .eq('id', id)
-    if (updateError) throw updateError
+    if (updateError) throw toError(updateError)
 
     await fetchData()
   }
@@ -1002,7 +1007,7 @@ export function useAdminTickets(): UseAdminTicketsResult {
         `)
         .order('created_at', { ascending: false })
 
-      if (queryError) throw queryError
+      if (queryError) throw toError(queryError)
 
       const ticketsList = (result || []) as unknown as (SupportTicket & {
         profiles: TicketCustomerProfile | TicketCustomerProfile[] | null
@@ -1083,7 +1088,7 @@ export function useAdminTickets(): UseAdminTicketsResult {
       .eq('id', id)
       .select()
       .single()
-    if (updateError) throw updateError
+    if (updateError) throw toError(updateError)
     await fetchData()
     return row as SupportTicket
   }
