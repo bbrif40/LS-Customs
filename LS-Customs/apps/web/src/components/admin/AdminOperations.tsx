@@ -25,11 +25,14 @@ export function AdminOperations() {
   const [reviewReason, setReviewReason] = useState('')
   const [licenseExpiry, setLicenseExpiry] = useState('')
   const [licenseUrl, setLicenseUrl] = useState('')
+  const [licensePdf, setLicensePdf] = useState(false)
+  const [licenseWindow, setLicenseWindow] = useState('')
   const load = useCallback(async () => {
     const { error: refreshError } = await supabase.rpc('refresh_operations_queue')
     if (refreshError) { setError('Due operations could not be refreshed. Please retry.'); return }
     const { data, error: loadError } = await supabase.from('operations_queue').select('*').is('closed_at', null).order('due_at', { nullsFirst: false }).order('created_at')
-    if (loadError) setError(loadError.message); else { setItems(data ?? []); setError('') }
+    // Polling keeps action errors visible; each action clears its own error when it starts.
+    if (loadError) setError(loadError.message); else setItems(data ?? [])
   }, [])
   useEffect(() => { void load(); const timer = window.setInterval(() => void load(), 30000); return () => clearInterval(timer) }, [load])
   const openWorkspace = async (id: string) => {
@@ -68,13 +71,16 @@ export function AdminOperations() {
     finally { setBusy(false) }
   }
   const openLicense = async (booking: string) => {
-    setReviewBooking(booking); setLicenseUrl(''); setError('')
-    const { data: rental, error: rentalError } = await supabase.from('vehicle_bookings').select('license_id').eq('id', booking).single()
+    setReviewBooking(booking); setLicenseUrl(''); setLicenseWindow(''); setError('')
+    const { data: rental, error: rentalError } = await supabase.from('vehicle_bookings').select('license_id,checkout_state,review_deadline').eq('id', booking).single()
     if (rentalError || !rental?.license_id) { setError('The customer has not uploaded a license yet.'); return }
+    setLicenseWindow(rental.checkout_state === 'license_pending' && rental.review_deadline && Date.parse(rental.review_deadline) > Date.now()
+      ? `Review before ${new Date(rental.review_deadline).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} Philippine time.`
+      : `Review window closed (booking ${rental.checkout_state.replace(/_/g, ' ')}). The license can be viewed but no longer approved.`)
     const { data: license, error: licenseError } = await supabase.from('driver_licenses').select('object_path').eq('id', rental.license_id).single()
     if (licenseError || !license) { setError('License could not be loaded.'); return }
-    const { data, error: urlError } = await supabase.storage.from('driver-licenses').createSignedUrl(license.object_path, 120)
-    if (urlError) setError('Private license preview could not be opened.'); else setLicenseUrl(data.signedUrl)
+    const { data, error: urlError } = await supabase.storage.from('driver-licenses').createSignedUrl(license.object_path, 600)
+    if (urlError) setError('Private license preview could not be opened.'); else { setLicensePdf(license.object_path.endsWith('.pdf')); setLicenseUrl(data.signedUrl) }
   }
   const reviewLicense = async (state: 'approved' | 'unreadable' | 'rejected') => {
     if (busy) return
@@ -121,18 +127,18 @@ export function AdminOperations() {
     setBusy(false)
   }
   return <div className="admin-page"><section className="account-panel"><h1>Action queue</h1>
-    {error && <p role="alert">{error}</p>}
+    {error && !reviewBooking && <p role="alert">{error}</p>}
     {!items.length && <p>No items requiring action.</p>}
     {items.map(item => <article className="account-panel" key={item.id}><h3>{item.title}</h3><p>{item.kind.replace(/_/g, ' ')} · {item.due_at ? `Due ${new Date(item.due_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} Philippine time` : 'No deadline'}</p>
       <p>{item.claimed_by ? `Assigned to admin ${item.claimed_by.slice(0, 8)}` : 'Unclaimed'}</p>
       {item.booking_id && <p>Booking {item.booking_id} <button type="button" onClick={() => void openWorkspace(item.booking_id!)}>Open booking workspace</button></p>}
       {item.kind === 'license_review' && item.booking_id && <button type="button" disabled={busy} onClick={() => void openLicense(item.booking_id!)}>Review private driver license</button>}
       {item.customer_id && <p>Customer {item.customer_id}</p>}
+      {reviewBooking === item.booking_id && <fieldset disabled={busy}><legend>License review · {reviewBooking}</legend>{error && <p role="alert">{error}</p>}{licenseWindow && <p>{licenseWindow}</p>}{licenseUrl && <>{!licensePdf && <img src={licenseUrl} alt="Customer driver license" style={{ display: 'block', maxWidth: '100%', maxHeight: 480 }} />}<a href={licenseUrl} target="_blank" rel="noreferrer">Open private license in a new tab (10 minutes)</a></>}<label>Verified license expiry<input type="date" value={licenseExpiry} onChange={e => setLicenseExpiry(e.target.value)} /></label><label>Verification / rejection reason<input value={reviewReason} onChange={e => setReviewReason(e.target.value)} /></label><div className="transaction-actions"><button type="button" disabled={!licenseUrl || !licenseExpiry || reviewReason.length < 3} onClick={() => void reviewLicense('approved')}>Approve matching license</button><button type="button" disabled={reviewReason.length < 3} onClick={() => void reviewLicense('unreadable')}>Request readable upload</button><button type="button" disabled={reviewReason.length < 3} onClick={() => void reviewLicense('rejected')}>Reject invalid / mismatched license</button></div></fieldset>}
       {item.kind === 'cancellation_review' && typeof item.details.request_id === 'string' && <div><p>Review reason is required in the notes field below. Work already started requires a support-reviewed refund amount.</p><button type="button" disabled={busy} onClick={() => void reviewCancellation(item.details.request_id as string, true)}>Approve cancellation and quoted refund</button><button type="button" disabled={busy} onClick={() => void reviewCancellation(item.details.request_id as string, false)}>Decline cancellation</button></div>}
       {['extension_review', 'location_review'].includes(item.kind) && typeof item.details.request_id === 'string' && <div><button type="button" disabled={busy} onClick={() => void reviewChange(item.details.request_id as string, item.kind, true)}>Approve after availability / license checks</button><button type="button" disabled={busy} onClick={() => void reviewChange(item.details.request_id as string, item.kind, false)}>Decline proposed change</button></div>}
       <button type="button" disabled={busy} onClick={() => void claim(item.id)}>Claim / reassign to me</button>{item.claimed_by && <button type="button" disabled={busy} onClick={() => void claim(item.id, true)}>Release claim</button>}
     </article>)}<button type="button" onClick={() => void load()}>Refresh queue</button>
-    {reviewBooking && <fieldset disabled={busy}><legend>License review · {reviewBooking}</legend>{licenseUrl && <a href={licenseUrl} target="_blank" rel="noreferrer">Open private license preview (2 minutes)</a>}<label>Verified license expiry<input type="date" value={licenseExpiry} onChange={e => setLicenseExpiry(e.target.value)} /></label><label>Verification / rejection reason<input value={reviewReason} onChange={e => setReviewReason(e.target.value)} /></label><div className="transaction-actions"><button type="button" disabled={!licenseUrl || !licenseExpiry || reviewReason.length < 3} onClick={() => void reviewLicense('approved')}>Approve matching license</button><button type="button" disabled={reviewReason.length < 3} onClick={() => void reviewLicense('unreadable')}>Request readable upload</button><button type="button" disabled={reviewReason.length < 3} onClick={() => void reviewLicense('rejected')}>Reject invalid / mismatched license</button></div></fieldset>}
   </section><section className="account-panel"><h2>Rental cash and actual return</h2><p>Return time stops the late-fee clock. Corrections require a reason and retain audit history.</p>
     <label>Booking reference<input value={bookingId} onChange={e => setBookingId(e.target.value)} required /></label>
     <label>Actual return (Philippine time)<input type="datetime-local" value={returnedAt} onChange={e => setReturnedAt(e.target.value)} required /></label>

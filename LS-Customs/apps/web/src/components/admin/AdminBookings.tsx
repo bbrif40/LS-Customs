@@ -390,11 +390,9 @@ export function AdminBookings() {
       }
       if (!mechanicName) mechanicName = 'LS Customs Mechanic'
 
-      // 4. Update the service booking to assigned
-      const { error: updateErr } = await supabase
-        .from('service_bookings')
-        .update({ mechanic_id: mechanicId, status: 'assigned' })
-        .eq('id', bookingId)
+      // 4. Assign through the RPC: offer-based bookings reject direct status writes.
+      const { data: assignedStatus, error: updateErr } = await supabase
+        .rpc('admin_assign_mechanic', { p_booking: bookingId, p_mechanic: mechanicId })
       if (updateErr) throw updateErr
 
       // 5. Construct friendly SMS message
@@ -405,7 +403,9 @@ export function AdminBookings() {
       const { data: notification, error: notificationError } = await supabase.from('notifications')
         .select('id').eq('user_id', customerId).contains('metadata', { booking_id: bookingId, new_status: 'assigned' })
         .order('created_at', { ascending: false }).limit(1).maybeSingle()
-      let smsStatusMsg = ' Assignment saved. SMS delivery is not yet verified.'
+      let smsStatusMsg = assignedStatus === 'pending'
+        ? ' Customer has 3 hours to complete online payment.'
+        : ' Assignment saved. SMS delivery is not yet verified.'
       if (!notificationError && notification) {
         try {
           const dispatch = requireFunctionData<{ channels: string[]; dispatched: boolean; simulated?: boolean; reason?: string }>(
@@ -432,6 +432,21 @@ export function AdminBookings() {
     } catch (err) {
       console.error('[admin] failed to assign mechanic', err)
       alert(getAdminErrorMessage(err, 'Failed to assign mechanic'))
+    } finally {
+      setAssigning(false)
+    }
+  }
+
+  const reofferMechanics = async (bookingId: string) => {
+    setAssigning(true)
+    try {
+      const { error: reofferErr } = await supabase.rpc('admin_reoffer_mechanics', { p_booking: bookingId })
+      if (reofferErr) throw reofferErr
+      setAssignmentNotice({ type: 'success', text: `Booking #${bookingId.slice(0, 8).toUpperCase()} re-offered to available mechanics for 5 minutes.` })
+      setTimeout(() => setAssignmentNotice(null), 7000)
+      await refetchServices()
+    } catch (err) {
+      alert(getAdminErrorMessage(err, 'Failed to re-offer booking'))
     } finally {
       setAssigning(false)
     }
@@ -1036,6 +1051,15 @@ export function AdminBookings() {
                                         </span>
                                       </button>
                                     ))}
+                                    <button
+                                      type="button"
+                                      className="admin-vehicle-btn secondary"
+                                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '6px 8px', fontSize: 12 }}
+                                      disabled={assigning}
+                                      onClick={() => void reofferMechanics(booking.id)}
+                                    >
+                                      Re-offer to all available mechanics (5 min)
+                                    </button>
                                   </div>
                                 )}
                               </div>

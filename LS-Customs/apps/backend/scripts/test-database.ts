@@ -87,7 +87,7 @@ before(async () => {
       '20260924150000_fix_audit_trigger_nested_if.sql','20260924170000_fix_audit_trigger_remove_booking_reference.sql',
       '20261020130000_rental_license_checkout.sql','20261020131000_private_driver_license_storage.sql']) await apply(file)
   }
-  if (stage >= 3) await apply('20261020140000_mechanic_offers_and_cash.sql')
+  if (stage >= 3) for (const file of ['20261020140000_mechanic_offers_and_cash.sql','20261021130000_admin_mechanic_assignment.sql']) await apply(file)
   if (stage >= 4) for (const file of ['20261020150000_booking_requests_refunds.sql','20261020160000_reports_quotes_and_damage.sql',
     '20261020161000_private_booking_evidence.sql']) await apply(file)
   if (stage >= 5) for (const file of ['20261020170000_service_coverage_and_gps.sql',

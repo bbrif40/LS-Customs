@@ -81,3 +81,30 @@ isolated('late successful payment refunds instead of confirming expired mechanic
   assert.equal((await db.query(`select checkout_state from service_bookings where id='${b.id}'`)).rows[0].checkout_state,'expired')
   assert.equal((await db.query("select * from operations_queue where kind='refund_required'")).rows.length,1)
 })
+isolated('admin assigns or re-offers a booking whose offer round lapsed',async()=>{
+  const b=await serviceBooking('cash')
+  await as('postgres'); await db.query(`update service_bookings set offer_deadline=now()-interval '1 second',status='confirmed' where id='${b.id}'`)
+  await as('authenticated',admin)
+  await fails(`update service_bookings set mechanic_id='${mechanic}',status='assigned' where id='${b.id}'`,/Mechanic acceptance/)
+  await as('authenticated',customer); await fails(`select admin_assign_mechanic('${b.id}','${mechanic}')`,/Administrator access/)
+  await as('authenticated',admin); await db.query(`select admin_reoffer_mechanics('${b.id}')`)
+  await as('postgres')
+  const offer=(await db.query(`select * from mechanic_offers where booking_id='${b.id}'`)).rows[0]
+  assert.equal(offer.state,'pending'); assert.ok(offer.expires_at.getTime()>Date.now())
+  await as('authenticated',admin)
+  assert.equal((await db.query(`select admin_assign_mechanic('${b.id}','${mechanic}') as s`)).rows[0].s,'assigned')
+  await as('postgres')
+  const next=(await db.query(`select * from service_bookings where id='${b.id}'`)).rows[0]
+  assert.equal(next.checkout_state,'confirmed'); assert.equal(next.mechanic_id,mechanic)
+  assert.equal((await db.query(`select state from mechanic_offers where id='${offer.id}'`)).rows[0].state,'closed')
+  await as('authenticated',admin); await fails(`select admin_assign_mechanic('${b.id}','${mechanic}')`,/already assigned/)
+})
+isolated('admin assignment of an online booking opens a payment hold',async()=>{
+  const b=await serviceBooking()
+  await as('authenticated',admin)
+  assert.equal((await db.query(`select admin_assign_mechanic('${b.id}','${mechanic}') as s`)).rows[0].s,'pending')
+  await as('postgres')
+  const next=(await db.query(`select * from service_bookings where id='${b.id}'`)).rows[0]
+  assert.equal(next.checkout_state,'awaiting_payment'); assert.ok(next.hold_expires_at>new Date())
+  await as('service_role'); await db.query(`select require_payable_checkout('service','${b.id}')`)
+})
