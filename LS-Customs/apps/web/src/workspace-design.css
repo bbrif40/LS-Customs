@@ -136,7 +136,9 @@ input, select, textarea { accent-color: var(--green); }
 .admin-topbar h1 { font-size: 30px; font-weight: 600; letter-spacing: -.8px; }
 .admin-topbar p { font-size: 14px; color: var(--muted); }
 .admin-data-state { font-size: 12px; color: var(--muted); padding: 8px 12px; background: #eaf1eb; border-radius: 6px; }
-.admin-sidebar { background: var(--admin-sidebar); border-right: none; }
+.admin-sidebar { background: var(--admin-sidebar); border-right: none; height: 100dvh; min-height: 0; }
+/* Only the nav scrolls, so the bottom section (Sign Out) stays pinned in view. */
+.admin-sidebar-nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; align-content: start; }
 .admin-sidebar-subtitle { color: #bdcfc2; font-size: 12px; }
 .admin-sidebar-close { align-self: flex-end; display: grid; place-items: center; min-width: 44px; min-height: 44px; background: #243e36; color: #fff; border-radius: 8px; }
 .admin-nav-item { min-height: 44px; font-size: 14px; border-radius: 8px; color: #d4e1d8; }

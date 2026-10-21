@@ -993,7 +993,7 @@ export function AdminBookings() {
                                 <X size={14} /><span>Cancel</span>
                               </button>
                             )}
-                            {['pending', 'confirmed'].includes(booking.status) && activeTab === 'services' && (
+                            {['pending', 'confirmed'].includes(booking.status) && activeTab === 'services' && !('mechanic_id' in booking && booking.mechanic_id) && (
                               <div style={{ position: 'relative', display: 'inline-block' }}>
                                 <button
                                   title="Assign Mechanic" aria-label="Assign Mechanic"
