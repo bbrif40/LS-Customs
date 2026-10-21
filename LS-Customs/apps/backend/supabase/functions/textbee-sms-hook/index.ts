@@ -1,53 +1,54 @@
-const serve = Deno.serve
+import { sendTextBeeSms } from "../_shared/textbee.ts";
+import { timingSafeEqual } from "../_shared/paymentProvider.ts";
+
+const serve = Deno.serve;
 
 serve(async (req) => {
-  // Parse the Supabase auth hook payload
-  const payload = await req.json()
-
-  const { user, sms } = payload
-
-  // OTP code provided by Supabase Auth
-  const otpCode = sms.otp
-  const phone = user.phone
-
-  // Construct TextBee API request
-  const apiKey = Deno.env.get("TEXTBEE_API_KEY")
-  const deviceId = Deno.env.get("TEXTBEE_DEVICE_ID")
-
-  if (!apiKey || !deviceId) {
-    console.error("TextBee credentials missing.")
-    return new Response(JSON.stringify({ error: "Configuration missing" }), { status: 500 })
+  const token = req.headers.get("authorization")?.match(/^Bearer (.+)$/i)?.[1] ?? "";
+  const authorized = [Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"), Deno.env.get("OPERATIONS_WORKER_TOKEN")]
+    .some(secret => Boolean(secret && token && timingSafeEqual(secret, token)));
+  if (!authorized) return Response.json({ error: "Authentication required" }, { status: 401 });
+  if (req.method !== "POST") return Response.json({ error: "POST required" }, { status: 405 });
+  let payload: unknown;
+  try {
+    payload = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: "Invalid request" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
-  const message = `Your LS Customs verification code is: ${otpCode}`
-
-  try {
-    const response = await fetch(
-      `https://api.textbee.dev/api/v1/gateway/devices/${deviceId}/sendSMS`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey
-        },
-        body: JSON.stringify({
-          recipients: [phone],
-          message: message
-        })
-      }
-    )
-
-    const data = await response.json()
-    console.log("TextBee Response:", data)
-
-    return new Response(JSON.stringify({ success: true }), {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return new Response(JSON.stringify({ error: "Invalid request" }), {
+      status: 400,
       headers: { "Content-Type": "application/json" },
-    })
-  } catch (error) {
-    console.error("Failed to send SMS via TextBee", error)
+    });
+  }
+  const { user, sms } = payload as {
+    user?: { phone?: unknown };
+    sms?: { otp?: unknown };
+  };
+  const phone = typeof user?.phone === "string" ? user.phone : "";
+  const otpCode = typeof sms?.otp === "string" ? sms.otp : "";
+  if (!phone.trim() || !otpCode.trim()) {
+    return new Response(JSON.stringify({ error: "Invalid request" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const result = await sendTextBeeSms(
+    phone,
+    `Your LS Customs verification code is: ${otpCode}`,
+  );
+  if (!result.success) {
     return new Response(JSON.stringify({ error: "Failed to send SMS" }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
-    })
+    });
   }
-})
+  return new Response(JSON.stringify({ success: true }), {
+    headers: { "Content-Type": "application/json" },
+  });
+});

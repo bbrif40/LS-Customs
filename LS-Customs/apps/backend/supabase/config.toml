@@ -470,6 +470,10 @@ verify_jwt = false
 [functions.operations-worker]
 verify_jwt = false
 
+# Auth SMS forwarding uses a private Vault token checked inside the handler.
+[functions.textbee-sms-hook]
+verify_jwt = false
+
 [functions.verify-service-location]
 verify_jwt = false
 
