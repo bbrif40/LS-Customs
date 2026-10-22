@@ -67,6 +67,15 @@ function FormattedMessage({ text }: { text: string }) {
   )
 }
 
+interface TicketSession {
+  id: string
+  tracking_number: string
+  category: string
+  priority: string
+  status: string
+  created_at: string
+}
+
 export function ChatBot({ userId, onNotify, onRecommendation }: ChatBotProps) {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -75,17 +84,33 @@ export function ChatBot({ userId, onNotify, onRecommendation }: ChatBotProps) {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [ticketFormOpen, setTicketFormOpen] = useState(false)
+  // The active ticket lives in sessionStorage: closing the chat or changing
+  // pages rejoins the same thread, and closing the browser tab ends it.
+  const ticketStorageKey = `ls-ticket-session:${userId ?? 'guest'}`
+  const [ticketResult, setTicketResult] = useState<TicketSession | null>(() => {
+    try { return JSON.parse(sessionStorage.getItem(ticketStorageKey) ?? 'null') as TicketSession | null }
+    catch { return null }
+  })
   // When true, the overlay shows the live thread instead of the form/success.
   // Set after the success card's Done button is clicked.
-  const [ticketThreadOpen, setTicketThreadOpen] = useState(false)
-  const [ticketResult, setTicketResult] = useState<{
-    id: string
-    tracking_number: string
-    category: string
-    priority: string
-    status: string
-    created_at: string
-  } | null>(null)
+  const [ticketThreadOpen, setTicketThreadOpen] = useState(() => ticketResult !== null)
+
+  useEffect(() => {
+    try {
+      if (ticketResult) sessionStorage.setItem(ticketStorageKey, JSON.stringify(ticketResult))
+      else sessionStorage.removeItem(ticketStorageKey)
+    } catch { /* Storage can be unavailable; the ticket stays usable until reload. */ }
+  }, [ticketResult, ticketStorageKey])
+
+  const minimizeTicket = () => {
+    setTicketThreadOpen(true)
+    setTicketFormOpen(false)
+  }
+
+  const endTicketSession = () => {
+    setTicketThreadOpen(false)
+    setTicketResult(null)
+  }
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const requestVersionRef = useRef(0)
@@ -196,8 +221,7 @@ export function ChatBot({ userId, onNotify, onRecommendation }: ChatBotProps) {
       // The assistant may open the existing form after an explicit request;
       // ticket creation still happens only when the customer submits it.
       if (resPayload?.ticket_form_requested) {
-        setTicketResult(null)
-        setTicketThreadOpen(false)
+        // An active ticket is rejoined rather than replaced.
         setTicketFormOpen(true)
       }
 
@@ -270,8 +294,8 @@ export function ChatBot({ userId, onNotify, onRecommendation }: ChatBotProps) {
               <button
                 className={`chat-action-btn${ticketFormOpen ? ' active' : ''}`}
                 onClick={() => setTicketFormOpen((prev) => !prev)}
-                title={ticketFormOpen ? "Return to chat" : "Create support ticket"}
-                aria-label={ticketFormOpen ? "Return to chat" : "Create support ticket"}
+                title={ticketFormOpen ? "Return to chat" : ticketResult ? "Return to your ticket" : "Create support ticket"}
+                aria-label={ticketFormOpen ? "Return to chat" : ticketResult ? "Return to your ticket" : "Create support ticket"}
               >
                 <TicketPlus size={14} />
               </button>
@@ -296,11 +320,8 @@ export function ChatBot({ userId, onNotify, onRecommendation }: ChatBotProps) {
                 <ThreadOverlay
                   ticketId={ticketResult.id}
                   trackingNumber={ticketResult.tracking_number}
-                  onClose={() => {
-                    setTicketThreadOpen(false)
-                    setTicketResult(null)
-                    setTicketFormOpen(false)
-                  }}
+                  onClose={minimizeTicket}
+                  onNewTicket={endTicketSession}
                   onError={(message) => onNotify(message)}
                 />
               ) : ticketResult ? (
@@ -317,11 +338,7 @@ export function ChatBot({ userId, onNotify, onRecommendation }: ChatBotProps) {
                     // Collapse success card into the live thread view.
                     setTicketThreadOpen(true)
                   }}
-                  onDismiss={() => {
-                    setTicketThreadOpen(false)
-                    setTicketResult(null)
-                    setTicketFormOpen(false)
-                  }}
+                  onDismiss={minimizeTicket}
                   onCopy={(text) => {
                     void navigator.clipboard.writeText(text).then(
                       () => onNotify(`Copied ${text}`),
@@ -503,11 +520,13 @@ function ThreadOverlay({
   ticketId,
   trackingNumber,
   onClose,
+  onNewTicket,
   onError,
 }: {
   ticketId: string
   trackingNumber: string
   onClose: () => void
+  onNewTicket: () => void
   onError: (message: string) => void
 }) {
   return (
@@ -517,14 +536,19 @@ function ThreadOverlay({
           <TicketPlus size={16} />
           <span>{trackingNumber.startsWith('ticket-') ? trackingNumber : `ticket-${trackingNumber.slice(0, 8).toLowerCase()}`}</span>
         </div>
-        <button
-          type="button"
-          className="chat-close"
-          onClick={onClose}
-          aria-label="Close ticket thread"
-        >
-          <X size={16} />
-        </button>
+        <div className="chat-header-actions">
+          <button type="button" className="chat-action-btn" onClick={onNewTicket} title="Start a new ticket" aria-label="Start a new ticket">
+            <RefreshCw size={14} />
+          </button>
+          <button
+            type="button"
+            className="chat-close"
+            onClick={onClose}
+            aria-label="Minimize ticket thread"
+          >
+            <X size={16} />
+          </button>
+        </div>
       </div>
       <p className="ticket-form-subtitle">
         You're now in a live conversation with LS Customs Support. New
