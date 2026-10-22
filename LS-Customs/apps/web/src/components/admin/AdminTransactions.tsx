@@ -1,30 +1,26 @@
 /**
  * AdminTransactions — Transactions tab for the admin panel.
  *
- * Replaces the mock `transactions` panel with real payment data fetched
- * from the `payments` table (via useAdminPayments). Supports two admin
- * actions on each row:
- *
- *   • Refund  — for `succeeded` payments, calls the refund-payment edge
- *     function. The status flips to `refunded` and the customer is
- *     notified by the existing DB trigger.
- *   • Retry   — for `failed` payments, creates a new payment intent so
- *     the customer can try a different card.
+ * Shows actual collections alongside completed cash booking recognitions.
+ * Recognition rows are reporting entries; only provider-backed payments can
+ * request a refund.
  *
  * Status pills use the same palette as the booking overview so the two
  * tabs feel like one surface.
  */
 import { useState } from 'react'
-import { ChevronLeft, ChevronRight, Loader2, RefreshCw, CheckCircle2, RotateCcw } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, RefreshCw, RotateCcw } from 'lucide-react'
 import { IonIcon } from '@ionic/react'
 import { carOutline, constructOutline } from 'ionicons/icons'
-import { useAdminPayments } from '../../hooks/useAdminPayments'
+import { useAdminPayments, type AdminTransactionCompletionTarget } from '../../hooks/useAdminPayments'
+import { BookingReference } from './BookingReference'
 
 const statusColors: Record<string, string> = {
   pending: '#f59e0b',
   succeeded: '#22c55e',
   failed: '#ef4444',
   refunded: '#3b82f6',
+  recognized: '#316749',
 }
 
 const statusLabels: Record<string, string> = {
@@ -32,13 +28,16 @@ const statusLabels: Record<string, string> = {
   succeeded: 'Succeeded',
   failed: 'Failed',
   refunded: 'Refunded',
+  recognized: 'Completed',
 }
 
 const PAGE_SIZE = 10
 
 export function AdminTransactions() {
-  const { payments, loading, error, warning, updatePaymentStatus, refetch } = useAdminPayments()
+  const { payments, loading, error, warning, updatePaymentStatus, completeTransaction, refetch } = useAdminPayments()
   const [page, setPage] = useState(1)
+  const [completing, setCompleting] = useState<string | null>(null)
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
 
   const totalPages = Math.ceil(payments.length / PAGE_SIZE)
   const startIndex = (page - 1) * PAGE_SIZE + 1
@@ -70,17 +69,9 @@ export function AdminTransactions() {
     return (
       <div className="admin-main" style={{ padding: 40, color: 'var(--admin-muted)', textAlign: 'center' }}>
         <p>No transactions found.</p>
-        <p style={{ fontSize: 13, marginTop: 8 }}>Payments will appear here once customers start booking.</p>
+        <p style={{ fontSize: 13, marginTop: 8 }}>Completed cash bookings and collections appear here.</p>
       </div>
     )
-  }
-
-  const handleMarkSucceeded = async (paymentId: string) => {
-    const confirmed = window.confirm(
-      'Mark this payment as Succeeded? This will confirm the transaction and automatically update the revenue reports.',
-    )
-    if (!confirmed) return
-    await updatePaymentStatus(paymentId, 'succeeded')
   }
 
   const handleRefund = async (paymentId: string) => {
@@ -91,9 +82,28 @@ export function AdminTransactions() {
     await updatePaymentStatus(paymentId, 'refunded')
   }
 
+  const handleComplete = async (key: string, target: AdminTransactionCompletionTarget) => {
+    const reason = window.prompt('Reason for recording this cash settlement (at least 3 characters):')
+    if (reason === null) return
+    if (reason.trim().length < 3) {
+      setActionMessage('Enter a reason with at least 3 characters.')
+      return
+    }
+    setCompleting(key)
+    setActionMessage(null)
+    try {
+      await completeTransaction(target, reason.trim())
+      setActionMessage('Admin cash settlement recorded as completed.')
+    } catch (completionError) {
+      setActionMessage(completionError instanceof Error ? completionError.message : 'Could not record the cash settlement.')
+    } finally {
+      setCompleting(null)
+    }
+  }
+
   return (
     <div className="admin-transactions">
-      {warning && <p role="status">{warning}</p>}
+      {(warning || actionMessage) && <p role="status">{actionMessage ?? warning}</p>}
       {/* ── Toolbar ── */}
       <div className="admin-filter-row" style={{ marginBottom: 16 }}>
         <button
@@ -103,9 +113,10 @@ export function AdminTransactions() {
         >
           <RefreshCw size={14} /> Refresh
         </button>
+        <a href="/admin?view=revenue" className="admin-filter-btn">View revenue report</a>
         <div style={{ flex: 1 }} />
         <span style={{ color: 'var(--admin-muted)', fontSize: 13, alignSelf: 'center' }}>
-          {payments.length} transaction{payments.length === 1 ? '' : 's'}
+          {payments.length} record{payments.length === 1 ? '' : 's'}
         </span>
       </div>
 
@@ -119,7 +130,7 @@ export function AdminTransactions() {
               <th>Type</th>
               <th>Booking Ref</th>
               <th style={{ textAlign: 'right' }}>Amount</th>
-              <th>Provider</th>
+              <th>Record</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -127,8 +138,34 @@ export function AdminTransactions() {
           <tbody>
             {paginated.map((payment) => {
               const statusColor = statusColors[payment.status] ?? '#9ca3af'
-              const isSucceeded = payment.status === 'succeeded'
               const isRefunded = payment.status === 'refunded'
+              const canRefund = payment.record_kind === 'collection'
+                && payment.is_payment
+                && payment.account_quote_id === null
+                && payment.status === 'succeeded'
+                && Boolean(payment.provider_reference)
+                && payment.provider !== 'cash'
+                && payment.provider !== 'online_payment'
+                && payment.provider !== 'cash_ledger'
+                && payment.provider !== 'admin_cash_settlement'
+              const completeTarget: AdminTransactionCompletionTarget | null = payment.account_quote_id && payment.status === 'pending'
+                ? { kind: 'account_quote', paymentId: payment.id }
+                : payment.record_kind === 'recognition' && payment.record_source === 'cash_completion' && payment.can_complete_balance
+                  ? { kind: 'service_base', bookingId: payment.booking_id }
+                  : null
+              const recordLabel = payment.record_source === 'admin_settlement_cash'
+                ? 'Admin settlement · Cash'
+                : payment.account_quote_id
+                  ? `Account balance quote${payment.account_quote_charge_count ? ` · ${payment.account_quote_charge_count} charge${payment.account_quote_charge_count === 1 ? '' : 's'}` : ''}`
+                : payment.record_kind === 'recognition'
+                ? 'Cash booking revenue'
+                : payment.record_source === 'cash_collection'
+                  ? 'Cash collection'
+                  : payment.record_source?.startsWith('account_charge_')
+                    ? 'Account charge collection'
+                  : payment.provider === 'online_payment'
+                    ? 'Online payment'
+                    : payment.provider ?? 'Payment'
 
               return (
                 <tr key={payment.id}>
@@ -150,17 +187,28 @@ export function AdminTransactions() {
                         icon={payment.booking_type === 'vehicle' ? carOutline : constructOutline}
                         style={{ fontSize: 15, color: payment.booking_type === 'vehicle' ? '#e8a838' : '#3b82f6' }}
                       />
-                      {payment.booking_type === 'vehicle' ? 'Rental' : 'Service'}
+                      {payment.account_quote_id ? 'Account balance' : payment.booking_type === 'vehicle' ? 'Rental' : 'Service'}
                     </span>
                   </td>
                   <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                    {payment.booking_ref ?? `#${payment.booking_id.slice(0, 8)}`}
+                    {payment.account_quote_id && payment.account_quote_bookings?.length ? (
+                      payment.account_quote_bookings.length === 1
+                        ? <BookingReference id={payment.account_quote_bookings[0].booking_id} />
+                        : <details>
+                            <summary style={{ cursor: 'pointer' }}>{payment.account_quote_bookings.length} bookings</summary>
+                            <div style={{ display: 'grid', gap: 5, marginTop: 6 }}>
+                              {payment.account_quote_bookings.map((booking) => (
+                                <BookingReference key={`${booking.booking_type}:${booking.booking_id}`} id={booking.booking_id} />
+                              ))}
+                            </div>
+                          </details>
+                    ) : <BookingReference id={payment.booking_id} />}
                   </td>
                   <td style={{ textAlign: 'right', fontWeight: 600, color: '#e8a838' }}>
                     {payment.amount.toFixed(2)} {payment.currency}
                   </td>
-                  <td style={{ fontSize: 13, fontWeight: 500 }}>
-                    PayMongo
+                  <td style={{ fontSize: 13, fontWeight: 500, textTransform: 'capitalize' }}>
+                    {recordLabel}
                   </td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <span
@@ -177,30 +225,7 @@ export function AdminTransactions() {
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                      <button
-                        className="admin-vehicle-btn secondary"
-                        onClick={() => void handleMarkSucceeded(payment.id)}
-                        disabled={isSucceeded}
-                        style={{
-                          padding: '4px 10px',
-                          fontSize: 11,
-                          borderColor: isSucceeded ? '#16a34a' : '#22c55e',
-                          color: isSucceeded ? '#16a34a' : '#22c55e',
-                          background: isSucceeded ? 'rgba(34, 197, 94, 0.12)' : 'transparent',
-                          opacity: isSucceeded ? 0.65 : 1,
-                          cursor: isSucceeded ? 'default' : 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: 4,
-                          fontWeight: 600,
-                          borderRadius: 6,
-                        }}
-                        title={isSucceeded ? 'Payment is already marked Succeeded' : 'Mark as Succeeded (updates Revenue)'}
-                      >
-                        <CheckCircle2 size={12} /> Succeeded
-                      </button>
-
-                      <button
+                      {canRefund && <button
                         className="admin-vehicle-btn secondary"
                         onClick={() => void handleRefund(payment.id)}
                         disabled={isRefunded}
@@ -218,10 +243,31 @@ export function AdminTransactions() {
                           fontWeight: 600,
                           borderRadius: 6,
                         }}
-                        title={isRefunded ? 'Payment is already marked Refunded' : 'Issue Refund (updates Revenue)'}
+                          title={isRefunded ? 'Payment is already marked Refunded' : 'Request a provider refund'}
                       >
                         <RotateCcw size={12} /> {isRefunded ? 'Refunded' : 'Refund'}
-                      </button>
+                      </button>}
+                      {completeTarget && <button
+                        className="admin-vehicle-btn secondary"
+                        onClick={() => void handleComplete(payment.id, completeTarget)}
+                        disabled={completing === payment.id}
+                        style={{
+                          padding: '4px 10px',
+                          fontSize: 11,
+                          borderColor: '#22c55e',
+                          color: '#22c55e',
+                          opacity: completing === payment.id ? 0.65 : 1,
+                          cursor: completing === payment.id ? 'wait' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          fontWeight: 600,
+                          borderRadius: 6,
+                        }}
+                        title="Record this covered balance as collected in cash"
+                      >
+                        {completing === payment.id ? 'Saving…' : 'Complete'}
+                      </button>}
                     </div>
                   </td>
                 </tr>

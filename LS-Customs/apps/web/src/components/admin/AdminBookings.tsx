@@ -1,3 +1,4 @@
+import { BookingReference } from './BookingReference'
 import { useDialog } from '../../hooks/useDialog'
 /**
  * AdminBookings — Combined Bookings Overview (read-only with admin status updates).
@@ -95,13 +96,13 @@ export function AdminBookings() {
   const [availableMechanics, setAvailableMechanics] = useState<AvailableMechanic[]>([])
   const [assignOpenFor, setAssignOpenFor] = useState<string | null>(null)
   const [assigning, setAssigning] = useState(false)
-  const [editingBooking, setEditingBooking] = useState<VehicleBooking | ServiceBooking | null>(null)
+  const [editingBooking, setEditingBooking] = useState<((VehicleBooking | ServiceBooking) & { payment_method?: string }) | null>(null)
   const [editingText, setEditingText] = useState('')
   const [savingEdit, setSavingEdit] = useState(false)
   const [paymentSummary, setPaymentSummary] = useState<number | null>(null)
   const [paymentSummaryError, setPaymentSummaryError] = useState(false)
 
-  const [completionBooking, setCompletionBooking] = useState<VehicleBooking | ServiceBooking | null>(null)
+  const [completionBooking, setCompletionBooking] = useState<((VehicleBooking | ServiceBooking) & { payment_method?: string }) | null>(null)
   const [viewingBooking, setViewingBooking] = useState<VehicleBookingWithDetails | ServiceBookingWithDetails | null>(null)
   const detailDialogRef = useDialog(() => setViewingBooking(null), Boolean(viewingBooking))
   useEffect(() => {
@@ -243,7 +244,7 @@ export function AdminBookings() {
     : undefined
 
   const handleStatusChange = async (
-    booking: VehicleBooking | ServiceBooking,
+    booking: (VehicleBooking | ServiceBooking) & { payment_method?: string },
     nextStatus: BookingStatus,
   ) => {
     try {
@@ -263,6 +264,12 @@ export function AdminBookings() {
           setAssignmentNotice({ type: 'warning', text: getAdminErrorMessage(emailError, 'Booking approved; confirmation email failed.') })
         }
       }
+      window.dispatchEvent(new Event('admin-financial-data-changed'))
+      if (nextStatus === 'completed' && booking.payment_method === 'cash') {
+        setActiveTab('transactions')
+        setCurrentPage(1)
+        setAssignmentNotice({ type: 'success', text: `Booking ${booking.id} completed. Its cash booking-value revenue is recorded and Transactions is updated.` })
+      }
       return true
     } catch (err) {
       console.error('[admin] failed to update booking status', err)
@@ -271,7 +278,7 @@ export function AdminBookings() {
     }
   }
 
-  const openCompletionModal = (booking: VehicleBooking | ServiceBooking) => {
+  const openCompletionModal = (booking: (VehicleBooking | ServiceBooking) & { payment_method?: string }) => {
     setCompletionBooking(booking)
     setViolationPaymentRequired(false)
     setViolationAmount('')
@@ -339,16 +346,13 @@ export function AdminBookings() {
   const assignMechanic = async (bookingId: string, mechanicId: string) => {
     setAssigning(true)
     try {
-      // 1. Pre-check: was the booking still pending?
+      // 1. Read the current customer; admins may assign at any workflow stage.
       const { data: probe, error: probeErr } = await supabase
         .from('service_bookings')
         .select('status, customer_id')
         .eq('id', bookingId)
         .single()
       if (probeErr) throw probeErr
-      if (!['pending', 'confirmed'].includes(probe.status)) {
-        throw new Error(`Booking is already ${probe.status}; reload to see the latest.`)
-      }
 
       // 2. Identify target booking & customer details
       const targetBooking = serviceBookingsWithDetails?.find((b) => b.id === bookingId)
@@ -390,13 +394,13 @@ export function AdminBookings() {
       }
       if (!mechanicName) mechanicName = 'LS Customs Mechanic'
 
-      // 4. Assign through the RPC: offer-based bookings reject direct status writes.
+      // 4. Assign through the audited admin RPC.
       const { data: assignedStatus, error: updateErr } = await supabase
         .rpc('admin_assign_mechanic', { p_booking: bookingId, p_mechanic: mechanicId })
       if (updateErr) throw updateErr
 
       // 5. Construct friendly SMS message
-      const bookingRef = bookingId.slice(0, 8).toUpperCase()
+      const bookingRef = bookingId
       const contactDetail = mechanicPhone ? ` (Contact: ${mechanicPhone})` : ''
       const smsMessage = `Hi ${customerName}! Your LS Customs mobile mechanic service (Booking #${bookingRef}) has been assigned to ${mechanicName}${contactDetail}. They will arrive at your scheduled time.`
 
@@ -442,7 +446,7 @@ export function AdminBookings() {
     try {
       const { error: reofferErr } = await supabase.rpc('admin_reoffer_mechanics', { p_booking: bookingId })
       if (reofferErr) throw reofferErr
-      setAssignmentNotice({ type: 'success', text: `Booking #${bookingId.slice(0, 8).toUpperCase()} re-offered to available mechanics for 5 minutes.` })
+      setAssignmentNotice({ type: 'success', text: `Booking #${bookingId} re-offered to available mechanics for 5 minutes.` })
       setTimeout(() => setAssignmentNotice(null), 7000)
       await refetchServices()
     } catch (err) {
@@ -528,7 +532,7 @@ export function AdminBookings() {
 
     if (isVehicle) {
       const vb = viewingBooking as VehicleBookingWithDetails
-      displayId = 'b' + vb.id.slice(0, 5)
+      displayId = vb.id
       dateStr = `${vb.start_date} to ${vb.end_date}`
       timeStr = new Date(vb.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       timeLabel = 'Time of booking of rental:'
@@ -538,7 +542,7 @@ export function AdminBookings() {
       itemStr = getVehicleName(vb)
     } else {
       const sb = viewingBooking as ServiceBookingWithDetails
-      displayId = 'S' + sb.id.slice(0, 5)
+      displayId = sb.id
       const d = new Date(sb.scheduled_at)
       dateStr = d.toLocaleDateString()
       timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -575,7 +579,7 @@ export function AdminBookings() {
           
           <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px 16px', fontSize: '14px', lineHeight: 1.5 }}>
             <span style={{ color: '#64748b' }}>ID:</span>
-            <span style={{ fontFamily: 'monospace', fontWeight: 500 }}>{displayId}</span>
+            <BookingReference id={displayId} />
             
             <span style={{ color: '#64748b' }}>Customer:</span>
             <span style={{ fontWeight: 600 }}>{name}</span>
@@ -684,10 +688,10 @@ export function AdminBookings() {
             }`,
             color:
               assignmentNotice.type === 'success'
-                ? '#86efac'
+                ? '#316749'
                 : assignmentNotice.type === 'warning'
-                ? '#fde047'
-                : '#fca5a5',
+                ? '#93621a'
+                : '#b34232',
           }}
         >
           <span>{assignmentNotice.text}</span>
@@ -780,7 +784,7 @@ export function AdminBookings() {
           <h3>Service customer locations</h3>
           <p className="admin-map-panel-sub">
             {isSelectedBookingOnMap && selectedBooking
-              ? `Focused on Booking #${selectedBooking.id.slice(0, 8)} (${getCustomerName(selectedBooking)}) · ${statusLabels[selectedBooking.status] ?? selectedBooking.status}`
+              ? `Focused on Booking #${selectedBooking.id} (${getCustomerName(selectedBooking)}) · ${statusLabels[selectedBooking.status] ?? selectedBooking.status}`
               : servicePins.length === 0
                 ? 'No active service bookings with pinned customer locations.'
                 : `${servicePins.length} active service customer${servicePins.length === 1 ? '' : 's'} on the map.`}
@@ -835,8 +839,8 @@ export function AdminBookings() {
                       background: isSelected ? 'rgba(232, 168, 56, 0.06)' : undefined,
                     }}
                   >
-                    <td data-label="Booking reference" style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                      {booking.id.slice(0, 8)}...
+                    <td data-label="Booking reference" style={{ minWidth: 260, maxWidth: 300 }}>
+                      <BookingReference id={booking.id} actionsLink bookingType={isServiceRow ? 'service' : 'vehicle'} />
                     </td>
                     <td data-label="Customer" style={{ fontWeight: 500 }}>{getCustomerName(booking)}</td>
                     {activeTab === 'vehicles' ? (
@@ -936,7 +940,7 @@ export function AdminBookings() {
                           fontWeight: 600,
                         }}
                       >
-                        {(activeTab === 'vehicles' ? ['pending', 'confirmed', 'completed', 'cancelled'] : ['pending', 'confirmed', 'assigned', 'en_route', 'in_progress', 'completed', 'cancelled']).map((s) => (
+                        {(activeTab === 'vehicles' ? ['pending', 'confirmed', 'in_progress', 'completed', 'cancelled'] : ['pending', 'confirmed', 'assigned', 'en_route', 'in_progress', 'completed', 'cancelled']).map((s) => (
                           <option key={s} value={s} style={{ background: '#ffffff', color: '#1e293b', fontWeight: 500 }}>
                             {statusLabels[s as BookingStatus]}
                           </option>
@@ -967,8 +971,7 @@ export function AdminBookings() {
                           <Edit size={14} /><span>Edit</span>
                         </button>
 
-                        {(['pending', 'confirmed', 'assigned', 'en_route', 'in_progress'] as BookingStatus[]).includes(booking.status) && (
-                          <>
+                        <>
                             {booking.status !== 'completed' && (
                               <button
                                 title="Complete" aria-label="Complete"
@@ -993,7 +996,7 @@ export function AdminBookings() {
                                 <X size={14} /><span>Cancel</span>
                               </button>
                             )}
-                            {['pending', 'confirmed'].includes(booking.status) && activeTab === 'services' && !('mechanic_id' in booking && booking.mechanic_id) && (
+                            {activeTab === 'services' && (
                               <div style={{ position: 'relative', display: 'inline-block' }}>
                                 <button
                                   title="Assign Mechanic" aria-label="Assign Mechanic"
@@ -1064,8 +1067,7 @@ export function AdminBookings() {
                                 )}
                               </div>
                             )}
-                          </>
-                        )}
+                        </>
                       </div>
                     </td>
                   </tr>
@@ -1120,8 +1122,8 @@ export function AdminBookings() {
             <div className="admin-modal-header">
               <div>
                 <h2>{'vehicle_id' in completionBooking || activeTab === 'vehicles' ? 'Complete rental' : 'Complete service'}</h2>
-                <p className="admin-modal-subtitle">
-                  Booking {completionBooking.id.slice(0, 8)}... · {getCustomerName(completionBooking as VehicleBookingWithDetails)}
+                <p className="admin-modal-subtitle" style={{ overflowWrap: 'anywhere' }}>
+                  Booking {completionBooking.id} · {getCustomerName(completionBooking as VehicleBookingWithDetails)}
                 </p>
               </div>
               <button className="admin-modal-close" onClick={closeCompletionModal} aria-label="Close completion modal">
@@ -1145,7 +1147,7 @@ export function AdminBookings() {
                 />
                 <span>
                   <strong><AlertTriangle size={15} /> Payment is required for violations</strong>
-                  <small>Keep this booking active until the additional charge is collected.</small>
+                  <small>Record an additional charge if needed. You can still complete this booking.</small>
                 </span>
               </label>
 
@@ -1172,7 +1174,7 @@ export function AdminBookings() {
                       placeholder="Describe the damage, late return, or other charge..."
                     />
                   </div>
-                  <p className="completion-payment-note"><CreditCard size={14} /> This booking will remain active and will not be marked completed.</p>
+                  <p className="completion-payment-note"><CreditCard size={14} /> Recording a charge and completing the booking are separate admin actions.</p>
                 </div>
               )}
             </div>
@@ -1181,15 +1183,14 @@ export function AdminBookings() {
               <button type="button" className="admin-modal-btn secondary" onClick={closeCompletionModal} disabled={completing}>
                 Cancel
               </button>
-              {violationPaymentRequired ? (
+              {violationPaymentRequired && (
                 <button type="button" className="admin-modal-btn primary completion-payment-btn" onClick={() => void recordViolationPayment()} disabled={completing}>
                   {completing ? 'Recording...' : 'Record payment required'}
                 </button>
-              ) : (
-                <button type="button" className="admin-modal-btn primary" onClick={() => void completeBooking()} disabled={completing}>
-                  {completing ? 'Completing...' : ('vehicle_id' in completionBooking || activeTab === 'vehicles' ? 'Complete rental' : 'Complete service')}
-                </button>
               )}
+              <button type="button" className="admin-modal-btn primary" onClick={() => void completeBooking()} disabled={completing}>
+                {completing ? 'Completing...' : ('vehicle_id' in completionBooking || activeTab === 'vehicles' ? 'Complete rental' : 'Complete service')}
+              </button>
             </div>
           </div>
         </div>

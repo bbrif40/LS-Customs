@@ -11,7 +11,10 @@ export function AdminOperations() {
   const [items, setItems] = useState<QueueItem[]>([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const [bookingId, setBookingId] = useState('')
+  const [bookingId, setBookingId] = useState(() => {
+    const reference = new URL(window.location.href).searchParams.get('booking') ?? ''
+    return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(reference) ? reference : ''
+  })
   const [reportBookingId, setReportBookingId] = useState('')
   const [reportBookingType, setReportBookingType] = useState<'vehicle' | 'service'>('vehicle')
   const [returnedAt, setReturnedAt] = useState(() => new Date(Date.now() + 8 * 3600000).toISOString().slice(0, 16))
@@ -35,10 +38,22 @@ export function AdminOperations() {
     if (loadError) setError(loadError.message); else setItems(data ?? [])
   }, [])
   useEffect(() => { void load(); const timer = window.setInterval(() => void load(), 30000); return () => clearInterval(timer) }, [load])
-  const openWorkspace = async (id: string) => {
-    const { data: rental } = await supabase.from('vehicle_bookings').select('id').eq('id', id).maybeSingle()
-    setReportBookingType(rental ? 'vehicle' : 'service'); setBookingId(id); setReportBookingId(id)
+  const openWorkspace = async (id: string): Promise<'vehicle' | 'service' | null> => {
+    const { data: rental, error: rentalError } = await supabase.from('vehicle_bookings').select('id').eq('id', id).maybeSingle()
+    if (rentalError) { setError('Booking could not be loaded. Check the full ID and retry.'); return null }
+    let type: 'vehicle' | 'service' = 'vehicle'
+    if (!rental) {
+      const { data: service, error: serviceError } = await supabase.from('service_bookings').select('id').eq('id', id).maybeSingle()
+      if (serviceError || !service) { setError('Booking not found. Copy the full ID from Bookings.'); return null }
+      type = 'service'
+    }
+    setReportBookingType(type); setBookingId(id); setReportBookingId(id)
+    return type
   }
+  useEffect(() => {
+    const id = new URL(window.location.href).searchParams.get('booking')
+    if (id && /^[0-9a-f-]{36}$/i.test(id)) void openWorkspace(id)
+  }, [])
   const arrangePickup = async () => {
     setBusy(true)
     const { error: arrangementError } = await supabase.rpc('arrange_rental_pickup', { p_booking: bookingId,
@@ -71,12 +86,12 @@ export function AdminOperations() {
     finally { setBusy(false) }
   }
   const openLicense = async (booking: string) => {
-    setReviewBooking(booking); setLicenseUrl(''); setLicenseWindow(''); setError('')
+    setReviewBooking(booking); setLicenseUrl(''); setLicenseWindow(''); setLicenseExpiry(''); setReviewReason(''); setError('')
     const { data: rental, error: rentalError } = await supabase.from('vehicle_bookings').select('license_id,checkout_state,review_deadline').eq('id', booking).single()
     if (rentalError || !rental?.license_id) { setError('The customer has not uploaded a license yet.'); return }
     setLicenseWindow(rental.checkout_state === 'license_pending' && rental.review_deadline && Date.parse(rental.review_deadline) > Date.now()
       ? `Review before ${new Date(rental.review_deadline).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} Philippine time.`
-      : `Review window closed (booking ${rental.checkout_state.replace(/_/g, ' ')}). The license can be viewed but no longer approved.`)
+      : `Review window closed (booking ${rental.checkout_state.replace(/_/g, ' ')}). Admins may still approve this upload for the walkthrough.`)
     const { data: license, error: licenseError } = await supabase.from('driver_licenses').select('object_path').eq('id', rental.license_id).single()
     if (licenseError || !license) { setError('License could not be loaded.'); return }
     const { data, error: urlError } = await supabase.storage.from('driver-licenses').createSignedUrl(license.object_path, 600)
@@ -85,7 +100,7 @@ export function AdminOperations() {
   const reviewLicense = async (state: 'approved' | 'unreadable' | 'rejected') => {
     if (busy) return
     setBusy(true)
-    const { error: reviewError } = await supabase.rpc('review_rental_license', { p_booking: reviewBooking, p_state: state, p_expires_on: licenseExpiry || null, p_reason: reviewReason })
+    const { error: reviewError } = await supabase.rpc('review_rental_license', { p_booking: reviewBooking, p_state: state, p_expires_on: licenseExpiry || null, p_reason: reviewReason.trim() || (state === 'approved' ? 'Admin approved sample upload for walkthrough' : 'Admin license review') })
     if (reviewError) setError(reviewError.message)
     else { setReviewBooking(''); setLicenseUrl(''); setReviewReason(''); await load() }
     setBusy(false)
@@ -121,19 +136,24 @@ export function AdminOperations() {
   const providerAction = async (cancel: boolean) => {
     if (busy || reason.trim().length < 3) return
     setBusy(true)
-    const result = cancel ? await supabase.rpc('provider_cancel_booking', { p_type: reportBookingType, p_booking: bookingId, p_reason: reason })
+    const resolvedType = await openWorkspace(bookingId)
+    if (!resolvedType) { setBusy(false); return }
+    const result = cancel ? await supabase.rpc('provider_cancel_booking', { p_type: resolvedType, p_booking: bookingId, p_reason: reason })
       : await supabase.rpc('request_mechanic_reschedule', { p_request: crypto.randomUUID(), p_booking: bookingId, p_schedule: new Date(`${newAppointment}:00+08:00`).toISOString() })
     if (result.error) setError(result.error.message); else { setMessage(cancel ? 'Provider cancellation recorded; collected payments enter full-refund processing.' : 'Time change proposed. Original appointment remains active until customer acceptance and mechanic capacity are secured.'); await load() }
     setBusy(false)
   }
   return <div className="admin-page"><section className="account-panel"><h1>Action queue</h1>
     {error && !reviewBooking && <p role="alert">{error}</p>}
+    <label>Rental booking reference<input value={bookingId} onChange={e => setBookingId(e.target.value)} placeholder="Paste the full booking ID copied from Bookings" /></label>
+    <button type="button" disabled={busy || !/^[0-9a-f-]{36}$/i.test(bookingId)} onClick={() => void openLicense(bookingId)}>Review uploaded rental file</button>
+    {reviewBooking && <fieldset disabled={busy}><legend>License review · {reviewBooking}</legend>{error && <p role="alert">{error}</p>}{licenseWindow && <p>{licenseWindow}</p>}{licenseUrl && <>{!licensePdf && <img src={licenseUrl} alt="Customer driver license" style={{ display: 'block', width: '100%', maxHeight: 320, objectFit: 'contain', background: 'var(--admin-bg)' }} />}<a href={licenseUrl} target="_blank" rel="noreferrer">Open private license in a new tab (10 minutes)</a></>}<label>License expiry (optional for admin approval)<input type="date" value={licenseExpiry} onChange={e => setLicenseExpiry(e.target.value)} /></label><label>Verification / rejection reason<input value={reviewReason} onChange={e => setReviewReason(e.target.value)} /></label><div className="transaction-actions"><button type="button" disabled={busy || !licenseUrl} onClick={() => void reviewLicense('approved')}>Approve uploaded image</button><button type="button" disabled={reviewReason.length < 3} onClick={() => void reviewLicense('unreadable')}>Request readable upload</button><button type="button" disabled={reviewReason.length < 3} onClick={() => void reviewLicense('rejected')}>Reject invalid / mismatched license</button></div></fieldset>}
     {!items.length && <p>No items requiring action.</p>}
     {items.map(item => <article className="account-panel" key={item.id}><h3>{item.title}</h3><p>{item.kind.replace(/_/g, ' ')} · {item.due_at ? `Due ${new Date(item.due_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila' })} Philippine time` : 'No deadline'}</p>
       {item.booking_id && <p>Booking {item.booking_id} <button type="button" onClick={() => void openWorkspace(item.booking_id!)}>Open booking workspace</button></p>}
       {item.kind === 'license_review' && item.booking_id && <button type="button" disabled={busy} onClick={() => void openLicense(item.booking_id!)}>Review private driver license</button>}
       {item.customer_id && <p>Customer {item.customer_id}</p>}
-      {reviewBooking === item.booking_id && <fieldset disabled={busy}><legend>License review · {reviewBooking}</legend>{error && <p role="alert">{error}</p>}{licenseWindow && <p>{licenseWindow}</p>}{licenseUrl && <>{!licensePdf && <img src={licenseUrl} alt="Customer driver license" style={{ display: 'block', maxWidth: '100%', maxHeight: 480 }} />}<a href={licenseUrl} target="_blank" rel="noreferrer">Open private license in a new tab (10 minutes)</a></>}<label>Verified license expiry<input type="date" value={licenseExpiry} onChange={e => setLicenseExpiry(e.target.value)} /></label><label>Verification / rejection reason<input value={reviewReason} onChange={e => setReviewReason(e.target.value)} /></label><div className="transaction-actions"><button type="button" disabled={!licenseUrl || !licenseExpiry || reviewReason.length < 3} onClick={() => void reviewLicense('approved')}>Approve matching license</button><button type="button" disabled={reviewReason.length < 3} onClick={() => void reviewLicense('unreadable')}>Request readable upload</button><button type="button" disabled={reviewReason.length < 3} onClick={() => void reviewLicense('rejected')}>Reject invalid / mismatched license</button></div></fieldset>}
+
       {item.kind === 'cancellation_review' && typeof item.details.request_id === 'string' && <div><p>Review reason is required in the notes field below. Work already started requires a support-reviewed refund amount.</p><button type="button" disabled={busy} onClick={() => void reviewCancellation(item.details.request_id as string, true)}>Approve cancellation and quoted refund</button><button type="button" disabled={busy} onClick={() => void reviewCancellation(item.details.request_id as string, false)}>Decline cancellation</button></div>}
       {['extension_review', 'location_review'].includes(item.kind) && typeof item.details.request_id === 'string' && <div><button type="button" disabled={busy} onClick={() => void reviewChange(item.details.request_id as string, item.kind, true)}>Approve after availability / license checks</button><button type="button" disabled={busy} onClick={() => void reviewChange(item.details.request_id as string, item.kind, false)}>Decline proposed change</button></div>}
       <button type="button" disabled={busy} onClick={() => void claim(item.id)}>Claim · moves to audit log</button>

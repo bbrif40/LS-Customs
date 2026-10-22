@@ -99,6 +99,9 @@ before(async () => {
   if (stage >= 5) await apply('20261021140000_assignment_contact_and_queue_claims.sql')
   if (stage >= 6) await apply('20261021100000_radius_service_coverage.sql')
   if (stage >= 7) await apply('20261021110000_customer_website_text.sql')
+  if (stage >= 8) await apply('20261022120000_admin_booking_workflow.sql')
+  if (stage >= 9) await apply('20261022130000_completed_booking_revenue.sql')
+  if (stage >= 10) await apply('20261022140000_admin_transaction_settlement.sql')
 })
 
 after(async () => { await db.close() })

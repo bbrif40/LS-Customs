@@ -192,3 +192,13 @@ Deno.test('outside-radius denial stays actionable and infrastructure errors stay
 });
 
 Deno.test('radius verification requires authentication',async()=>{ status(await call('verify-service-location',{lat:14.6,lng:121},{},false),401); });
+
+Deno.test('admin-closed account checkout cannot recover a stale PayMongo URL', async () => {
+  const result = await call('account-payment', { quote_id: bookingId }, {
+    account_quotes: { id: bookingId, customer_id: caller, expires_at: '2020-01-01T00:00:00Z' },
+    payments: { id: bookingId, status: 'failed', provider: 'paymongo', provider_reference: 'cs_closed' },
+  });
+  status(result, 409);
+  const payload = await result.json();
+  if (payload.error?.code !== 'CHECKOUT_CLOSED') throw new Error('Closed checkout was not rejected');
+});

@@ -26,6 +26,7 @@ export type MechanicWithProfile = MechanicProfile & {
 }
 
 type VehicleBookingWithCustomer = VehicleBooking & {
+  payment_method: string
   profiles: Profile[] | null
   vehicles: Vehicle[] | null
 }
@@ -37,6 +38,7 @@ type AdminMechanicSummary = Pick<MechanicProfile, 'id' | 'specialties' | 'rating
 }
 
 type ServiceBookingWithDetails = ServiceBooking & {
+  payment_method: string
   profiles: AdminProfileSummary[] | null
   mechanic_profiles: AdminMechanicSummary[] | null
   addresses: {
@@ -428,6 +430,7 @@ export function useAdminVehicleBookings() {
           start_date,
           end_date,
           pickup_location,
+          payment_method,
           status,
           total_price,
           created_at,
@@ -496,7 +499,7 @@ export function useAdminServiceBookings() {
         .from('service_bookings')
         .select(
           'id, customer_id, mechanic_id, address_id, pin_lat, pin_lng, current_lat, current_lng, location_updated_at, ' +
-            'scheduled_at, status, total_price, notes, created_at, updated_at',
+            'scheduled_at, status, payment_method, total_price, notes, created_at, updated_at',
         )
         .order('created_at', { ascending: false })
 

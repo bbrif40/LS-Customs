@@ -46,7 +46,7 @@ export function useAdminOverviewStats(): UseAdminOverviewStatsResult {
     setError(null)
 
     try {
-      // ── 1. Total Revenue (last 7 days) ──────────────────────────
+      // ── 1. Earned revenue (last 7 days) ─────────────────────────
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
       const sevenDaysAgoIso = sevenDaysAgo.toISOString()
@@ -56,8 +56,8 @@ export function useAdminOverviewStats(): UseAdminOverviewStatsResult {
       const fourteenDaysAgoIso = fourteenDaysAgo.toISOString()
 
       const [currentRevenueRes, previousRevenueRes] = await Promise.all([
-        supabase.from('financial_collections').select('amount').eq('status', 'succeeded').gte('created_at', sevenDaysAgoIso),
-        supabase.from('financial_collections').select('amount').eq('status', 'succeeded').gte('created_at', fourteenDaysAgoIso).lt('created_at', sevenDaysAgoIso),
+        supabase.from('financial_revenue').select('amount').in('status', ['succeeded', 'recognized']).gte('created_at', sevenDaysAgoIso),
+        supabase.from('financial_revenue').select('amount').in('status', ['succeeded', 'recognized']).gte('created_at', fourteenDaysAgoIso).lt('created_at', sevenDaysAgoIso),
       ])
       if (currentRevenueRes.error) throw currentRevenueRes.error
       if (previousRevenueRes.error) throw previousRevenueRes.error
@@ -113,7 +113,7 @@ export function useAdminOverviewStats(): UseAdminOverviewStatsResult {
 
       const computedStats: OverviewStat[] = [
         {
-          label: 'Total Revenue (7d)',
+          label: 'Revenue Earned (7d)',
           value: `₱${currentRevenue.toLocaleString()}`,
           trend: revenueTrend.percentage !== 0 ? `${revenueTrend.trendUp ? '+' : ''}${revenueTrend.percentage.toFixed(1)}% vs last week` : undefined,
           trendUp: revenueTrend.trendUp,
@@ -177,6 +177,20 @@ export function useAdminOverviewStats(): UseAdminOverviewStatsResult {
           void fetchStats()
         }
       })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'booking_revenue_recognitions',
+      }, () => {
+        void fetchStats()
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'account_events',
+      }, () => {
+        void fetchStats()
+      })
       .subscribe()
 
     const bookingsChannel = supabase
@@ -197,7 +211,16 @@ export function useAdminOverviewStats(): UseAdminOverviewStatsResult {
       })
       .subscribe()
 
+    const refreshOnFinancialChange = () => { void fetchStats() }
+    const refreshOnFocus = () => {
+      if (document.visibilityState === 'visible') void fetchStats()
+    }
+    window.addEventListener('admin-financial-data-changed', refreshOnFinancialChange)
+    document.addEventListener('visibilitychange', refreshOnFocus)
+
     return () => {
+      window.removeEventListener('admin-financial-data-changed', refreshOnFinancialChange)
+      document.removeEventListener('visibilitychange', refreshOnFocus)
       void supabase.removeChannel(paymentsChannel)
       void supabase.removeChannel(bookingsChannel)
     }

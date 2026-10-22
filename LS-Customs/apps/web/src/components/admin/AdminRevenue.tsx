@@ -9,6 +9,7 @@ import { IonIcon } from '@ionic/react'
 import { carOutline, constructOutline, barChartOutline } from 'ionicons/icons'
 import { useAdminRevenueData } from '../../hooks/useAdminRevenueData'
 import { AdminStatSkeleton, AdminChartSkeleton, AdminTableSkeleton } from '../common/Skeleton'
+import { BookingReference } from './BookingReference'
 
 type TxFilter = 'all' | 'rentals' | 'mechanics'
 
@@ -119,13 +120,15 @@ export function AdminRevenue() {
 
   // CSV Export
   const handleExportCSV = () => {
-    const header = ['Date', 'Customer', 'Service Type', 'Amount', 'Status', 'Provider']
+    const header = ['Date', 'Customer', 'Booking ID', 'Record Type', 'Service Type', 'Amount', 'Status', 'Provider']
     const rows = filteredTx.map((tx) => [
       `"${tx.date}"`,
       `"${tx.customer}"`,
+      `"${tx.bookingId}"`,
+      `"${tx.recordKind === 'recognition' ? 'Completed booking · revenue recognized' : `Earned revenue · ${tx.provider ?? 'payment'}` }"`,
       `"${tx.serviceType}"`,
       `"${tx.amount}"`,
-      `"${tx.status}"`,
+      `"${tx.status === 'recognized' ? 'completed' : tx.status}"`,
       `"${tx.provider ?? ''}"`,
     ])
     const csv = [header, ...rows].map((r) => r.join(',')).join('\n')
@@ -438,10 +441,10 @@ export function AdminRevenue() {
               </thead>
               <tbody>
                 {paginated.map((tx, i) => (
-                  <tr key={`${tx.paymentId}-${i}`}>
+                  <tr key={`${tx.recordKind}-${tx.recordId}-${i}`}>
                     <td style={{ color: 'var(--admin-muted)', fontSize: 12 }}>{tx.date}</td>
                     <td style={{ fontWeight: 600 }}>{tx.customer}</td>
-                    <td style={{ fontFamily: 'monospace', fontSize: 12, color: '#e8a838' }}>{tx.bookingId}</td>
+                    <td style={{ color: '#e8a838', maxWidth: 230 }}><BookingReference id={tx.bookingId} /></td>
                     <td>
                       <div className="admin-table-service">
                         <div className="admin-table-service-icon">
@@ -450,13 +453,23 @@ export function AdminRevenue() {
                             style={{ fontSize: 18 }}
                           />
                         </div>
-                        <span>{tx.serviceType}</span>
+                        <span>
+                          {tx.serviceType}
+                          <small style={{ display: 'block', color: 'var(--admin-muted)', marginTop: 3 }}>
+                            {tx.recordKind === 'recognition'
+                              ? 'Completed booking · revenue recognized'
+                              : `Earned revenue${tx.provider ? ` · ${tx.provider}` : ''}`}
+                          </small>
+                        </span>
                       </div>
                     </td>
                     <td style={{ textAlign: 'right', fontWeight: 700 }}>{tx.amount}</td>
                     <td style={{ textAlign: 'right' }}>
-                      <span className={`admin-status-badge ${tx.status}`}>
-                        {tx.status.toUpperCase()}
+                      <span
+                        className={`admin-status-badge ${tx.status}`}
+                        style={tx.status === 'recognized' ? { color: '#316749', background: 'rgba(49, 103, 73, 0.12)' } : undefined}
+                      >
+                        {tx.status === 'recognized' ? 'COMPLETED' : tx.status.toUpperCase()}
                       </span>
                     </td>
                   </tr>

@@ -1,0 +1,59 @@
+.rental-license-preview {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.rental-license-preview h4,
+.rental-license-preview p {
+  margin: 0;
+}
+
+.rental-license-image {
+  display: block;
+  max-width: min(100%, 480px);
+  max-height: 360px;
+  object-fit: contain;
+  border: 1px solid #dce4df;
+  border-radius: 8px;
+  background: #f4f6f4;
+}
+
+.rental-license-pdf {
+  display: block;
+  width: min(100%, 680px);
+  min-height: 280px;
+  height: min(55vh, 480px);
+  border: 1px solid #dce4df;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.rental-license-preview a {
+  overflow-wrap: anywhere;
+}
+
+.rental-license-upload-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.rental-license-spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  border: 2px solid #b6cbbb;
+  border-top-color: #316749;
+  border-radius: 50%;
+  animation: rental-license-spin 800ms linear infinite;
+}
+
+@keyframes rental-license-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rental-license-spinner { animation: none; }
+}

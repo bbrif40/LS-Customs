@@ -16,7 +16,7 @@ import { useWebsiteText } from "../../hooks/useWebsiteText"
  * usePaymentStatus should be used in parallel to catch async confirmations
  * (3DS redirects, bank delays, etc.).
  */
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { loadStripe, Stripe } from '@stripe/stripe-js'
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js'
 import { CreditCard, Loader2, ExternalLink, ShieldCheck, Smartphone, QrCode, Wallet, RefreshCw } from 'lucide-react'
@@ -37,6 +37,8 @@ export interface PaymentFormProps {
   provider: string
   /** Called when the provider SDK reports a terminal or intermediate result. */
   onComplete: (result: PaymentFormStatus) => void
+  /** Called when the user opens a PayMongo checkout tab. */
+  onCheckoutOpened?: () => void
   /** Called on provider or validation error. */
   onError?: (message: string) => void
   /** Disable the form while an external state (e.g. profile check) is pending. */
@@ -50,6 +52,7 @@ export function PaymentForm({
   currency,
   provider,
   onComplete,
+  onCheckoutOpened,
   onError,
   disabled,
 }: PaymentFormProps) {
@@ -65,6 +68,7 @@ export function PaymentForm({
         amount={amount}
         currency={currency}
         onComplete={onComplete}
+        onCheckoutOpened={onCheckoutOpened}
         onError={onError}
         disabled={disabled}
       />
@@ -112,6 +116,7 @@ interface StripeCardFormProps {
   amount: number
   currency: string
   onComplete: (result: PaymentFormStatus) => void
+  onCheckoutOpened?: () => void
   onError?: (message: string) => void
   disabled?: boolean
 }
@@ -132,6 +137,7 @@ function StripeCardForm({
   amount,
   currency,
   onComplete,
+  onCheckoutOpened,
   onError,
   disabled,
 }: StripeCardFormProps) {
@@ -218,6 +224,7 @@ interface PaymongoFormProps {
   amount: number
   currency: string
   onComplete: (result: PaymentFormStatus) => void
+  onCheckoutOpened?: () => void
   onError?: (message: string) => void
   disabled?: boolean
 }
@@ -235,65 +242,28 @@ function PaymongoForm({
   amount,
   currency,
   onComplete,
+  onCheckoutOpened,
   onError,
   disabled,
 }: PaymongoFormProps) {
   const websiteText = useWebsiteText("Shared")
 
   const [waitingForPayment, setWaitingForPayment] = useState(false)
-  const popupTimer = useRef<ReturnType<typeof setInterval> | null>(null)
-  useEffect(() => () => { if (popupTimer.current) clearInterval(popupTimer.current) }, [])
 
   // Resolve checkout URL accurately
   const resolvedUrl = providedCheckoutUrl || clientSecret
   let safeCheckout = false
   try { const url = new URL(resolvedUrl); safeCheckout = url.protocol === 'https:' && (url.hostname === 'checkout.paymongo.com' || url.hostname === 'paymongo.com' || url.hostname.endsWith('.paymongo.com')) } catch { /* Invalid checkout stays disabled. */ }
 
-  const handlePay = (forceRedirect = false) => {
-    if (disabled) return
-    if (!safeCheckout) { onError?.('Checkout is unavailable. Resume payment from your booking or contact support.'); return }
-
+  const handleCheckoutOpened = () => {
     setWaitingForPayment(true)
-    localStorage.setItem('lsc_paymongo_checkout_start', Date.now().toString())
-
-    if (forceRedirect) {
-      window.location.href = resolvedUrl
-      return
-    }
-
-    // Open in popup for desktop users
-    const popup = window.open(
-      resolvedUrl,
-      'paymongo_checkout',
-      'width=540,height=740,scrollbars=yes,resizable=yes',
-    )
-
-    if (!popup) {
-      // If popup was blocked by browser, redirect current tab
-      window.location.href = resolvedUrl
-      return
-    }
-
-    // Poll for popup closure
-    if (popupTimer.current) clearInterval(popupTimer.current)
-    popupTimer.current = setInterval(() => {
-      if (popup.closed) {
-        if (popupTimer.current) clearInterval(popupTimer.current)
-        popupTimer.current = null
-        setWaitingForPayment(false)
-        onComplete('processing')
-      }
-    }, 1000)
+    onCheckoutOpened?.()
+    onComplete('processing')
   }
 
-  // Detect return when redirected back
-  useEffect(() => {
-    const start = localStorage.getItem('lsc_paymongo_checkout_start')
-    if (start) {
-      localStorage.removeItem('lsc_paymongo_checkout_start')
-      onComplete('processing')
-    }
-  }, [onComplete])
+  const handleUnavailableCheckout = () => {
+    if (!disabled) onError?.('Checkout is unavailable. Resume payment from your booking or contact support.')
+  }
 
   return (
     <div className="payment-form-paymongo" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -310,39 +280,55 @@ function PaymongoForm({
             <Loader2 size={16} className="spin" />
             <span>{websiteText("Awaiting PayMongo Confirmation…")}</span>
           </div>
-          <p className="muted" style={{ fontSize: '12px', margin: '0 0 10px 0' }}>{websiteText("Please finish your payment in the checkout window. This page will update automatically once verified.")}</p>
+          <p className="muted" style={{ fontSize: '12px', margin: '0 0 10px 0' }}>{websiteText("Please finish your payment in the checkout tab. This page will update automatically once verified.")}</p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
-            <button
-              type="button"
-              className="button text-button"
-              onClick={() => handlePay(false)}
-              style={{ fontSize: '12px', padding: '4px 8px' }}
-            >
-              <ExternalLink size={12} />{' '}{websiteText("Re-open window")}</button>
-            <button
-              type="button"
-              className="button text-button"
-              onClick={() => handlePay(true)}
-              style={{ fontSize: '12px', padding: '4px 8px' }}
-            >{websiteText("Continue in this tab")}</button>
+            {safeCheckout && <>
+              <a
+                className="button text-button"
+                href={resolvedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: '12px', padding: '4px 8px' }}
+              >
+                <ExternalLink size={12} />{' '}{websiteText("Re-open checkout tab")}
+              </a>
+              <a
+                className="button text-button"
+                href={resolvedUrl}
+                target="_self"
+                style={{ fontSize: '12px', padding: '4px 8px' }}
+              >{websiteText("Continue in this tab")}</a>
+            </>}
           </div>
         </div>
       ) : (
-        <button
-          type="button"
-          className="button dark-button payment-submit"
-          onClick={() => handlePay(false)}
-          disabled={disabled}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
-        >
-          {disabled ? (
-            <>
-              <Loader2 size={16} className="spin" />{' '}{websiteText("Loading…")}</>
-          ) : (
-            <>
-              <ExternalLink size={16} />{' '}{websiteText("Pay ₱")}{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}{websiteText("via PayMongo")}</>
-          )}
-        </button>
+        safeCheckout && !disabled ? (
+          <a
+            className="button dark-button payment-submit"
+            href={resolvedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={handleCheckoutOpened}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
+          >
+            <ExternalLink size={16} />{' '}{websiteText("Pay ₱")}{amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}{' '}{websiteText("via PayMongo · opens in new tab")}
+          </a>
+        ) : (
+          <button
+            type="button"
+            className="button dark-button payment-submit"
+            onClick={handleUnavailableCheckout}
+            disabled={disabled}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px' }}
+          >
+            {disabled ? (
+              <>
+                <Loader2 size={16} className="spin" />{' '}{websiteText("Loading…")}</>
+            ) : (
+              <>{websiteText("PayMongo checkout unavailable")}</>
+            )}
+          </button>
+        )
       )}
 
       <p className="muted" style={{ fontSize: '12px', textAlign: 'center', margin: 0 }}>{websiteText("Powered by PayMongo Philippines · 256-bit encrypted checkout")}</p>

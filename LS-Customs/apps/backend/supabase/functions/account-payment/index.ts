@@ -22,6 +22,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (existingError) throw existingError
     if (existing) {
       if (existing.status === 'succeeded') return jsonResponse(null, { code: 'PAID', message: 'Payment already received. Refresh your balance.' }, 409, req)
+      if (existing.status === 'failed' && Date.parse(quote.expires_at) <= Date.now())
+        return jsonResponse(null, { code: 'CHECKOUT_CLOSED', message: 'This checkout is closed. Refresh your balance before starting another payment.' }, 409, req)
       const recovered = await retrievePaymentIntent(existing.provider_reference, existing.provider)
       return jsonResponse({ ...recovered, payment_id: existing.id, provider: existing.provider, amount: Number(existing.amount), currency: existing.currency }, null, 200, req)
     }

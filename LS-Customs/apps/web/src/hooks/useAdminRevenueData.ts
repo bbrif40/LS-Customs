@@ -1,19 +1,8 @@
-let realtimeInstance = 0
-/**
- * useAdminRevenueData — live revenue metrics for the Revenue Reports page.
- *
- * Replaces the static `revenueStats`, `revenueChartData`, and `transactions`
- * mocks from adminData.ts. Fetches all payments within a date range,
- * aggregates them into daily buckets for the chart, computes summary stats,
- * and provides the raw transaction list for the table.
- *
- * Also subscribes to realtime payment INSERT/UPDATE so new transactions
- * appear without a page refresh.
- */
-import { useCallback, useEffect, useState } from 'react'
+/** Live earned revenue and collection records for the admin Revenue Reports page. */
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import type { Payment, Profile } from '@ls-customs/shared-types'
 
+let realtimeInstance = 0
 export interface RevenueStat {
   label: string
   value: string
@@ -23,22 +12,19 @@ export interface RevenueStat {
   icon: string
 }
 
-export interface ChartDataPoint {
-  label: string
-  rentals: number
-  mechanics: number
-}
-
 export interface RevenueTransaction {
+  recordId: string
+  recordKind: 'collection' | 'recognition'
   date: string
+  createdAt: string
   customer: string
   bookingId: string
   serviceType: string
   serviceIcon: string
   amount: string
-  status: 'completed' | 'refunded' | 'pending'
+  status: 'completed' | 'refunded' | 'pending' | 'failed' | 'recognized'
   provider: string | null
-  paymentId: string
+  recordSource: 'cash_completion' | 'online_payment' | 'account_charge_online' | 'account_charge_cash'
 }
 
 export interface AdminRevenueData {
@@ -51,355 +37,325 @@ export interface AdminRevenueData {
   refetch: () => Promise<void>
 }
 
-// Default to last 30 days
+interface FinancialRow {
+  id: string
+  booking_type: 'vehicle' | 'service'
+  booking_id: string
+  customer_id: string
+  amount: number | string
+  status: string
+  provider: string | null
+  created_at: string
+}
+
+interface RecognitionRow {
+  id: string
+  payment_id: string | null
+  booking_type: 'vehicle' | 'service'
+  booking_id: string
+  customer_id: string
+  amount: number | string
+  status: 'recognized' | 'succeeded'
+  source: string
+  created_at: string
+}
+
+interface BookingRow {
+  id: string
+  status?: string
+  vehicles?: { name: string } | null
+}
+
 const DEFAULT_DAYS = 30
 
-export function useAdminRevenueData(
-  days: number = DEFAULT_DAYS,
-): AdminRevenueData {
+export function useAdminRevenueData(days: number = DEFAULT_DAYS): AdminRevenueData {
   const [stats, setStats] = useState<RevenueStat[]>([])
-  const [chartData, setChartData] = useState<{ labels: string[]; rentals: number[]; mechanics: number[] }>(
-    { labels: [], rentals: [], mechanics: [] },
-  )
+  const [chartData, setChartData] = useState<{ labels: string[]; rentals: number[]; mechanics: number[] }>({ labels: [], rentals: [], mechanics: [] })
   const [transactions, setTransactions] = useState<RevenueTransaction[]>([])
   const [totalTransactions, setTotalTransactions] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const fetchGeneration = useRef(0)
 
   const fetchRevenue = useCallback(async () => {
+    const generation = ++fetchGeneration.current
     setLoading(true)
     setError(null)
 
     try {
-      // Compute date range
       const endDate = new Date()
       const startDate = new Date()
       startDate.setDate(endDate.getDate() - days)
-
       const previousStartDate = new Date(startDate)
       previousStartDate.setDate(startDate.getDate() - days)
 
-      // ── 1. Fetch payments in the current period ─────────────────
-      const { data: payments, error: paymentsError } = await supabase
-        .from('financial_collections')
-        .select('id, booking_type, booking_id, customer_id, amount, status, provider, created_at')
-        .gte('created_at', startDate.toISOString())
-        .lte('created_at', endDate.toISOString())
-        .order('created_at', { ascending: false })
+      // The revenue view combines completed cash booking values with successful
+      // online payments and nonduplicated account-charge allocations. Actual
+      // collection totals remain a separate metric.
+      const [revenueResult, previousRevenueResult, collectionResult] = await Promise.all([
+        supabase.from('financial_revenue')
+          .select('id, payment_id, booking_type, booking_id, customer_id, amount, status, source, created_at')
+          .in('status', ['recognized', 'succeeded'])
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', endDate.toISOString())
+          .order('created_at', { ascending: false }),
+        supabase.from('financial_revenue')
+          .select('amount, booking_type, booking_id, status')
+          .in('status', ['recognized', 'succeeded'])
+          .gte('created_at', previousStartDate.toISOString())
+          .lt('created_at', startDate.toISOString()),
+        supabase.from('financial_collections')
+          .select('id, booking_type, booking_id, customer_id, amount, status, provider, created_at')
+          .gte('created_at', startDate.toISOString())
+          .lte('created_at', endDate.toISOString())
+          .order('created_at', { ascending: false }),
+      ])
 
-      if (paymentsError) throw paymentsError
-
-      const typedPayments = (payments ?? []) as Payment[]
-
-      // ── 2. Fetch payments in the previous period (for trends) ────
-      const { data: prevPayments, error: prevError } = await supabase
-        .from('financial_collections')
-        .select('amount, status')
-        .gte('created_at', previousStartDate.toISOString())
-        .lt('created_at', startDate.toISOString())
-
-      if (prevError) {
-        console.warn('[useAdminRevenueData] previous period query failed (non-fatal)', prevError)
+      if (revenueResult.error) throw revenueResult.error
+      if (collectionResult.error) throw collectionResult.error
+      if (previousRevenueResult.error) {
+        console.warn('[useAdminRevenueData] previous revenue query failed (non-fatal)', previousRevenueResult.error)
       }
 
-      // ── 3. Fetch customer names ─────────────────────────────────
-      const customerIds = Array.from(
-        new Set(typedPayments.map((p) => p.customer_id).filter(Boolean))
-      )
+      const revenueRows = (revenueResult.data ?? []) as unknown as RecognitionRow[]
+      const collectionRows = (collectionResult.data ?? []) as unknown as FinancialRow[]
+      const previousRevenueRows = previousRevenueResult.error ? [] : (previousRevenueResult.data ?? []) as { amount: number | string; booking_type: string; booking_id: string; status: string }[]
+
+      const customerIds = Array.from(new Set([
+        ...revenueRows.map((row) => row.customer_id),
+        ...collectionRows.map((row) => row.customer_id),
+      ].filter(Boolean)))
       const customersById = new Map<string, string>()
       if (customerIds.length > 0) {
         const { data: profiles, error: profileError } = await supabase
           .from('profiles')
           .select('id, full_name')
           .in('id', customerIds)
-
         if (!profileError && profiles) {
-          for (const p of profiles as { id: string; full_name: string | null }[]) {
-            customersById.set(p.id, p.full_name ?? 'Unknown Customer')
+          for (const profile of profiles as { id: string; full_name: string | null }[]) {
+            customersById.set(profile.id, profile.full_name ?? 'Unknown Customer')
           }
         }
       }
 
-      // ── 4. Fetch booking references & statuses ───────────────
-      const vehicleBookingIds = typedPayments
-        .filter((p) => p.booking_type === 'vehicle')
-        .map((p) => p.booking_id)
-      const serviceBookingIds = typedPayments
-        .filter((p) => p.booking_type === 'service')
-        .map((p) => p.booking_id)
-
-      const vehicleRefs = new Map<string, string>()
+      const vehicleBookingIds = Array.from(new Set([...revenueRows, ...collectionRows]
+        .filter((row) => row.booking_type === 'vehicle')
+        .map((row) => row.booking_id)))
       const vehicleNames = new Map<string, string>()
-      const bookingStatusMap = new Map<string, string>()
 
       if (vehicleBookingIds.length > 0) {
-        type VehicleRow = { id: string; status?: string; vehicles: { name: string } | null }
-        let vbRows: VehicleRow[] | null = null
-
-        const { data: joinedVb, error: vbError } = await supabase
+        const { data, error: vehicleError } = await supabase
           .from('vehicle_bookings')
-          .select('id, status, vehicles(name)')
+          .select('id, vehicles(name)')
           .in('id', vehicleBookingIds)
-
-        if (!vbError && joinedVb) {
-          vbRows = joinedVb as unknown as VehicleRow[]
-        } else {
-          const { data: fallbackVb } = await supabase
-            .from('vehicle_bookings')
-            .select('id, status')
-            .in('id', vehicleBookingIds)
-          vbRows = (fallbackVb ?? []) as unknown as VehicleRow[]
-        }
-
-        for (const row of vbRows ?? []) {
-          vehicleRefs.set(row.id, `VR-${row.id.slice(0, 8).toUpperCase()}`)
-          if (row.vehicles?.name) {
-            vehicleNames.set(row.id, row.vehicles.name)
-          }
-          if (row.status) {
-            bookingStatusMap.set(`vehicle:${row.id}`, row.status)
+        if (!vehicleError && data) {
+          for (const row of data as unknown as BookingRow[]) {
+            if (row.vehicles?.name) vehicleNames.set(row.id, row.vehicles.name)
           }
         }
       }
 
-      if (serviceBookingIds.length > 0) {
-        const { data: sbRows, error: sbError } = await supabase
-          .from('service_bookings')
-          .select('id, status')
-          .in('id', serviceBookingIds)
+      const currentRevenue = revenueRows.reduce((sum, row) => sum + Number(row.amount), 0)
+      const previousRevenue = previousRevenueRows.reduce((sum, row) => sum + Number(row.amount), 0)
+      const bookingCount = new Set(revenueRows.map((row) => `${row.booking_type}:${row.booking_id}`)).size
+      const previousBookingCount = new Set(previousRevenueRows.map((row) => `${row.booking_type}:${row.booking_id}`)).size
+      const actualCollections = collectionRows.filter((row) => row.status === 'succeeded')
+      const collectedAmount = actualCollections.reduce((sum, row) => sum + Number(row.amount), 0)
+      const averageBookingValue = bookingCount > 0 ? currentRevenue / bookingCount : 0
+      const previousAverage = previousBookingCount > 0 ? previousRevenue / previousBookingCount : 0
+      const revenueTrend = computeTrend(currentRevenue, previousRevenue)
+      const averageTrend = computeTrend(averageBookingValue, previousAverage)
 
-        if (!sbError && sbRows) {
-          for (const row of (sbRows ?? []) as { id: string; status: string }[]) {
-            if (row.status) {
-              bookingStatusMap.set(`service:${row.id}`, row.status)
-            }
-          }
-        }
-      }
-
-      // Revenue is derived only from succeeded payment records. Booking completion is not payment evidence.
-      const isPaymentSucceeded = (p: Payment) => p.status === 'succeeded'
-
-      // ── 5. Compute revenue stats ────────────────────────────────
-      const currentRevenue = typedPayments
-        .filter(isPaymentSucceeded)
-        .reduce((sum, p) => sum + Number(p.amount), 0)
-
-      const currentCompletedCount = typedPayments.filter(isPaymentSucceeded).length
-      const prevRevenue = (prevError ? [] : (prevPayments ?? []))
-        .filter((p) => p.status === 'succeeded')
-        .reduce((sum, p) => sum + Number(p.amount), 0)
-
-      const aov = currentCompletedCount > 0 ? currentRevenue / currentCompletedCount : 0
-      const prevAov = ((prevPayments ?? []).filter((p) => p.status === 'succeeded').length) || 1
-      const prevAovAmount = ((prevPayments ?? []).filter((p) => p.status === 'succeeded')
-        .reduce((sum, p) => sum + Number(p.amount), 0)) / prevAov
-
-      const prevRevenueTrend = prevRevenue > 0
-        ? ((currentRevenue - prevRevenue) / prevRevenue) * 100
-        : currentRevenue > 0 ? 100 : 0
-
-      const aovTrend = prevAovAmount > 0
-        ? ((aov - prevAovAmount) / prevAovAmount) * 100
-        : aov > 0 ? 100 : 0
-
-      // ── 6. Build chart buckets (granular by timeframe) ────────
       type BucketPoint = { label: string; dateStart: Date; dateEnd: Date; rentals: number; mechanics: number }
       const chartPoints: BucketPoint[] = []
 
       if (days <= 7) {
         for (let i = 6; i >= 0; i--) {
-          const d = new Date()
-          d.setDate(d.getDate() - i)
-          d.setHours(0, 0, 0, 0)
-          const endD = new Date(d)
-          endD.setHours(23, 59, 59, 999)
+          const date = new Date()
+          date.setDate(date.getDate() - i)
+          date.setHours(0, 0, 0, 0)
+          const dateEnd = new Date(date)
+          dateEnd.setHours(23, 59, 59, 999)
           chartPoints.push({
-            label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }),
-            dateStart: d,
-            dateEnd: endD,
+            label: date.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }),
+            dateStart: date,
+            dateEnd,
             rentals: 0,
             mechanics: 0,
           })
         }
       } else if (days <= 30) {
-        // Daily points for the period
         for (let i = days - 1; i >= 0; i--) {
-          const d = new Date()
-          d.setDate(d.getDate() - i)
-          d.setHours(0, 0, 0, 0)
-          const endD = new Date(d)
-          endD.setHours(23, 59, 59, 999)
+          const date = new Date()
+          date.setDate(date.getDate() - i)
+          date.setHours(0, 0, 0, 0)
+          const dateEnd = new Date(date)
+          dateEnd.setHours(23, 59, 59, 999)
           chartPoints.push({
-            label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            dateStart: d,
-            dateEnd: endD,
+            label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            dateStart: date,
+            dateEnd,
             rentals: 0,
             mechanics: 0,
           })
         }
       } else if (days <= 90) {
-        // Weekly points (approx 12 weeks)
-        const numWeeks = 12
-        for (let i = numWeeks - 1; i >= 0; i--) {
-          const d = new Date()
-          d.setDate(d.getDate() - (i * 7 + 6))
-          d.setHours(0, 0, 0, 0)
-          const endD = new Date(d)
-          endD.setDate(d.getDate() + 7)
+        for (let i = 11; i >= 0; i--) {
+          const date = new Date()
+          date.setDate(date.getDate() - (i * 7 + 6))
+          date.setHours(0, 0, 0, 0)
+          const dateEnd = new Date(date)
+          dateEnd.setDate(date.getDate() + 7)
           chartPoints.push({
-            label: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-            dateStart: d,
-            dateEnd: endD,
+            label: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            dateStart: date,
+            dateEnd,
             rentals: 0,
             mechanics: 0,
           })
         }
       } else {
-        // Monthly points
         for (let i = 11; i >= 0; i--) {
-          const d = new Date()
-          d.setMonth(d.getMonth() - i, 1)
-          d.setHours(0, 0, 0, 0)
-          const endD = new Date(d)
-          endD.setMonth(d.getMonth() + 1, 0)
-          endD.setHours(23, 59, 59, 999)
+          const date = new Date()
+          date.setMonth(date.getMonth() - i, 1)
+          date.setHours(0, 0, 0, 0)
+          const dateEnd = new Date(date)
+          dateEnd.setMonth(date.getMonth() + 1, 0)
+          dateEnd.setHours(23, 59, 59, 999)
           chartPoints.push({
-            label: d.toLocaleDateString('en-US', { month: 'short' }),
-            dateStart: d,
-            dateEnd: endD,
+            label: date.toLocaleDateString('en-US', { month: 'short' }),
+            dateStart: date,
+            dateEnd,
             rentals: 0,
             mechanics: 0,
           })
         }
       }
 
-      // Aggregate payments exactly once into the matching date bucket
-      for (const p of typedPayments) {
-        if (!isPaymentSucceeded(p)) continue
-        const pTime = new Date(p.created_at).getTime()
-        const target = chartPoints.find((pt) => pTime >= pt.dateStart.getTime() && pTime <= pt.dateEnd.getTime())
-        if (target) {
-          if (p.booking_type === 'vehicle') {
-            target.rentals += Number(p.amount)
-          } else {
-            target.mechanics += Number(p.amount)
-          }
-        }
+      for (const row of revenueRows) {
+        const time = new Date(row.created_at).getTime()
+        const bucket = chartPoints.find((point) => time >= point.dateStart.getTime() && time <= point.dateEnd.getTime())
+        if (!bucket) continue
+        if (row.booking_type === 'vehicle') bucket.rentals += Number(row.amount)
+        else bucket.mechanics += Number(row.amount)
       }
 
-      const chartLabels = chartPoints.map((pt) => pt.label)
-      const rentalsData = chartPoints.map((pt) => pt.rentals)
-      const mechanicsData = chartPoints.map((pt) => pt.mechanics)
-
-      // ── 7. Build transaction list for the table ─────────────────
-      const txList: RevenueTransaction[] = typedPayments.map((p) => {
-        const customer = customersById.get(p.customer_id) ?? (p.customer_id ? p.customer_id.slice(0, 8) : 'Customer')
-        const bookingId = p.booking_id ? `#${p.booking_id.slice(0, 8)}` : '—'
-        const succeeded = isPaymentSucceeded(p)
-
-        const vName = vehicleNames.get(p.booking_id)
-        const vehicleLabel = vName ? `${vName} Rental` : 'Premium Sedan Rental'
-
-        return {
-          date: new Date(p.created_at).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          }),
-          customer,
-          bookingId,
-          serviceType: p.booking_type === 'vehicle' ? vehicleLabel : 'Mobile Mechanic Service',
-          serviceIcon: p.booking_type === 'vehicle' ? 'vehicle' : 'service',
-          amount: `${Number(p.amount).toLocaleString()}.00`,
-          status: succeeded ? 'completed' : p.status as 'completed' | 'refunded' | 'pending',
-          provider: 'paymongo',
-          paymentId: p.id,
-        }
+      const formatAmount = (amount: number | string) => Number(amount).toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+      const dateLabel = (createdAt: string) => new Date(createdAt).toLocaleDateString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+      })
+      const transactionType = (bookingType: 'vehicle' | 'service', bookingId: string) => ({
+        serviceType: bookingType === 'vehicle'
+          ? `${vehicleNames.get(bookingId) ?? 'Vehicle'} Rental`
+          : 'Mobile Mechanic Service',
+        serviceIcon: bookingType === 'vehicle' ? 'vehicle' : 'service',
       })
 
-      // ── 8. Compute summary stats ────────────────────────────────
-      const computedStats: RevenueStat[] = [
+      const revenueTransactions: RevenueTransaction[] = revenueRows
+        .map((row) => ({
+        recordId: row.id,
+        recordKind: row.source === 'cash_completion' ? 'recognition' : 'collection',
+        date: dateLabel(row.created_at),
+        createdAt: row.created_at,
+        customer: customersById.get(row.customer_id) ?? 'Customer',
+        bookingId: row.booking_id,
+        ...transactionType(row.booking_type, row.booking_id),
+        amount: formatAmount(row.amount),
+        status: row.source === 'cash_completion' ? 'recognized' : 'completed',
+        provider: row.source === 'online_payment'
+          ? 'online payment'
+          : row.source === 'account_charge_online'
+            ? 'online account balance'
+            : row.source === 'account_charge_cash'
+              ? 'cash account balance'
+              : null,
+        recordSource: row.source as RevenueTransaction['recordSource'],
+      }))
+      const txList = revenueTransactions
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+
+      if (generation !== fetchGeneration.current) return
+
+      setStats([
         {
           label: 'Total Revenue',
           value: `₱${currentRevenue.toLocaleString()}`,
-          trend: prevRevenueTrend !== 0 && prevRevenue > 0
-            ? `${prevRevenueTrend >= 0 ? '+' : ''}${prevRevenueTrend.toFixed(1)}% period over period`
+          trend: revenueTrend.percentage !== 0 && previousRevenue > 0
+            ? `${revenueTrend.percentage >= 0 ? '+' : ''}${revenueTrend.percentage.toFixed(1)}% period over period`
             : undefined,
-          trendUp: prevRevenueTrend >= 0,
+          trendUp: revenueTrend.trendUp,
           icon: 'revenue',
         },
         {
-          label: 'Average Order Value',
-          value: `₱${aov.toFixed(2)}`,
-          trend: aovTrend !== 0 && prevAovAmount > 0
-            ? `${aovTrend >= 0 ? '+' : ''}${aovTrend.toFixed(1)}% vs last period`
+          label: 'Average Revenue per Booking',
+          value: `₱${averageBookingValue.toFixed(2)}`,
+          trend: averageTrend.percentage !== 0 && previousAverage > 0
+            ? `${averageTrend.percentage >= 0 ? '+' : ''}${averageTrend.percentage.toFixed(1)}% vs last period`
             : undefined,
-          trendUp: aovTrend >= 0,
+          trendUp: averageTrend.trendUp,
           icon: 'avg',
         },
         {
-          label: 'Total Transactions',
-          value: String(typedPayments.length),
-          sub: `${currentCompletedCount} completed`,
+          label: 'Payments Collected',
+          value: `₱${collectedAmount.toLocaleString()}`,
+          sub: `${actualCollections.length} successful collections`,
           icon: 'subs',
         },
-      ]
-
-      setStats(computedStats)
+      ])
       setChartData({
-        labels: chartLabels,
-        rentals: rentalsData,
-        mechanics: mechanicsData,
+        labels: chartPoints.map((point) => point.label),
+        rentals: chartPoints.map((point) => point.rentals),
+        mechanics: chartPoints.map((point) => point.mechanics),
       })
       setTransactions(txList)
       setTotalTransactions(txList.length)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load revenue data')
-      setStats([])
-      setChartData({ labels: [], rentals: [], mechanics: [] })
-      setTransactions([])
-      setTotalTransactions(0)
+      if (generation === fetchGeneration.current) {
+        setError(err instanceof Error ? err.message : 'Failed to load revenue data')
+        setStats([])
+        setChartData({ labels: [], rentals: [], mechanics: [] })
+        setTransactions([])
+        setTotalTransactions(0)
+      }
     } finally {
-      setLoading(false)
+      if (generation === fetchGeneration.current) setLoading(false)
     }
   }, [days])
 
-  useEffect(() => {
-    void fetchRevenue()
-  }, [fetchRevenue])
+  useEffect(() => { void fetchRevenue() }, [fetchRevenue])
 
-  // ── Realtime: refresh when payments or bookings change ──────
   useEffect(() => {
     const channel = supabase
       .channel(`admin-revenue-changes:${++realtimeInstance}`)
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'payments',
-      }, () => { void fetchRevenue() })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'service_bookings',
-      }, () => { void fetchRevenue() })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'vehicle_bookings',
-      }, () => { void fetchRevenue() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => { void fetchRevenue() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'account_events' }, () => { void fetchRevenue() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_revenue_recognitions' }, () => { void fetchRevenue() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'service_bookings' }, () => { void fetchRevenue() })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'vehicle_bookings' }, () => { void fetchRevenue() })
       .subscribe()
 
-    return () => { void supabase.removeChannel(channel) }
+    const refreshOnFinancialChange = () => { void fetchRevenue() }
+    const refreshOnFocus = () => {
+      if (document.visibilityState === 'visible') void fetchRevenue()
+    }
+    window.addEventListener('admin-financial-data-changed', refreshOnFinancialChange)
+    document.addEventListener('visibilitychange', refreshOnFocus)
+
+    return () => {
+      window.removeEventListener('admin-financial-data-changed', refreshOnFinancialChange)
+      document.removeEventListener('visibilitychange', refreshOnFocus)
+      void supabase.removeChannel(channel)
+    }
   }, [fetchRevenue])
 
-  return {
-    stats,
-    chartData,
-    transactions,
-    totalTransactions,
-    loading,
-    error,
-    refetch: fetchRevenue,
-  }
+  return { stats, chartData, transactions, totalTransactions, loading, error, refetch: fetchRevenue }
+}
+
+function computeTrend(current: number, previous: number): { percentage: number; trendUp: boolean } {
+  if (previous === 0) return { percentage: current > 0 ? 100 : 0, trendUp: current > 0 }
+  const percentage = ((current - previous) / previous) * 100
+  return { percentage, trendUp: percentage >= 0 }
 }
